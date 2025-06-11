@@ -272,7 +272,7 @@ public class AgentTests
 
         public override AgentThread GetNewThread()
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override Task<ChatResponse> RunAsync(IReadOnlyCollection<ChatMessage> messages, AgentThread? thread = null, AgentRunOptions? options = null, CancellationToken cancellationToken = default)

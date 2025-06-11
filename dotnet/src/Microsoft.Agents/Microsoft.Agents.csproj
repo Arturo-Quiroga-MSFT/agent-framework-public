@@ -5,6 +5,10 @@
     <VersionSuffix>alpha</VersionSuffix>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <InjectSharedThrow>true</InjectSharedThrow>
+  </PropertyGroup>
+  
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TargetFrameworks>$(ProjectsDebugTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
@@ -13,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Agents.Abstractions\Microsoft.Agents.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
   </ItemGroup>
 
   <PropertyGroup>
