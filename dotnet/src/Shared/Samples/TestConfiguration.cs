@@ -43,6 +43,16 @@ public sealed class TestConfiguration
         public string? ApiKey { get; set; }
     }
 
+    /// <summary>Represents the configuration settings required to interact with the Azure AI service.</summary>
+    public sealed class AzureAIConfig
+    {
+        /// <summary>Gets or sets the endpoint of Azure AI Foundry project.</summary>
+        public string? Endpoint { get; set; }
+
+        /// <summary>Gets or sets the name of the model deployment.</summary>
+        public string? DeploymentName { get; set; }
+    }
+
     /// <summary>
     /// Initializes the configuration system with the specified configuration root.
     /// </summary>
@@ -53,6 +63,7 @@ public sealed class TestConfiguration
     }
 
     #region Private Members
+
     private readonly IConfigurationRoot _configRoot;
     private static TestConfiguration? s_instance;
 
@@ -65,6 +76,11 @@ public sealed class TestConfiguration
     /// Provides access to the configuration root for the application.
     /// </summary>
     private static IConfigurationRoot? ConfigurationRoot => s_instance?._configRoot;
+
+    /// <summary>
+    /// Gets the configuration settings for the AzureAI integration.
+    /// </summary>
+    public static AzureAIConfig AzureAI => LoadSection<AzureAIConfig>();
 
     /// <summary>
     /// Retrieves a configuration section based on the specified key.
