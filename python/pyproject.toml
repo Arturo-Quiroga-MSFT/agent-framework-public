@@ -26,24 +26,35 @@ dependencies = [
     "azure",
     "openai",
     "pydantic>=2.11.7",
+    "typing-extensions>=4.14.0",
 ]
 
-[dependency-groups]
-dev = [
+[tool.uv]
+prerelease = "if-necessary-or-explicit"
+dev-dependencies = [
     "pre-commit >= 3.7",
-    "pyright>=1.1.400",
-    "mypy>=1.15.0",
     "ruff>=0.11.8",
     "poethepoet>=0.36.0",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.2.1",
-    "pytest-xdist>=3.8.0",
+    "pytest-xdist[psutil]>=3.8.0",
+    "pytest-timeout>=2.3.1",
+    "mypy>=1.16.1",
+]
+environments = [
+    "sys_platform == 'darwin'",
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'"
 ]
 
-[build-system]
-requires = ["hatchling", "uv-dynamic-versioning"]
-build-backend = "hatchling.build"
+[tool.pytest.ini_options]
+testpaths = 'tests'
+addopts = "-ra -q -r fEX"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = []
+timeout = 120
 
 [tool.uv.workspace]
 members = ["extensions/*"]
@@ -91,6 +102,7 @@ select = [
 ignore = [
     "D100", # allow missing docstring in public module
     "D104", # allow missing docstring in public package
+    "D418", # allow overload to have a docstring
     "TD003", # allow missing link to todo issue
     "FIX002" # allow todo
 ]
@@ -116,10 +128,9 @@ include = ["agent_framework", "tests", "samples"]
 typeCheckingMode = "strict"
 reportUnnecessaryIsInstance = false
 reportMissingTypeStubs = false
-venvPath = "."
-venv = ".venv"
 
 [tool.mypy]
+plugins = ['pydantic.mypy']
 strict = true
 python_version = "3.10"
 ignore_missing_imports = true
@@ -136,3 +147,11 @@ disallow_any_unimported = true
 [tool.bandit]
 targets = ["agent_framework"]
 exclude_dirs = ["tests"]
+
+[tool.uv.build-backend]
+module-name = "agent_framework"
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.7.19,<0.8.0"]
+build-backend = "uv_build"

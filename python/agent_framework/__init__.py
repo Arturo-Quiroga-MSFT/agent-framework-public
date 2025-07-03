@@ -10,6 +10,30 @@ except importlib.metadata.PackageNotFoundError:
 
 _IMPORTS = {
     "get_logger": "._logging",
+    "AITool": "._tools",
+    "ai_function": "._tools",
+    "AIContent": "._types",
+    "AIContents": "._types",
+    "TextContent": "._types",
+    "TextReasoningContent": "._types",
+    "DataContent": "._types",
+    "UriContent": "._types",
+    "UsageContent": "._types",
+    "UsageDetails": "._types",
+    "FunctionCallContent": "._types",
+    "FunctionResultContent": "._types",
+    "ChatFinishReason": "._types",
+    "ChatMessage": "._types",
+    "ChatResponse": "._types",
+    "StructuredResponse": "._types",
+    "ChatResponseUpdate": "._types",
+    "ChatRole": "._types",
+    "ErrorContent": "._types",
+    "ModelClient": "._types",
+    "ChatOptions": "._types",
+    "ChatToolMode": "._types",
+    "InputGuardrail": ".guard_rails",
+    "OutputGuardrail": ".guard_rails",
 }
 
 
