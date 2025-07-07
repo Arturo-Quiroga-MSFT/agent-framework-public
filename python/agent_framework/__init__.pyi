@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 from . import __version__  # type: ignore[attr-defined]
+from ._agents import Agent, AgentThread
 from ._clients import ChatClient, EmbeddingGenerator
 from ._logging import get_logger
 from ._tools import AITool, ai_function
@@ -32,6 +33,8 @@ __all__ = [
     "AIContent",
     "AIContents",
     "AITool",
+    "Agent",
+    "AgentThread",
     "ChatClient",
     "ChatFinishReason",
     "ChatMessage",
