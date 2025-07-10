@@ -15,7 +15,7 @@ public readonly struct ActorMetadata : IEquatable<ActorMetadata>
     /// <param name="type">The type of the actor.</param>
     /// <param name="key">The unique key associated with the actor.</param>
     /// <param name="description">A brief description of the actor.</param>
-    public ActorMetadata(ActorType type, string key, string description)
+    public ActorMetadata(ActorType type, string key, string? description = null)
     {
         if (!ActorId.IsValidKey(key))
         {
@@ -46,7 +46,7 @@ public readonly struct ActorMetadata : IEquatable<ActorMetadata>
     /// <summary>
     /// A brief description of the actor's purpose or functionality.
     /// </summary>
-    public string Description { get; }
+    public string? Description { get; }
 
     /// <inheritdoc/>
     public override readonly bool Equals(object? obj) =>

@@ -53,7 +53,7 @@ public abstract class RuntimeActor : IRuntimeActor
     protected RuntimeActor(
         ActorId id,
         IAgentRuntime runtime,
-        string description,
+        string? description = null,
         ILogger? logger = null)
     {
         this.Id = id;
