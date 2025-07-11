@@ -14,6 +14,8 @@ _IMPORTS = {
     "AFBaseModel": "._pydantic",
     "AFBaseSettings": "._pydantic",
     "Agent": "._agents",
+    "AgentRunResponse": "._types",
+    "AgentRunResponseUpdate": "._types",
     "AgentThread": "._agents",
     "AITool": "._tools",
     "ai_function": "._tools",
