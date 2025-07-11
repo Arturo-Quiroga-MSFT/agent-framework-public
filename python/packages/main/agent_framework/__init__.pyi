@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 from . import __version__  # type: ignore[attr-defined]
-from ._agents import Agent, AgentThread
+from ._agents import Agent, AgentThread, ChatClientAgent, ChatClientAgentThread, ChatClientAgentThreadType
 from ._clients import ChatClient, ChatClientBase, EmbeddingGenerator, use_tool_calling
 from ._logging import get_logger
 from ._pydantic import AFBaseModel, AFBaseSettings
@@ -45,6 +45,9 @@ __all__ = [
     "AgentRunResponseUpdate",
     "AgentThread",
     "ChatClient",
+    "ChatClientAgent",
+    "ChatClientAgentThread",
+    "ChatClientAgentThreadType",
     "ChatClientBase",
     "ChatFinishReason",
     "ChatMessage",
