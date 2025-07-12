@@ -5,7 +5,7 @@ from ._agents import Agent, AgentThread, ChatClientAgent, ChatClientAgentThread,
 from ._clients import ChatClient, ChatClientBase, EmbeddingGenerator, use_tool_calling
 from ._logging import get_logger
 from ._pydantic import AFBaseModel, AFBaseSettings
-from ._tools import AITool, ai_function
+from ._tools import AIFunction, AITool, ai_function
 from ._types import (
     AgentRunResponse,
     AgentRunResponseUpdate,
@@ -39,6 +39,7 @@ __all__ = [
     "AFBaseSettings",
     "AIContent",
     "AIContents",
+    "AIFunction",
     "AITool",
     "Agent",
     "AgentRunResponse",
