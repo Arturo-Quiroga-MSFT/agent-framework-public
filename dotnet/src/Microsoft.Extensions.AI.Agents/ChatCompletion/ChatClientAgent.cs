@@ -104,7 +104,7 @@ public sealed class ChatClientAgent : Agent
         (ChatClientAgentThread chatClientThread, ChatOptions? chatOptions, List<ChatMessage> threadMessages) =
             await this.PrepareThreadAndMessagesAsync(thread, messages, options, cancellationToken).ConfigureAwait(false);
 
-        var agentName = this.GetAgentName();
+        var agentName = this.GetLoggingAgentName();
 
         this._logger.LogAgentChatClientInvokingAgent(nameof(RunAsync), this.Id, agentName, this._chatClientType);
 
@@ -146,14 +146,14 @@ public sealed class ChatClientAgent : Agent
             await this.PrepareThreadAndMessagesAsync(thread, inputMessages, options, cancellationToken).ConfigureAwait(false);
 
         int messageCount = threadMessages.Count;
-        var agentName = this.GetAgentName();
+        var loggingAgentName = this.GetLoggingAgentName();
 
-        this._logger.LogAgentChatClientInvokingAgent(nameof(RunStreamingAsync), this.Id, agentName, this._chatClientType);
+        this._logger.LogAgentChatClientInvokingAgent(nameof(RunStreamingAsync), this.Id, loggingAgentName, this._chatClientType);
 
         // Using the enumerator to ensure we consider the case where no updates are returned for notification.
         var responseUpdatesEnumerator = this.ChatClient.GetStreamingResponseAsync(threadMessages, chatOptions, cancellationToken).GetAsyncEnumerator(cancellationToken);
 
-        this._logger.LogAgentChatClientInvokedStreamingAgent(nameof(RunStreamingAsync), this.Id, agentName, this._chatClientType);
+        this._logger.LogAgentChatClientInvokedStreamingAgent(nameof(RunStreamingAsync), this.Id, loggingAgentName, this._chatClientType);
 
         List<ChatResponseUpdate> responseUpdates = [];
 
@@ -166,7 +166,7 @@ public sealed class ChatClientAgent : Agent
             if (update is not null)
             {
                 responseUpdates.Add(update);
-                update.AuthorName ??= agentName;
+                update.AuthorName ??= this.Name;
                 yield return update.ToAgentRunResponseUpdate(this.Id);
             }
 
@@ -388,6 +388,6 @@ public sealed class ChatClientAgent : Agent
         }
     }
 
-    private string GetAgentName() => this.Name ?? "UnnamedAgent";
+    private string GetLoggingAgentName() => this.Name ?? "UnnamedAgent";
     #endregion
 }
