@@ -5,7 +5,7 @@ from random import randint
 from typing import Annotated
 
 from agent_framework import ChatClientAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.foundry import FoundryChatClient
 from dotenv import load_dotenv
 from pydantic import Field
 
@@ -19,9 +19,17 @@ def get_weather(
 
 
 async def main() -> None:
-    instructions = "You are a helpful assistant, you can help the user with weather information."
-    agent = ChatClientAgent(OpenAIChatClient(), instructions=instructions, tools=get_weather)
-    print(str(await agent.run("What's the weather in Amsterdam?")))
+    print("=== Basic Foundry Chat Client Example ===")
+
+    # Since no Agent ID is provided, the agent will be automatically created
+    # and deleted after getting a response
+    async with ChatClientAgent(
+        chat_client=FoundryChatClient(),
+        instructions="You are a helpful weather agent.",
+        tools=get_weather,
+    ) as agent:
+        result = await agent.run("What's the weather like in Seattle?")
+        print(f"Result: {result}\n")
 
 
 if __name__ == "__main__":

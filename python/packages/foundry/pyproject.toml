@@ -1,8 +1,8 @@
 [project]
-name = "agent-framework"
-description = "Microsoft Agent Framework for building AI Agents with Python."
+name = "agent-framework-foundry"
+description = "Azure AI Foundry integration for Microsoft Agent Framework."
 authors = [{ name = "Microsoft", email = "SK-Support@microsoft.com"}]
-readme = "../../README.md"
+readme = "README.md"
 requires-python = ">=3.10"
 version = "0.1.0b1"
 license = {file = "../../LICENSE"}
@@ -23,18 +23,10 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-    "openai>=1.94.0",
-    "pydantic>=2.11.7",
-    "pydantic-settings>=2.10.1",
-    "typing-extensions>=4.14.0",
-]
-
-[project.optional-dependencies]
-azure = [
-    "agent-framework-azure"
-]
-foundry = [
-    "agent-framework-foundry"
+    "agent-framework",
+    "azure-ai-projects >= 1.0.0b11",
+    "azure-ai-agents >= 1.1.0b1",
+    "aiohttp ~= 3.8"
 ]
 
 [dependency-groups]
@@ -83,7 +75,6 @@ environments = [
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
-
 [tool.pytest.ini_options]
 testpaths = 'tests'
 addopts = "-ra -q -r fEX"
@@ -115,7 +106,7 @@ disallow_untyped_decorators = true
 disallow_any_unimported = true
 
 [tool.bandit]
-targets = ["agent_framework"]
+targets = ["agent_framework_foundry"]
 exclude_dirs = ["tests"]
 
 [tool.poe]
@@ -123,7 +114,7 @@ executor.type = "uv"
 include = "../../shared_tasks.toml"
 
 [tool.uv.build-backend]
-module-name = "agent_framework"
+module-name = "agent_framework_foundry"
 module-root = ""
 
 [build-system]

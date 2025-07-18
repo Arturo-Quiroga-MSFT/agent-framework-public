@@ -4,9 +4,9 @@ import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterable, Awaitable, Callable, MutableMapping, MutableSequence, Sequence
 from functools import wraps
-from typing import Annotated, Any, Generic, Literal, Protocol, TypeVar, runtime_checkable
+from typing import Any, Generic, Literal, Protocol, TypeVar, runtime_checkable
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel
 
 from ._logging import get_logger
 from ._pydantic import AFBaseModel
@@ -75,7 +75,7 @@ async def _auto_invoke_function(
     )
 
 
-def _tool_to_json_schema_spec(tool: AITool) -> dict[str, Any]:
+def tool_to_json_schema_spec(tool: AITool) -> dict[str, Any]:
     """Convert a AITool to the JSON Schema function specification format."""
     return {
         "type": "function",
@@ -95,7 +95,7 @@ def _prepare_tools_and_tool_choice(chat_options: ChatOptions) -> None:
         chat_options.tool_choice = ChatToolMode.NONE.mode
         return
     chat_options.tools = [
-        (_tool_to_json_schema_spec(t) if isinstance(t, AITool) else t)
+        (tool_to_json_schema_spec(t) if isinstance(t, AITool) else t)
         for t in chat_options._ai_tools or []  # type: ignore[reportPrivateUsage]
     ]
     if not chat_options.tools:
@@ -204,6 +204,12 @@ def _tool_call_streaming(func: TInnerGetStreamingResponse) -> TInnerGetStreaming
             # add the single assistant response message to the history
             messages.append(response.messages[0])
             function_calls = [item for item in response.messages[0].contents if isinstance(item, FunctionCallContent)]
+
+            # When conversation id is present, it means that messages are hosted on the server.
+            # In this case, we need to update ChatOptions with conversation id and also clear messages
+            if response.conversation_id is not None:
+                chat_options.conversation_id = response.conversation_id
+                messages = []
 
             if function_calls:
                 # Run all function calls concurrently
@@ -392,8 +398,6 @@ class ChatClient(Protocol):
 
 class ChatClientBase(AFBaseModel, ABC):
     """Base class for chat clients."""
-
-    ai_model_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
     def _prepare_messages(
         self, messages: str | ChatMessage | list[str] | list[ChatMessage]
