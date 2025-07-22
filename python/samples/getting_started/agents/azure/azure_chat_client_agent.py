@@ -4,7 +4,8 @@ import asyncio
 from random import randint
 from typing import Annotated
 
-from agent_framework.openai import OpenAIChatClient
+from agent_framework import ChatClientAgent
+from agent_framework.azure import AzureChatClient
 from pydantic import Field
 
 
@@ -17,19 +18,9 @@ def get_weather(
 
 
 async def main() -> None:
-    client = OpenAIChatClient()
-    message = "What's the weather in Amsterdam and in Paris?"
-    stream = False
-    print(f"User: {message}")
-    if stream:
-        print("Assistant: ", end="")
-        async for chunk in client.get_streaming_response(message, tools=get_weather):
-            if str(chunk):
-                print(str(chunk), end="")
-        print("")
-    else:
-        response = await client.get_response(message, tools=get_weather)
-        print(f"Assistant: {response}")
+    instructions = "You are a helpful assistant, you can help the user with weather information."
+    agent = ChatClientAgent(AzureChatClient(), instructions=instructions, tools=get_weather)
+    print(str(await agent.run("What's the weather in Amsterdam?")))
 
 
 if __name__ == "__main__":

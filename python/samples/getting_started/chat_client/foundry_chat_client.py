@@ -4,9 +4,7 @@ import asyncio
 from random import randint
 from typing import Annotated
 
-from agent_framework import ChatClientAgent
-from agent_framework.openai import OpenAIChatClient
-from dotenv import load_dotenv
+from agent_framework.foundry import FoundryChatClient
 from pydantic import Field
 
 
@@ -19,11 +17,20 @@ def get_weather(
 
 
 async def main() -> None:
-    instructions = "You are a helpful assistant, you can help the user with weather information."
-    agent = ChatClientAgent(OpenAIChatClient(), instructions=instructions, tools=get_weather)
-    print(str(await agent.run("What's the weather in Amsterdam?")))
+    client = FoundryChatClient()
+    message = "What's the weather in Amsterdam and in Paris?"
+    stream = False
+    print(f"User: {message}")
+    if stream:
+        print("Assistant: ", end="")
+        async for chunk in client.get_streaming_response(message, tools=get_weather):
+            if str(chunk):
+                print(str(chunk), end="")
+        print("")
+    else:
+        response = await client.get_response(message, tools=get_weather)
+        print(f"Assistant: {response}")
 
 
 if __name__ == "__main__":
-    load_dotenv()
     asyncio.run(main())
