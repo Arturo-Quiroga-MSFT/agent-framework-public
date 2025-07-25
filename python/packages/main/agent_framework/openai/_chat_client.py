@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncIterable, Mapping, MutableSequence, Sequence
 from datetime import datetime
 from itertools import chain
-from typing import Any, ClassVar, cast
+from typing import Any, cast
 
 from openai import AsyncOpenAI, AsyncStream
 from openai.types import CompletionUsage
@@ -34,16 +34,16 @@ from ._shared import OpenAIConfigBase, OpenAIHandler, OpenAIModelTypes, OpenAISe
 __all__ = ["OpenAIChatClient"]
 
 
+# region OpenAIChatClientBase
+
+
 # Implements agent_framework.ChatClient protocol, through ChatClientBase
 @use_tool_calling
 class OpenAIChatClientBase(OpenAIHandler, ChatClientBase):
     """OpenAI Chat completion class."""
 
-    MODEL_PROVIDER_NAME: ClassVar[str] = "openai"
-    SUPPORTS_FUNCTION_CALLING: ClassVar[bool] = True
-
     # region Overriding base class methods
-    # most of the methods are overridden from the ChatCompletionClientBase class, otherwise it is mentioned
+    # most of the methods are overridden from the ChatClientBase class, otherwise it is mentioned
 
     async def _inner_get_response(
         self,
@@ -63,7 +63,6 @@ class OpenAIChatClientBase(OpenAIHandler, ChatClientBase):
             self._create_chat_message_content(response, choice, response_metadata) for choice in response.choices
         )
 
-    # @trace_streaming_chat_completion(MODEL_PROVIDER_NAME)
     async def _inner_get_streaming_response(
         self,
         *,
@@ -79,6 +78,7 @@ class OpenAIChatClientBase(OpenAIHandler, ChatClientBase):
         if not isinstance(response, AsyncStream):
             raise ServiceInvalidResponseError("Expected an AsyncStream[ChatCompletionChunk] response.")
         async for chunk in response:
+            assert isinstance(chunk, ChatCompletionChunk)  # nosec  # noqa: S101
             if len(chunk.choices) == 0 and chunk.usage is None:
                 continue
 
@@ -269,6 +269,11 @@ class OpenAIChatClientBase(OpenAIHandler, ChatClientBase):
                 return content.model_dump(exclude_none=True)
 
 
+# endregion
+
+# region OpenAIChatClient
+
+
 class OpenAIChatClient(OpenAIConfigBase, OpenAIChatClientBase):
     """OpenAI Chat completion class."""
 
@@ -301,21 +306,13 @@ class OpenAIChatClient(OpenAIConfigBase, OpenAIChatClientBase):
             instruction_role (str | None): The role to use for 'instruction' messages, for example,
         """
         try:
-            if api_key:
-                openai_settings = OpenAISettings(
-                    api_key=SecretStr(api_key),
-                    org_id=org_id,
-                    chat_model_id=ai_model_id,
-                    env_file_path=env_file_path,
-                    env_file_encoding=env_file_encoding,
-                )
-            else:
-                openai_settings = OpenAISettings(
-                    org_id=org_id,
-                    chat_model_id=ai_model_id,
-                    env_file_path=env_file_path,
-                    env_file_encoding=env_file_encoding,
-                )
+            openai_settings = OpenAISettings(
+                api_key=SecretStr(api_key) if api_key else None,
+                org_id=org_id,
+                chat_model_id=ai_model_id,
+                env_file_path=env_file_path,
+                env_file_encoding=env_file_encoding,
+            )
         except ValidationError as ex:
             raise ServiceInitializationError("Failed to create OpenAI settings.", ex) from ex
 
@@ -345,3 +342,6 @@ class OpenAIChatClient(OpenAIConfigBase, OpenAIChatClientBase):
             ai_model_id=settings["ai_model_id"],
             default_headers=settings.get("default_headers"),
         )
+
+
+# endregion
