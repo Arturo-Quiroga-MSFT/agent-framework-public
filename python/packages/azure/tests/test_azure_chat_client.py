@@ -646,9 +646,10 @@ def get_story_text() -> str:
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_response() -> None:
     """Test Azure OpenAI chat completion responses."""
-    azure_chat_client = AzureChatClient(deployment_name="gpt-4o")
+    azure_chat_client = AzureChatClient()
 
     assert isinstance(azure_chat_client, ChatClient)
+    print(f"Using Azure OpenAI endpoint: {azure_chat_client.client._azure_endpoint}")  # noqa
 
     messages: list[ChatMessage] = []
     messages.append(
@@ -673,7 +674,7 @@ async def test_azure_openai_chat_client_response() -> None:
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_response_tools() -> None:
     """Test AzureOpenAI chat completion responses."""
-    azure_chat_client = AzureChatClient(deployment_name="gpt-4o")
+    azure_chat_client = AzureChatClient()
 
     assert isinstance(azure_chat_client, ChatClient)
 
@@ -695,7 +696,7 @@ async def test_azure_openai_chat_client_response_tools() -> None:
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_streaming() -> None:
     """Test Azure OpenAI chat completion responses."""
-    azure_chat_client = AzureChatClient(deployment_name="gpt-4o")
+    azure_chat_client = AzureChatClient()
 
     assert isinstance(azure_chat_client, ChatClient)
 
@@ -728,7 +729,7 @@ async def test_azure_openai_chat_client_streaming() -> None:
 @skip_if_azure_integration_tests_disabled
 async def test_azure_openai_chat_client_streaming_tools() -> None:
     """Test AzureOpenAI chat completion responses."""
-    azure_chat_client = AzureChatClient(deployment_name="gpt-4o")
+    azure_chat_client = AzureChatClient()
 
     assert isinstance(azure_chat_client, ChatClient)
 
