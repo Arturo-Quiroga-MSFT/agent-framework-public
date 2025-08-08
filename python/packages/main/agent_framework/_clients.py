@@ -39,7 +39,7 @@ __all__ = [
     "use_tool_calling",
 ]
 
-# region: Tool Calling Functions and Decorators
+# region Tool Calling Functions and Decorators
 
 
 async def _auto_invoke_function(
@@ -253,7 +253,7 @@ def use_tool_calling(cls: type[TChatClientBase]) -> type[TChatClientBase]:
     return cls
 
 
-# region: ChatClient Protocol
+# region ChatClient Protocol
 
 
 @runtime_checkable
@@ -675,7 +675,7 @@ class ChatClientBase(AFBaseModel, ABC):
         return ChatClientAgent(chat_client=self, name=name, instructions=instructions, tools=tools, **kwargs)
 
 
-# region: Embedding Client
+# region Embedding Client
 
 
 @runtime_checkable
