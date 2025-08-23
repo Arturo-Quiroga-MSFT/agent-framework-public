@@ -11,6 +11,7 @@ from agent_framework.workflow import (
     RequestInfoEvent,
     RequestInfoExecutor,
     RequestInfoMessage,
+    RequestResponse,
     WorkflowBuilder,
     WorkflowCompletedEvent,
     WorkflowContext,
@@ -68,10 +69,13 @@ class MockExecutorRequestApproval(Executor):
         await ctx.send_message(RequestInfoMessage())
 
     @handler
-    async def mock_handler_b(self, message: ApprovalMessage, ctx: WorkflowContext[NumberMessage]) -> None:
+    async def mock_handler_b(
+        self, message: RequestResponse[RequestInfoMessage, ApprovalMessage], ctx: WorkflowContext[NumberMessage]
+    ) -> None:
         """A mock handler that processes the approval response."""
         data = await ctx.get_shared_state(self.id)
-        if message.approved:
+        assert isinstance(message.data, ApprovalMessage)
+        if message.data.approved:
             await ctx.add_event(WorkflowCompletedEvent(data=data))
         else:
             await ctx.send_message(NumberMessage(data=data))
