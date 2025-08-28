@@ -30,6 +30,15 @@
     <Project Path="samples/GettingStartedSteps/Step08_ChatClientAgent_Telemetry/Step08_ChatClientAgent_Telemetry.csproj" />
     <Project Path="samples/GettingStartedSteps/Step09_ChatClientAgent_DependencyInjection/Step09_ChatClientAgent_DependencyInjection.csproj" />
   </Folder>
+  <Folder Name="/Samples/HowToCreateAnAIAgentByProvider/">
+    <File Path="samples/HowToCreateAnAIAgentByProvider/README.md" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_AzureFoundry/AIAgent_With_AzureFoundry.csproj" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_AzureOpenAIChatCompletion/AIAgent_With_AzureOpenAIChatCompletion.csproj" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_AzureOpenAIResponses/AIAgent_With_AzureOpenAIResponses.csproj" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_ONNX/AIAgent_With_ONNX.csproj" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_OpenAIChatCompletion/AIAgent_With_OpenAIChatCompletion.csproj" />
+    <Project Path="samples/HowToCreateAnAIAgentByProvider/AIAgent_With_OpenAIResponses/AIAgent_With_OpenAIResponses.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
