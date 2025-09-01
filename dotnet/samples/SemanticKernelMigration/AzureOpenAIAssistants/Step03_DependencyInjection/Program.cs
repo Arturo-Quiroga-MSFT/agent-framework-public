@@ -2,15 +2,18 @@
 
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
+using Azure.AI.OpenAI;
+using Azure.Identity;
 using Microsoft.Extensions.AI.Agents;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents.OpenAI;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 using OpenAI.Assistants;
 
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
-var modelId = System.Environment.GetEnvironmentVariable("OPENAI_MODELID") ?? "gpt-4o";
+var endpoint = Environment.GetEnvironmentVariable("AZUREOPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZUREOPENAI_ENDPOINT is not set.");
+var deploymentName = System.Environment.GetEnvironmentVariable("AZUREOPENAI_DEPLOYMENT_NAME") ?? "gpt-4o";
 var userInput = "Tell me a joke about a pirate.";
 
 Console.WriteLine($"User Input: {userInput}");
@@ -22,17 +25,23 @@ async Task SKAgent()
 {
     Console.WriteLine("\n=== SK Agent ===\n");
 
-    var builder = Kernel.CreateBuilder().AddOpenAIChatClient(modelId, apiKey);
+    var serviceCollection = new ServiceCollection();
+    serviceCollection.AddSingleton((sp) => new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetAssistantClient());
+    serviceCollection.AddKernel().AddAzureOpenAIChatClient(deploymentName, endpoint, new AzureCliCredential());
+    serviceCollection.AddTransient((sp) =>
+    {
+        var assistantsClient = sp.GetRequiredService<AssistantClient>();
 
-    var assistantsClient = new AssistantClient(apiKey);
+        Assistant assistant = assistantsClient.CreateAssistant(deploymentName, new() { Name = "Joker", Instructions = "You are good at telling jokes." });
 
-    // Define the assistant
-    Assistant assistant = await assistantsClient.CreateAssistantAsync(modelId, name: "Joker", instructions: "You are good at telling jokes.");
+        return new OpenAIAssistantAgent(assistant, assistantsClient);
+    });
 
-    // Create the agent
-    OpenAIAssistantAgent agent = new(assistant, assistantsClient);
+    await using ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+    var agent = serviceProvider.GetRequiredService<OpenAIAssistantAgent>();
 
     // Create a thread for the agent conversation.
+    var assistantsClient = serviceProvider.GetRequiredService<AssistantClient>();
     var thread = new OpenAIAssistantAgentThread(assistantsClient);
     var settings = new OpenAIPromptExecutionSettings() { MaxTokens = 1000 };
     var agentOptions = new OpenAIAssistantAgentInvokeOptions() { KernelArguments = new(settings) };
@@ -57,9 +66,19 @@ async Task AFAgent()
 {
     Console.WriteLine("\n=== AF Agent ===\n");
 
-    var assistantClient = new AssistantClient(apiKey);
+    var serviceCollection = new ServiceCollection();
+    serviceCollection.AddSingleton((sp) => new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetAssistantClient());
+    serviceCollection.AddTransient((sp) =>
+    {
+        var assistantClient = sp.GetRequiredService<AssistantClient>();
 
-    var agent = await assistantClient.CreateAIAgentAsync(modelId, name: "Joker", instructions: "You are good at telling jokes.");
+        var agent = assistantClient.CreateAIAgent(deploymentName, name: "Joker", instructions: "You are good at telling jokes.");
+
+        return agent;
+    });
+
+    await using ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+    var agent = serviceProvider.GetRequiredService<AIAgent>();
 
     var thread = agent.GetNewThread();
     var agentOptions = new ChatClientAgentRunOptions(new() { MaxOutputTokens = 1000 });
@@ -74,6 +93,7 @@ async Task AFAgent()
     }
 
     // Clean up
+    var assistantClient = serviceProvider.GetRequiredService<AssistantClient>();
     await assistantClient.DeleteThreadAsync(thread.ConversationId);
     await assistantClient.DeleteAssistantAsync(agent.Id);
 }

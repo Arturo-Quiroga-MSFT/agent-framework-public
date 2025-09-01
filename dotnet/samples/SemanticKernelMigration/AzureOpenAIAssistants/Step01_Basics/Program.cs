@@ -2,6 +2,8 @@
 
 #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
+using Azure.AI.OpenAI;
+using Azure.Identity;
 using Microsoft.Extensions.AI.Agents;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents.OpenAI;
@@ -9,8 +11,8 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI;
 using OpenAI.Assistants;
 
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
-var modelId = System.Environment.GetEnvironmentVariable("OPENAI_MODELID") ?? "gpt-4o";
+var endpoint = Environment.GetEnvironmentVariable("AZUREOPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZUREOPENAI_ENDPOINT is not set.");
+var deploymentName = System.Environment.GetEnvironmentVariable("AZUREOPENAI_DEPLOYMENT_NAME") ?? "gpt-4o";
 var userInput = "Tell me a joke about a pirate.";
 
 Console.WriteLine($"User Input: {userInput}");
@@ -22,12 +24,12 @@ async Task SKAgent()
 {
     Console.WriteLine("\n=== SK Agent ===\n");
 
-    var builder = Kernel.CreateBuilder().AddOpenAIChatClient(modelId, apiKey);
+    var builder = Kernel.CreateBuilder().AddAzureOpenAIChatClient(deploymentName, endpoint, new AzureCliCredential());
 
-    var assistantsClient = new AssistantClient(apiKey);
+    var assistantsClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetAssistantClient();
 
     // Define the assistant
-    Assistant assistant = await assistantsClient.CreateAssistantAsync(modelId, name: "Joker", instructions: "You are good at telling jokes.");
+    Assistant assistant = await assistantsClient.CreateAssistantAsync(deploymentName, name: "Joker", instructions: "You are good at telling jokes.");
 
     // Create the agent
     OpenAIAssistantAgent agent = new(assistant, assistantsClient);
@@ -57,9 +59,9 @@ async Task AFAgent()
 {
     Console.WriteLine("\n=== AF Agent ===\n");
 
-    var assistantClient = new AssistantClient(apiKey);
+    var assistantClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetAssistantClient();
 
-    var agent = await assistantClient.CreateAIAgentAsync(modelId, name: "Joker", instructions: "You are good at telling jokes.");
+    var agent = await assistantClient.CreateAIAgentAsync(deploymentName, name: "Joker", instructions: "You are good at telling jokes.");
 
     var thread = agent.GetNewThread();
     var agentOptions = new ChatClientAgentRunOptions(new() { MaxOutputTokens = 1000 });
