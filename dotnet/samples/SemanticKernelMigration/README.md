@@ -346,6 +346,10 @@ To run any migration sample, navigate to the desired sample directory:
 cd "AzureAIFoundry\Step01_Basics"
 dotnet run
 
+# Azure OpenAI Examples
+cd "AzureOpenAI\Step01_Basics"
+dotnet run
+
 # OpenAI Examples
 cd "OpenAI\Step01_Basics"
 dotnet run
@@ -353,6 +357,9 @@ dotnet run
 # OpenAI Assistants Examples
 cd "OpenAIAssistants\Step01_Basics"
 dotnet run
+
+# OpenAI Responses Examples
+cd "OpenAIResponses\Step01_Basics"
 
 # Azure OpenAI Examples
 cd "AzureOpenAI\Step01_Basics"
