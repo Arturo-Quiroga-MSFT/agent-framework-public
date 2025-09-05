@@ -34,7 +34,12 @@ except ImportError:
     )
 
 """
+Sample: Sub-workflow with parallel requests
+
 This sample demonstrates the PROPER pattern for request interception.
+
+Prerequisites:
+- No external services required (external handling simulated via `RequestInfoExecutor`).
 
 Key principles:
 1. Only ONE executor intercepts a given request type from a specific sub-workflow
