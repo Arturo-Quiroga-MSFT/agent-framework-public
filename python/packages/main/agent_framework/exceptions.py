@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 logger = logging.getLogger("agent_framework")
 
@@ -12,12 +12,20 @@ class AgentFrameworkException(Exception):
     Automatically logs the message as debug.
     """
 
-    def __init__(self, message: str, inner_exception: Exception | None = None, *args: Any):
+    def __init__(
+        self,
+        message: str,
+        inner_exception: Exception | None = None,
+        log_level: Literal[0] | Literal[10] | Literal[20] | Literal[30] | Literal[40] | Literal[50] | None = 10,
+        *args: Any,
+        **kwargs: Any,
+    ):
         """Create an AgentFrameworkException.
 
-        This emits a debug log, with the inner_exception if provided.
+        This emits a debug log (by default), with the inner_exception if provided.
         """
-        logger.debug(message, exc_info=inner_exception)
+        if log_level is not None:
+            logger.log(log_level, message, exc_info=inner_exception)
         if inner_exception:
             super().__init__(message, inner_exception, *args)  # type: ignore
         super().__init__(message, *args)  # type: ignore
@@ -31,6 +39,24 @@ class AgentException(AgentFrameworkException):
 
 class AgentExecutionException(AgentException):
     """An error occurred while executing the agent."""
+
+    pass
+
+
+class AgentInitializationError(AgentException):
+    """An error occurred while initializing the agent."""
+
+    pass
+
+
+class ChatClientException(AgentFrameworkException):
+    """An error occurred while dealing with a chat client."""
+
+    pass
+
+
+class ChatClientInitializationError(ChatClientException):
+    """An error occurred while initializing the chat client."""
 
     pass
 
@@ -101,9 +127,4 @@ class ToolExecutionException(ToolException):
 class AdditionItemMismatch(AgentFrameworkException):
     """An error occurred while adding two types."""
 
-    def __init__(self) -> None:
-        """Create an AdditionItemMismatch.
-
-        Unlike the AgentFrameworkException, this does not log the message automatically,
-        """
-        pass
+    pass

@@ -933,7 +933,7 @@ class FunctionCallContent(BaseContent):
         if not isinstance(other, FunctionCallContent):
             raise TypeError("Incompatible type")
         if other.call_id and self.call_id != other.call_id:
-            raise AdditionItemMismatch
+            raise AdditionItemMismatch("", log_level=None)
         if not self.arguments:
             arguments = other.arguments
         elif not other.arguments:

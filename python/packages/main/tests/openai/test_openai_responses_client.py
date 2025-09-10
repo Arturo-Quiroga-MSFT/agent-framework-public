@@ -373,7 +373,7 @@ def test_chat_message_parsing_with_function_calls() -> None:
         asyncio.run(client.get_response(messages=messages))
 
 
-def test_response_format_parse_path() -> None:
+async def test_response_format_parse_path() -> None:
     """Test get_response response_format parsing path."""
     client = OpenAIResponsesClient(ai_model_id="test-model", api_key="test-key")
 
@@ -386,19 +386,18 @@ def test_response_format_parse_path() -> None:
     mock_parsed_response.metadata = {}
     mock_parsed_response.output_parsed = None
     mock_parsed_response.usage = None
+    mock_parsed_response.finish_reason = None
 
     with patch.object(client.client.responses, "parse", return_value=mock_parsed_response):
-        response = asyncio.run(
-            client.get_response(
-                messages=[ChatMessage(role="user", text="Test message")], response_format=OutputStruct, store=True
-            )
+        response = await client.get_response(
+            messages=[ChatMessage(role="user", text="Test message")], response_format=OutputStruct, store=True
         )
 
         assert response.conversation_id == "parsed_response_123"
         assert response.ai_model_id == "test-model"
 
 
-def test_bad_request_error_non_content_filter() -> None:
+async def test_bad_request_error_non_content_filter() -> None:
     """Test get_response BadRequestError without content_filter."""
     client = OpenAIResponsesClient(ai_model_id="test-model", api_key="test-key")
 
@@ -412,10 +411,8 @@ def test_bad_request_error_non_content_filter() -> None:
 
     with patch.object(client.client.responses, "parse", side_effect=mock_error):
         with pytest.raises(ServiceResponseException) as exc_info:
-            asyncio.run(
-                client.get_response(
-                    messages=[ChatMessage(role="user", text="Test message")], response_format=OutputStruct
-                )
+            await client.get_response(
+                messages=[ChatMessage(role="user", text="Test message")], response_format=OutputStruct
             )
 
         assert "failed to complete the prompt" in str(exc_info.value)
@@ -440,11 +437,13 @@ async def test_streaming_content_filter_exception_handling() -> None:
                 break
 
 
-def test_get_streaming_response_with_all_parameters() -> None:
+@skip_if_openai_integration_tests_disabled
+async def test_get_streaming_response_with_all_parameters() -> None:
     """Test get_streaming_response with all possible parameters."""
     client = OpenAIResponsesClient(ai_model_id="test-model", api_key="test-key")
 
-    async def run_streaming_test():
+    # Should fail due to invalid API key
+    with pytest.raises(ServiceResponseException):
         response = client.get_streaming_response(
             messages=[ChatMessage(role="user", text="Test streaming")],
             include=["file_search_call.results"],
@@ -470,10 +469,6 @@ def test_get_streaming_response_with_all_parameters() -> None:
         # Just iterate once to trigger the logic
         async for _ in response:
             break
-
-    # Should fail due to invalid API key
-    with pytest.raises(ServiceResponseException):
-        asyncio.run(run_streaming_test())
 
 
 def test_response_content_creation_with_annotations() -> None:
@@ -731,7 +726,9 @@ def test_create_streaming_response_content_with_mcp_approval_request() -> None:
     assert fa.function_call.name == "do_stream_action"
 
 
-def test_end_to_end_mcp_approval_flow() -> None:
+@pytest.mark.parametrize("enable_otel", [False], indirect=True)
+@pytest.mark.parametrize("enable_sensitive_data", [False], indirect=True)
+def test_end_to_end_mcp_approval_flow(otel_settings) -> None:
     """End-to-end mocked test:
     model issues an mcp_approval_request, user approves, client sends mcp_approval_response.
     """

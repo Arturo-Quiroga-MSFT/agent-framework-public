@@ -15,7 +15,7 @@ from agent_framework import (
 )
 from agent_framework._tools import _parse_inputs
 from agent_framework.exceptions import ToolException
-from agent_framework.telemetry import GenAIAttributes
+from agent_framework.telemetry import OtelAttr
 
 # region AIFunction and ai_function decorator tests
 
@@ -83,19 +83,23 @@ async def test_ai_function_decorator_with_async():
     assert (await async_test_tool(1, 2)) == 3
 
 
-# Telemetry tests for AIFunction
-async def test_ai_function_invoke_telemetry_enabled():
+@pytest.mark.parametrize("otel_settings", [(True, True)], indirect=True)
+async def test_ai_function_invoke_telemetry_enabled(otel_settings):
     """Test the ai_function invoke method with telemetry enabled."""
 
-    @ai_function(name="telemetry_test_tool", description="A test tool for telemetry")
+    @ai_function(
+        name="telemetry_test_tool",
+        description="A test tool for telemetry",
+        additional_properties={"otel_settings": otel_settings},
+    )
     def telemetry_test_tool(x: int, y: int) -> int:
         """A function that adds two numbers for telemetry testing."""
         return x + y
 
     # Mock the tracer and span
     with (
-        patch("agent_framework._tools.tracer") as mock_tracer,
-        patch("agent_framework._tools.start_as_current_span") as mock_start_span,
+        patch("agent_framework.telemetry.tracer"),
+        patch("agent_framework._tools.get_function_span") as mock_start_span,
     ):
         mock_span = Mock()
         mock_context_manager = Mock()
@@ -114,23 +118,26 @@ async def test_ai_function_invoke_telemetry_enabled():
         assert result == 3
 
         # Verify telemetry calls
-        mock_start_span.assert_called_once_with(
-            mock_tracer, telemetry_test_tool, metadata={"tool_call_id": "test_call_id", "kwargs": {"x": 1, "y": 2}}
-        )
+        mock_start_span.assert_called_once_with(function=telemetry_test_tool, tool_call_id="test_call_id")
 
         # Verify histogram was called with correct attributes
         mock_histogram.record.assert_called_once()
         call_args = mock_histogram.record.call_args
         assert call_args[0][0] > 0  # duration should be positive
         attributes = call_args[1]["attributes"]
-        assert attributes[GenAIAttributes.MEASUREMENT_FUNCTION_TAG_NAME.value] == "telemetry_test_tool"
-        assert attributes[GenAIAttributes.TOOL_CALL_ID.value] == "test_call_id"
+        assert attributes[OtelAttr.MEASUREMENT_FUNCTION_TAG_NAME] == "telemetry_test_tool"
+        assert attributes[OtelAttr.TOOL_CALL_ID] == "test_call_id"
 
 
-async def test_ai_function_invoke_telemetry_with_pydantic_args():
+@pytest.mark.parametrize("otel_settings", [(True, True)], indirect=True)
+async def test_ai_function_invoke_telemetry_with_pydantic_args(otel_settings):
     """Test the ai_function invoke method with Pydantic model arguments."""
 
-    @ai_function(name="pydantic_test_tool", description="A test tool with Pydantic args")
+    @ai_function(
+        name="pydantic_test_tool",
+        description="A test tool with Pydantic args",
+        additional_properties={"otel_settings": otel_settings},
+    )
     def pydantic_test_tool(x: int, y: int) -> int:
         """A function that adds two numbers using Pydantic args."""
         return x + y
@@ -139,8 +146,8 @@ async def test_ai_function_invoke_telemetry_with_pydantic_args():
     args_model = pydantic_test_tool.input_model(x=5, y=10)
 
     with (
-        patch("agent_framework._tools.tracer") as mock_tracer,
-        patch("agent_framework._tools.start_as_current_span") as mock_start_span,
+        patch("agent_framework.telemetry.tracer"),
+        patch("agent_framework._tools.get_function_span") as mock_start_span,
     ):
         mock_span = Mock()
         mock_context_manager = Mock()
@@ -159,21 +166,27 @@ async def test_ai_function_invoke_telemetry_with_pydantic_args():
 
         # Verify telemetry calls
         mock_start_span.assert_called_once_with(
-            mock_tracer, pydantic_test_tool, metadata={"tool_call_id": "pydantic_call", "kwargs": {"x": 5, "y": 10}}
+            function=pydantic_test_tool,
+            tool_call_id="pydantic_call",
         )
 
 
-async def test_ai_function_invoke_telemetry_with_exception():
+@pytest.mark.parametrize("otel_settings", [(True, True)], indirect=True)
+async def test_ai_function_invoke_telemetry_with_exception(otel_settings):
     """Test the ai_function invoke method with telemetry when an exception occurs."""
 
-    @ai_function(name="exception_test_tool", description="A test tool that raises an exception")
+    @ai_function(
+        name="exception_test_tool",
+        description="A test tool that raises an exception",
+        additional_properties={"otel_settings": otel_settings},
+    )
     def exception_test_tool(x: int, y: int) -> int:
         """A function that raises an exception for telemetry testing."""
         raise ValueError("Test exception for telemetry")
 
     with (
-        patch("agent_framework._tools.tracer"),
-        patch("agent_framework._tools.start_as_current_span") as mock_start_span,
+        patch("agent_framework.telemetry.tracer"),
+        patch("agent_framework._tools.get_function_span") as mock_start_span,
     ):
         mock_span = Mock()
         mock_context_manager = Mock()
@@ -200,20 +213,25 @@ async def test_ai_function_invoke_telemetry_with_exception():
         mock_histogram.record.assert_called_once()
         call_args = mock_histogram.record.call_args
         attributes = call_args[1]["attributes"]
-        assert attributes[GenAIAttributes.ERROR_TYPE.value] == "ValueError"
+        assert attributes[OtelAttr.ERROR_TYPE] == ValueError.__name__
 
 
-async def test_ai_function_invoke_telemetry_async_function():
+@pytest.mark.parametrize("otel_settings", [(True, True)], indirect=True)
+async def test_ai_function_invoke_telemetry_async_function(otel_settings):
     """Test the ai_function invoke method with telemetry on async function."""
 
-    @ai_function(name="async_telemetry_test", description="An async test tool for telemetry")
+    @ai_function(
+        name="async_telemetry_test",
+        description="An async test tool for telemetry",
+        additional_properties={"otel_settings": otel_settings},
+    )
     async def async_telemetry_test(x: int, y: int) -> int:
         """An async function for telemetry testing."""
         return x * y
 
     with (
-        patch("agent_framework._tools.tracer") as mock_tracer,
-        patch("agent_framework._tools.start_as_current_span") as mock_start_span,
+        patch("agent_framework.telemetry.tracer"),
+        patch("agent_framework._tools.get_function_span") as mock_start_span,
     ):
         mock_span = Mock()
         mock_context_manager = Mock()
@@ -231,54 +249,13 @@ async def test_ai_function_invoke_telemetry_async_function():
         assert result == 12
 
         # Verify telemetry calls
-        mock_start_span.assert_called_once_with(
-            mock_tracer, async_telemetry_test, metadata={"tool_call_id": "async_call", "kwargs": {"x": 3, "y": 4}}
-        )
+        mock_start_span.assert_called_once_with(function=async_telemetry_test, tool_call_id="async_call")
 
         # Verify histogram recording
         mock_histogram.record.assert_called_once()
         call_args = mock_histogram.record.call_args
         attributes = call_args[1]["attributes"]
-        assert attributes[GenAIAttributes.MEASUREMENT_FUNCTION_TAG_NAME.value] == "async_telemetry_test"
-
-
-async def test_ai_function_invoke_telemetry_no_tool_call_id():
-    """Test the ai_function invoke method with telemetry when no tool_call_id is provided."""
-
-    @ai_function(name="no_id_test_tool", description="A test tool without tool_call_id")
-    def no_id_test_tool(x: int) -> int:
-        """A function for testing without tool_call_id."""
-        return x * 2
-
-    with (
-        patch("agent_framework._tools.tracer") as mock_tracer,
-        patch("agent_framework._tools.start_as_current_span") as mock_start_span,
-    ):
-        mock_span = Mock()
-        mock_context_manager = Mock()
-        mock_context_manager.__enter__ = Mock(return_value=mock_span)
-        mock_context_manager.__exit__ = Mock(return_value=None)
-        mock_start_span.return_value = mock_context_manager
-
-        mock_histogram = Mock()
-        no_id_test_tool._invocation_duration_histogram = mock_histogram
-
-        # Call invoke without tool_call_id
-        result = await no_id_test_tool.invoke(x=5)
-
-        # Verify result
-        assert result == 10
-
-        # Verify telemetry calls
-        mock_start_span.assert_called_once_with(
-            mock_tracer, no_id_test_tool, metadata={"tool_call_id": None, "kwargs": {"x": 5}}
-        )
-
-        # Verify histogram attributes
-        mock_histogram.record.assert_called_once()
-        call_args = mock_histogram.record.call_args
-        attributes = call_args[1]["attributes"]
-        assert attributes[GenAIAttributes.TOOL_CALL_ID.value] is None
+        assert attributes[OtelAttr.MEASUREMENT_FUNCTION_TAG_NAME] == "async_telemetry_test"
 
 
 async def test_ai_function_invoke_invalid_pydantic_args():

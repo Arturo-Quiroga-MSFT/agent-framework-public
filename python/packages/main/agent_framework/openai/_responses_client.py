@@ -25,7 +25,7 @@ from openai.types.responses.web_search_tool_param import UserLocation as WebSear
 from openai.types.responses.web_search_tool_param import WebSearchToolParam
 from pydantic import BaseModel, SecretStr, ValidationError
 
-from .._clients import BaseChatClient, use_tool_calling
+from .._clients import BaseChatClient
 from .._logging import get_logger
 from .._tools import (
     AIFunction,
@@ -34,6 +34,7 @@ from .._tools import (
     HostedMCPTool,
     HostedWebSearchTool,
     ToolProtocol,
+    use_function_invocation,
 )
 from .._types import (
     ChatMessage,
@@ -406,7 +407,7 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
                             tool_args["file_ids"] = []
                             for tool_input in tool.inputs:
                                 if isinstance(tool_input, HostedFileContent):
-                                    tool_args["file_ids"].append(tool_input.file_id)
+                                    tool_args["file_ids"].append(tool_input.file_id)  # type: ignore[attr-defined]
                             if not tool_args["file_ids"]:
                                 tool_args.pop("file_ids")
                         response_tools.append(
@@ -1040,8 +1041,8 @@ class OpenAIBaseResponsesClient(OpenAIBase, BaseChatClient):
 TOpenAIResponsesClient = TypeVar("TOpenAIResponsesClient", bound="OpenAIResponsesClient")
 
 
+@use_function_invocation
 @use_telemetry
-@use_tool_calling
 class OpenAIResponsesClient(OpenAIConfigMixin, OpenAIBaseResponsesClient):
     """OpenAI Responses client class."""
 
