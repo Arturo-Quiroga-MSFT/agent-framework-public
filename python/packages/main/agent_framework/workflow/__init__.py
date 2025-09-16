@@ -62,6 +62,7 @@ _IMPORTS = [
     "WorkflowErrorDetails",
     "WorkflowFailedEvent",
     "ConcurrentBuilder",
+    "SequentialBuilder",
 ]
 
 
