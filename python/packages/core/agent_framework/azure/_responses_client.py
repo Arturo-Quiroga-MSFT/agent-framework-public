@@ -43,6 +43,7 @@ class AzureOpenAIResponsesClient(AzureOpenAIConfigMixin, OpenAIBaseResponsesClie
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
         instruction_role: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize an AzureResponses service.
 
@@ -68,7 +69,10 @@ class AzureOpenAIResponsesClient(AzureOpenAIConfigMixin, OpenAIBaseResponsesClie
             env_file_encoding: The encoding of the environment settings file, defaults to 'utf-8'.
             instruction_role: The role to use for 'instruction' messages, for example, summarization
                 prompts could use `developer` or `system`. (Optional)
+            kwargs: Additional keyword arguments.
         """
+        if model_id := kwargs.pop("model_id", None) and not deployment_name:
+            deployment_name = str(model_id)
         try:
             azure_openai_settings = AzureOpenAISettings(
                 # pydantic settings will see if there is a value, if not, will try the env var or .env file
@@ -114,23 +118,4 @@ class AzureOpenAIResponsesClient(AzureOpenAIConfigMixin, OpenAIBaseResponsesClie
             default_headers=default_headers,
             client=async_client,
             instruction_role=instruction_role,
-        )
-
-    @classmethod
-    def from_dict(cls: type[TAzureOpenAIResponsesClient], settings: dict[str, Any]) -> TAzureOpenAIResponsesClient:
-        """Initialize an Open AI service from a dictionary of settings.
-
-        Args:
-            settings: A dictionary of settings for the service.
-        """
-        return cls(
-            api_key=settings.get("api_key"),
-            deployment_name=settings.get("deployment_name"),
-            endpoint=settings.get("endpoint"),
-            base_url=settings.get("base_url"),
-            api_version=settings.get("api_version"),
-            ad_token=settings.get("ad_token"),
-            ad_token_provider=settings.get("ad_token_provider"),
-            default_headers=settings.get("default_headers"),
-            env_file_path=settings.get("env_file_path"),
         )
