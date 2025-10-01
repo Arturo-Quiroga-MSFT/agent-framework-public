@@ -319,6 +319,8 @@ class AzureAIAgentClient(BaseChatClient):
             if run_options:
                 if "tools" in run_options:
                     args["tools"] = run_options["tools"]
+                if "tool_resources" in run_options:
+                    args["tool_resources"] = run_options["tool_resources"]
                 if "instructions" in run_options:
                     args["instructions"] = run_options["instructions"]
                 if "response_format" in run_options:
@@ -636,9 +638,42 @@ class AzureAIAgentClient(BaseChatClient):
 
             if chat_options.tool_choice is not None:
                 if chat_options.tool_choice != "none" and chat_options.tools:
-                    tool_definitions = await self._prep_tools(chat_options.tools)
+                    tool_definitions = await self._prep_tools(chat_options.tools, run_options)
                     if tool_definitions:
                         run_options["tools"] = tool_definitions
+
+                    # Handle MCP tool resources for approval mode
+                    mcp_tools = [tool for tool in chat_options.tools if isinstance(tool, HostedMCPTool)]
+                    if mcp_tools:
+                        mcp_resources = []
+                        for mcp_tool in mcp_tools:
+                            server_label = mcp_tool.name.replace(" ", "_")
+                            mcp_resource: dict[str, Any] = {"server_label": server_label}
+
+                            if mcp_tool.approval_mode is not None:
+                                match mcp_tool.approval_mode:
+                                    case str():
+                                        # Map agent framework approval modes to Azure AI approval modes
+                                        approval_mode = (
+                                            "always" if mcp_tool.approval_mode == "always_require" else "never"
+                                        )
+                                        mcp_resource["require_approval"] = approval_mode
+                                    case _:
+                                        if "always_require_approval" in mcp_tool.approval_mode:
+                                            mcp_resource["require_approval"] = {
+                                                "always": mcp_tool.approval_mode["always_require_approval"]
+                                            }
+                                        elif "never_require_approval" in mcp_tool.approval_mode:
+                                            mcp_resource["require_approval"] = {
+                                                "never": mcp_tool.approval_mode["never_require_approval"]
+                                            }
+
+                            mcp_resources.append(mcp_resource)
+
+                        # Add MCP resources to tool_resources
+                        if "tool_resources" not in run_options:
+                            run_options["tool_resources"] = {}
+                        run_options["tool_resources"]["mcp"] = mcp_resources
 
                 if chat_options.tool_choice == "none":
                     run_options["tool_choice"] = AgentsToolChoiceOptionMode.NONE
@@ -710,7 +745,7 @@ class AzureAIAgentClient(BaseChatClient):
         return run_options, required_action_results
 
     async def _prep_tools(
-        self, tools: Sequence["ToolProtocol | MutableMapping[str, Any]"]
+        self, tools: Sequence["ToolProtocol | MutableMapping[str, Any]"], run_options: dict[str, Any] | None = None
     ) -> list[ToolDefinition | dict[str, Any]]:
         """Prepare tool definitions for the run options."""
         tool_definitions: list[ToolDefinition | dict[str, Any]] = []
@@ -768,18 +803,20 @@ class AzureAIAgentClient(BaseChatClient):
                 case HostedCodeInterpreterTool():
                     tool_definitions.append(CodeInterpreterToolDefinition())
                 case HostedMCPTool():
-                    tool_definitions.extend(
-                        McpTool(
-                            server_label=tool.name.replace(" ", "_"),
-                            server_url=str(tool.url),
-                            allowed_tools=list(tool.allowed_tools) if tool.allowed_tools else [],
-                        ).definitions
+                    mcp_tool = McpTool(
+                        server_label=tool.name.replace(" ", "_"),
+                        server_url=str(tool.url),
+                        allowed_tools=list(tool.allowed_tools) if tool.allowed_tools else [],
                     )
+                    tool_definitions.extend(mcp_tool.definitions)
                 case HostedFileSearchTool():
                     vector_stores = [inp for inp in tool.inputs or [] if isinstance(inp, HostedVectorStoreContent)]
                     if vector_stores:
                         file_search = FileSearchTool(vector_store_ids=[vs.vector_store_id for vs in vector_stores])
                         tool_definitions.extend(file_search.definitions)
+                        # Set tool_resources for file search to work properly with Azure AI
+                        if run_options is not None and "tool_resources" not in run_options:
+                            run_options["tool_resources"] = file_search.resources
                     else:
                         additional_props = tool.additional_properties or {}
                         index_name = additional_props.get("index_name") or os.getenv("AZURE_AI_SEARCH_INDEX_NAME")
