@@ -13,6 +13,13 @@ from agent_framework import (
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 
+"""
+Azure AI Agent with Multiple Tools Example
+
+This sample demonstrates integrating multiple tools (MCP and Web Search) with Azure AI Agents,
+including user approval workflows for function call security.
+"""
+
 
 def get_time() -> str:
     """Get the current UTC time."""

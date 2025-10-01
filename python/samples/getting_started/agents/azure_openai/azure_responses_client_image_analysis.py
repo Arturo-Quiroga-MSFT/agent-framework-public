@@ -3,21 +3,22 @@
 import asyncio
 
 from agent_framework import ChatMessage, TextContent, UriContent
-from agent_framework.openai import OpenAIResponsesClient
+from agent_framework.azure import AzureOpenAIResponsesClient
+from azure.identity import AzureCliCredential
 
 """
-OpenAI Responses Client Image Analysis Example
+Azure OpenAI Responses Client with Image Analysis Example
 
-This sample demonstrates using OpenAI Responses Client for image analysis and vision tasks,
-showing multi-modal content handling with text and images.
+This sample demonstrates using Azure OpenAI Responses for image analysis and vision tasks,
+showing multi-modal messages combining text and image content.
 """
 
 
 async def main():
-    print("=== OpenAI Responses Agent with Image Analysis ===")
+    print("=== Azure Responses Agent with Image Analysis ===")
 
-    # 1. Create an OpenAI Responses agent with vision capabilities
-    agent = OpenAIResponsesClient().create_agent(
+    # 1. Create an Azure Responses agent with vision capabilities
+    agent = AzureOpenAIResponsesClient(credential=AzureCliCredential()).create_agent(
         name="VisionAgent",
         instructions="You are a helpful agent that can analyze images.",
     )

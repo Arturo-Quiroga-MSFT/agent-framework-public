@@ -7,6 +7,13 @@ from agent_framework import AgentProtocol, AgentThread, HostedMCPTool
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 
+"""
+Azure AI Agent with Hosted MCP Example
+
+This sample demonstrates integration of Azure AI Agents with hosted Model Context Protocol (MCP)
+servers, including user approval workflows for function call security.
+"""
+
 
 async def handle_approvals_with_thread(query: str, agent: "AgentProtocol", thread: "AgentThread"):
     """Here we let the thread deal with the previous responses, and we just rerun with the approval."""
