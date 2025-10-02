@@ -2,14 +2,19 @@
 
 import asyncio
 import os
+from pathlib import Path
 from random import randint
 from typing import Annotated
 
+from dotenv import load_dotenv
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 """
 Azure AI Agent with Existing Agent Example

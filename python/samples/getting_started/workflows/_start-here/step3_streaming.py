@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import (
     ChatAgent,
     ChatMessage,
@@ -18,6 +20,9 @@ from agent_framework._workflows._events import WorkflowOutputEvent
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
 from typing_extensions import Never
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 """
 Step 3: Agents in a workflow with streaming
@@ -109,8 +114,14 @@ class Reviewer(Executor):
 
 async def main():
     """Build the two node workflow and run it with streaming to observe events."""
-    # Create the Azure chat client. AzureCliCredential uses your current az login.
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    import os
+    
+    # Create the Azure chat client with explicit configuration from environment variables
+    chat_client = AzureOpenAIChatClient(
+        endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        deployment_name=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
+        credential=AzureCliCredential()
+    )
     # Instantiate the two agent backed executors.
     writer = Writer(chat_client)
     reviewer = Reviewer(chat_client)
