@@ -101,8 +101,8 @@ class EmailPreprocessor(Executor):
         cleaned = email.email.strip().lower()
         word_count = len(email.email.split())
 
-        # Check for suspicious patterns
-        suspicious_patterns = ["urgent", "limited time", "act now", "free money"]
+        # Check for suspicious patterns (MODIFIED: More specific patterns)
+        suspicious_patterns = ["100% free", "no obligation", "guaranteed winner", "secret deal", "miracle cure"]
         has_suspicious = any(pattern in cleaned for pattern in suspicious_patterns)
 
         result = EmailContent(
@@ -167,27 +167,27 @@ class SpamDetector(Executor):
         email_text = analysis.email_content.cleaned_message
         keyword_matches = [kw for kw in self._spam_keywords if kw in email_text]
 
-        # Calculate spam probability
+        # Calculate spam probability (MODIFIED: Less sensitive)
         spam_score = 0.0
         spam_reasons = []
 
         if keyword_matches:
-            spam_score += 0.4
+            spam_score += 0.3  # Reduced from 0.4
             spam_reasons.append(f"spam_keywords: {keyword_matches}")
 
         if analysis.email_content.has_suspicious_patterns:
-            spam_score += 0.3
+            spam_score += 0.2  # Reduced from 0.3
             spam_reasons.append("suspicious_patterns")
 
-        if len(analysis.risk_indicators) >= 3:
+        if len(analysis.risk_indicators) >= 4:  # Raised threshold from 3 to 4
             spam_score += 0.2
             spam_reasons.append("high_risk_indicators")
 
-        if analysis.sentiment_score < 0.4:
+        if analysis.sentiment_score < 0.2:  # Lowered from 0.4
             spam_score += 0.1
             spam_reasons.append("negative_sentiment")
 
-        is_spam = spam_score >= 0.5
+        is_spam = spam_score >= 0.7  # Raised threshold from 0.5 to 0.7
 
         result = SpamDetectorResponse(
             analysis=analysis, is_spam=is_spam, confidence_score=spam_score, spam_reasons=spam_reasons
@@ -282,7 +282,8 @@ class FinalProcessor(Executor):
 
 
 # Create the workflow instance that DevUI can discover
-spam_keywords = ["spam", "advertisement", "offer", "click here", "winner", "congratulations", "urgent"]
+# MODIFIED: More targeted spam keywords (removed common words like "offer" and "urgent")
+spam_keywords = ["viagra", "casino", "lottery", "nigerian prince", "money transfer", "tax refund", "phishing"]
 
 # Create all the executors for the 5-step workflow
 email_preprocessor = EmailPreprocessor(id="email_preprocessor")

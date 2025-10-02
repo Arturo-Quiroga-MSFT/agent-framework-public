@@ -2,8 +2,10 @@
 
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from agent_framework import (
     AgentProtocol,
     AgentThread,
@@ -12,6 +14,9 @@ from agent_framework import (
 )
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 """
 Azure AI Agent with Multiple Tools Example
