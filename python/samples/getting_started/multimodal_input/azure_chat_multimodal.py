@@ -2,12 +2,16 @@
 
 import asyncio
 import base64
+from pathlib import Path
 
+from dotenv import load_dotenv
 import requests
 from agent_framework import ChatMessage, DataContent, Role, TextContent
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
 
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 async def test_image() -> None:
     """Test image analysis with Azure."""
