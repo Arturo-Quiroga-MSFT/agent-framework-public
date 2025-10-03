@@ -3,11 +3,16 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from agent_framework import AgentRunUpdateEvent, WorkflowBuilder, WorkflowOutputEvent
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 """
 Sample: Agents in a workflow with streaming
