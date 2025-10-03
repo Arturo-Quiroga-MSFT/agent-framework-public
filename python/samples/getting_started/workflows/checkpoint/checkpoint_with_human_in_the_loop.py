@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
@@ -27,6 +28,9 @@ from agent_framework import (
 )
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 # NOTE: the Azure client imports above are real dependencies. When running this
 # sample outside of Azure-enabled environments you may wish to swap in the
@@ -199,11 +203,16 @@ class FinaliseExecutor(Executor):
 
 def create_workflow(*, checkpoint_storage: FileCheckpointStorage | None = None) -> "Workflow":
     """Assemble the workflow graph used by both the initial run and resume."""
+    import os
 
     # The Azure client is created once so our agent executor can issue calls to
     # the hosted model. The agent id is stable across runs which keeps
     # checkpoints deterministic.
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    chat_client = AzureOpenAIChatClient(
+        endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        deployment_name=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
+        credential=AzureCliCredential()
+    )
     writer = AgentExecutor(
         chat_client.create_agent(
             instructions="Write concise, warm release notes that sound human and helpful.",

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
@@ -20,6 +21,9 @@ from agent_framework import (
 )
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 if TYPE_CHECKING:
     from agent_framework import Workflow
@@ -161,7 +165,11 @@ def create_workflow(checkpoint_storage: FileCheckpointStorage) -> "Workflow":
     reverse_text_executor = ReverseTextExecutor(id="reverse-text")
 
     # Configure the agent stage that lowercases the text.
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    chat_client = AzureOpenAIChatClient(
+        endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        deployment_name=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
+        credential=AzureCliCredential()
+    )
     lower_agent = AgentExecutor(
         chat_client.create_agent(
             instructions=("You transform text to lowercase. Reply with ONLY the transformed text.")

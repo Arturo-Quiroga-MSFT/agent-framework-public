@@ -1,10 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import AgentRunUpdateEvent, WorkflowBuilder, WorkflowOutputEvent
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
+
+# Load environment variables from .env file in the current directory
+load_dotenv(Path(__file__).parent / ".env")
 
 """
 Sample: Agents in a workflow with streaming
@@ -29,8 +34,14 @@ Prerequisites:
 
 async def main():
     """Build and run a simple two node agent workflow: Writer then Reviewer."""
-    # Create the Azure chat client. AzureCliCredential uses your current az login.
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    import os
+    
+    # Create the Azure chat client with explicit configuration from environment variables
+    chat_client = AzureOpenAIChatClient(
+        endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        deployment_name=os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"],
+        credential=AzureCliCredential()
+    )
 
     # Define two domain specific chat agents. The builder will wrap these as executors.
     writer_agent = chat_client.create_agent(
