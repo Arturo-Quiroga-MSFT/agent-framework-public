@@ -1,11 +1,17 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+import os
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from agent_framework import ChatMessage, ConcurrentBuilder
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
+
+# Load environment variables from workflows/.env file
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 """
 Sample: Concurrent fan-out/fan-in (agent-only API) with default aggregator
@@ -21,14 +27,22 @@ Demonstrates:
 - Workflow completion when idle with no pending work
 
 Prerequisites:
-- Azure OpenAI access configured for AzureOpenAIChatClient (use az login + env vars)
+- Azure OpenAI access configured via .env file in workflows directory:
+  - AZURE_OPENAI_ENDPOINT: Your Azure OpenAI endpoint
+  - AZURE_OPENAI_DEPLOYMENT_NAME: Your deployment name (e.g., gpt-4, gpt-35-turbo)
+- Azure CLI authentication: Run 'az login'
 - Familiarity with Workflow events (AgentRunEvent, WorkflowOutputEvent)
 """
 
 
 async def main() -> None:
     # 1) Create three domain agents using AzureOpenAIChatClient
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    # Configuration from .env file in workflows directory
+    chat_client = AzureOpenAIChatClient(
+        credential=AzureCliCredential(),
+        endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+        deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
+    )
 
     researcher = chat_client.create_agent(
         instructions=(
