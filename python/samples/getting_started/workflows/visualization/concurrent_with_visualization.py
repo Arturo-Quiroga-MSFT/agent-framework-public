@@ -2,7 +2,9 @@
 
 import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
@@ -20,6 +22,9 @@ from agent_framework import (
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
 from typing_extensions import Never
+
+# Load environment variables from workflows/.env file
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 """
 Sample: Concurrent (Fan-out/Fan-in) with Agents + Visualization
