@@ -1,0 +1,17 @@
+# NL2SQL Workflow Requirements
+
+# Database connectivity
+pyodbc>=5.0.0
+
+# Azure Agent Framework (already installed in main project)
+# agent-framework[devui]>=0.1.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Azure dependencies (already in main project)
+# azure-identity>=1.15.0
+# azure-ai-agent-service
+
+# Note: Make sure Microsoft ODBC Driver 18 for SQL Server is installed
+# See README.md for installation instructions

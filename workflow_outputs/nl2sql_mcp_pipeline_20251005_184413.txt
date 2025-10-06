@@ -1,0 +1,107 @@
+================================================================================
+🔍 NL2SQL PIPELINE WITH MCP SERVER
+================================================================================
+
+📋 PIPELINE STAGES:
+   1. 🎯 Intent Analysis
+   2. 📊 Schema Discovery (via MCP)
+   3. 💻 SQL Generation
+   4. ✅ SQL Validation
+   5. 🔧 Query Execution (via MCP)
+   6. 📝 Results Formatting
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+💬 USER QUESTION
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+🎯 INTENT ANALYZER
+────────────────────────────────────────────────────────────────────────────────
+
+Of course! Please provide the user's natural language question so I can analyze its intent.
+
+────────────────────────────────────────────────────────────────────────────────
+📊 SCHEMA AGENT (with MCP tools)
+────────────────────────────────────────────────────────────────────────────────
+
+Here are the tables present in the database:
+- dbo.Collateral
+- dbo.Company
+- dbo.CompanyAddress
+- dbo.Covenant
+- dbo.CovenantSchedule
+- dbo.CovenantTestResult
+- dbo.CustomerProfile
+- dbo.db_assistant_migrations
+- dbo.dim_company
+- dbo.dim_date
+- dbo.fact_loan_payments
+- dbo.Loan
+- dbo.LoanDelinquencyFeaturesSnapshot
+- dbo.PaymentEvent
+- dbo.PaymentSchedule
+- dbo.RiskMetricHistory
+- ref.Country
+- ref.Currency
+- ref.FXRateDaily
+- ref.ReferenceRate
+- ref.Region
+- ref.Subregion
+
+To provide a thorough schema mapping, I need your intent or target question (e.g., what kind of data or relational query you want to achieve). Please provide the user's request or intent so I can proceed to discover and map the schema precisely for your use-case.
+
+────────────────────────────────────────────────────────────────────────────────
+💻 SQL AGENT (with MCP execution)
+────────────────────────────────────────────────────────────────────────────────
+
+Please provide the request or question you want answered (e.g., which customer has the largest loan?), so I can generate the optimized SQL SELECT query and fetch the actual results for you.
+
+────────────────────────────────────────────────────────────────────────────────
+📝 RESULTS FORMATTER
+────────────────────────────────────────────────────────────────────────────────
+
+It appears there are no tool_result messages or actual data displayed above, so I'll provide a structured response based on the instructions, though with some caveats due to the absence of actual query execution and data return.
+
+---
+
+**1. Summary of What Was Requested (in Natural Language)**
+- The user requested that I:  
+   * Summarize the original business question or request  
+   * Explain the SQL query’s functionality  
+   * Present the real results from the query  
+   * Provide practical insights  
+   * Note any limitations
+
+**2. What the SQL Query Does (in Simple Terms)**
+- Although the actual query is not displayed, the instructions indicate SQL was used to extract or analyze business data relevant to the user’s request (for instance, analyzing loans, customers, collateral, or payment information from a financial database).
+
+**3. Actual Query Results**
+- No tool_result message or data excerpt is given in the conversation above, so no actual data can be presented at this time. Normally, this section would show the answer in a table format with numbers or facts, e.g.:  
+   | Customer    | Total Loans |  
+   |-------------|-------------|  
+   | Company A   | $1,250,000  |
+
+**4. Insights or Recommendations (Based on Actual Data)**
+- Since no real data is available, no specific actionable insights can be drawn. In a typical scenario, this section would highlight trends, risks, or business opportunities from the returned numbers and facts.
+
+**5. Limitations or Caveats**
+- No database query was executed, or the resulting data was not included.  
+- The summary is therefore based on assumptions about the possible query and data structure, not on returned results.  
+- For a more targeted response, please provide the actual conversational history that includes the user's business question and the tool_result message with data.
+
+---
+
+**Business-Friendly Summary**
+
+At this time, no real data has been returned. To generate a clear and actionable summary—
+- Please supply the original business question and the tool_result (query output).
+- With those, I can clearly present the data, deliver insights, and make recommendations rooted in your REAL business data. 
+
+Let me know how you'd like to proceed!
+
+================================================================================
+✅ NL2SQL Pipeline Complete - All Stages Executed
+================================================================================
