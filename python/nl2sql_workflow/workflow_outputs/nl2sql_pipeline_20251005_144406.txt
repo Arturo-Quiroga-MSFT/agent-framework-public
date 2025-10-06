@@ -1,0 +1,173 @@
+================================================================================
+🔍 NL2SQL PIPELINE ANALYSIS REPORT
+================================================================================
+
+📋 PIPELINE STAGES:
+   1. 🎯 Intent Analysis
+   2. 📊 Schema Mapping
+   3. 💻 SQL Generation
+   4. ✅ Validation
+   5. 🔧 Execution
+   6. 📝 Results Formatting
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+💬 STAGE 1: USER QUESTION
+────────────────────────────────────────────────────────────────────────────────
+
+show me all tables in the DB and their use
+
+────────────────────────────────────────────────────────────────────────────────
+🎯 STAGE 2: INTENT ANALYZER
+────────────────────────────────────────────────────────────────────────────────
+
+- Primary intent: Schema exploration via SELECT on system/metadata catalogs; likely requires a join to retrieve table descriptions/comments.
+- Entities requested: All tables in the current database (optionally schema-qualified), plus each table’s “use” (i.e., description/comment or purpose field from metadata).
+- Conditions/filters: No content filters; include all user tables in the database. Optionally exclude system/internal tables.
+- Aggregations/calculations: None required.
+- Expected output format: A list with one row per table, including columns like schema_name, table_name, and description/use (comment).
+
+────────────────────────────────────────────────────────────────────────────────
+📊 STAGE 3: SCHEMA EXPERT
+────────────────────────────────────────────────────────────────────────────────
+
+- Relevant metadata objects: sys.tables (list of user tables), sys.schemas (to schema-qualify each table), and sys.extended_properties (to retrieve table comments/descriptions as “use”). Optional fallback: INFORMATION_SCHEMA.TABLES if sys.* access is restricted.
+- Columns to query: sys.schemas.name as schema_name, sys.tables.name as table_name, sys.tables.object_id, and COALESCE of sys.extended_properties.value (where name = 'MS_Description' and class = 1, minor_id = 0) as table_use/description.
+- JOINs required: sys.tables t INNER JOIN sys.schemas s ON s.schema_id = t.schema_id; LEFT JOIN sys.extended_properties ep ON ep.class = 1 AND ep.major_id = t.object_id AND ep.minor_id = 0 AND ep.name = 'MS_Description' (to pull the “use” if present).
+- Performance notes: System catalogs are already indexed; no additional indexes needed. Filter predicates on schema_name or table_name (WHERE s.name IN ('dbo','ref'), etc.) and ep.name = 'MS_Description' keep scans minimal.
+- Potential limitations: Many tables may lack MS_Description, so “use” may be NULL; INFORMATION_SCHEMA does not store comments; requires sufficient permissions to read sys catalogs; this returns only tables (not views/synonyms); if “use” must be standardized, a separate mapping table is needed.
+
+────────────────────────────────────────────────────────────────────────────────
+💻 STAGE 4: SQL GENERATOR
+────────────────────────────────────────────────────────────────────────────────
+
+```sql
+/* 
+Return all user tables in the current database and their "use" (description/comment).
+- Targets SQL Server system catalogs.
+- Pulls MS_Description (preferred) or other common description property names if present.
+- Excludes Microsoft-shipped/system tables.
+*/
+
+SELECT
+    DB_NAME()                                  AS database_name,
+    s.name                                     AS schema_name,
+    t.name                                     AS table_name,
+    d.description                              AS table_use -- human-readable purpose/description if defined
+FROM sys.tables AS t
+INNER JOIN sys.schemas AS s
+    ON s.schema_id = t.schema_id
+-- Prefer MS_Description, fall back to other common property names if used
+OUTER APPLY (
+    SELECT TOP (1)
+           CAST(ep.value AS nvarchar(4000)) AS description
+    FROM sys.extended_properties AS ep
+    WHERE ep.class = 1                   -- object or column
+      AND ep.major_id = t.object_id      -- table object
+      AND ep.minor_id = 0                -- 0 = object-level (table), not column-level
+      AND ep.name IN (N'MS_Description', N'Description', N'Comment')
+    ORDER BY CASE ep.name
+                 WHEN N'MS_Description' THEN 1
+                 WHEN N'Description'     THEN 2
+                 ELSE 3
+             END
+) AS d
+WHERE t.is_ms_shipped = 0                 -- exclude system-shipped tables
+-- AND s.name IN (N'dbo')                 -- optional: restrict to specific schemas
+ORDER BY
+    s.name,
+    t.name;
+
+/*
+Notes and best practices:
+- sys.tables lists user tables; filtering is_ms_shipped = 0 avoids internal/system objects.
+- sys.extended_properties holds comments. By convention, table descriptions use the 'MS_Description' name.
+- OUTER APPLY selects the most relevant description in priority order without multiple LEFT JOINs.
+- All referenced system views are indexed; joins and filters here are sargable and efficient.
+- If many tables have no descriptions, table_use will be NULL; add extended properties to document tables:
+  EXEC sys.sp_addextendedproperty 
+       @name = N'MS_Description', 
+       @value = N'Purpose of this table', 
+       @level0type = N'SCHEMA', @level0name = N'dbo',
+       @level1type = N'TABLE',  @level1name = N'MyTable';
+*/
+```
+
+────────────────────────────────────────────────────────────────────────────────
+✅ STAGE 5: SQL VALIDATOR
+────────────────────────────────────────────────────────────────────────────────
+
+```sql
+SELECT
+    DB_NAME()                                  AS database_name,
+    s.name                                     AS schema_name,
+    t.name                                     AS table_name,
+    d.description                              AS table_use
+FROM sys.tables AS t
+INNER JOIN sys.schemas AS s
+    ON s.schema_id = t.schema_id
+OUTER APPLY (
+    SELECT TOP (1)
+           CAST(ep.value AS nvarchar(4000)) AS description
+    FROM sys.extended_properties AS ep
+    WHERE ep.class = 1                   -- OBJECT_OR_COLUMN
+      AND ep.major_id = t.object_id      -- table object
+      AND ep.minor_id = 0                -- object-level (table), not column
+      AND ep.name IN (N'MS_Description', N'Description', N'Comment')
+    ORDER BY CASE ep.name
+                 WHEN N'MS_Description' THEN 1
+                 WHEN N'Description'     THEN 2
+                 ELSE 3
+             END
+) AS d
+WHERE t.is_ms_shipped = 0
+ORDER BY
+    s.name,
+    t.name;
+```
+
+────────────────────────────────────────────────────────────────────────────────
+📝 STAGE 6: RESULTS FORMATTER
+────────────────────────────────────────────────────────────────────────────────
+
+1) What you asked for
+- A complete list of all tables in the database, along with each table’s “use” or purpose/description.
+
+2) What the SQL does
+- It looks up all user-created tables from the system catalog (sys.tables) and their schemas (sys.schemas).
+- It attempts to pull each table’s documented “use” from extended properties (commonly stored under the MS_Description property). If a description exists, it is shown; if not, the “use” column will be empty.
+- It excludes system/shipped tables and orders results by schema and table name.
+
+3) Actual results
+- No actual query execution results were included in the pipeline, so there is no list of tables or uses to present here.
+- If you run the provided query in your SQL Server database, it will return one row per user table with:
+  - database_name
+  - schema_name
+  - table_name
+  - table_use (description, if defined)
+
+4) Insights and recommendations
+- If many tables return a blank “use,” it means they are not yet documented. Consider adding MS_Description extended properties to each table to create a usable data dictionary for your teams.
+- Standardize how “use” is written (e.g., a concise business-purpose statement) so it’s consistent across tables and easy to consume.
+- Prioritize documenting high-impact tables first (fact tables, main dimensions, customer/order/transaction entities), and embed ownership/contact info in your data catalog.
+- Keep this list current by incorporating description updates into your change management or migration scripts.
+
+5) Limitations and caveats
+- The query relies on SQL Server system catalogs; if you’re using a different database platform, a different approach is needed.
+- Many environments do not populate MS_Description, so “use” may be empty until documentation is added.
+- This returns tables only, not views or other objects. If you need those, the query should be extended.
+- You must have permission to read system catalogs; restricted permissions can limit visibility.
+
+If you can share the query’s output from your environment, I can provide a targeted, business-friendly table inventory with the real data and specific observations.
+
+────────────────────────────────────────────────────────────────────────────────
+🔧 STAGE 7: QUERY EXECUTOR
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+❌ Could not extract SQL query from validator response.
+
+================================================================================
+✅ NL2SQL Pipeline Complete - All 6 Stages Executed
+================================================================================
