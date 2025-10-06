@@ -73,7 +73,21 @@ class AgTechInput(BaseModel):
             "Autonomous robotic harvesting system with computer vision for delicate fruits like strawberries and tomatoes",
             "Indoor aquaponics system combining tilapia farming with hydroponic vegetable production for local food systems",
             "Food waste valorization platform converting agricultural byproducts into animal feed, biofuels, and compost",
-            "Blockchain-based traceability platform for organic produce from farm to consumer with quality monitoring"
+            "Blockchain-based traceability platform for organic produce from farm to consumer with quality monitoring",
+            "Insect protein production facility rearing black soldier fly larvae on food waste streams for sustainable animal feed",
+            "Algae photobioreactor system producing omega-3 rich biomass for functional food ingredients",
+            "CRISPR-enabled gene edited tomato variety targeting higher lycopene and longer shelf life with regulatory pathway assessment",
+            "Edge AI device network performing on-field real-time plant stress detection using multispectral camera modules",
+            "Satellite + SAR + weather fusion analytics platform estimating regional soil moisture and yield forecasts for insurers",
+            "Biodegradable smart packaging with embedded freshness indicators to extend leafy greens shelf life in cold chain",
+            "On-farm anaerobic digester converting dairy manure into renewable natural gas and fertilizer coproducts with carbon credit stacking",
+            "Autonomous weeding robots using machine vision and laser micro-targeting to reduce herbicide inputs in specialty crops",
+            "Desalination-powered greenhouse cluster using brine valorization and solar thermal integration for arid-region vegetable production",
+            "Precision fermentation facility producing casein proteins for animal-free cheeses with downstream purification optimization",
+            "Regenerative agroforestry system integrating cacao, shade trees, and livestock with biodiversity impact quantification",
+            "Aquaculture RAS (recirculating aquaculture system) for shrimp paired with nutrient recovery hydroponic lettuce modules",
+            "Digital farm management platform offering variable rate nitrogen prescriptions based on sensor + historical yield map analytics",
+            "Cold chain optimization platform using IoT temperature loggers + predictive spoilage modeling for fresh berry distribution"
         ]
     )
 
@@ -430,6 +444,31 @@ def launch_devui():
     print("   - Regenerative agriculture with carbon credit monetization")
     print("   - Food waste valorization into feed and biofuels")
     print("   - Blockchain traceability for organic produce")
+    print()
+    print("🛰️ Remote Sensing & Analytics:")
+    print("   - Satellite + SAR fusion for regional soil moisture & yield prediction")
+    print("   - Multispectral drone + edge AI stress detection network")
+    print("   - Weather + imagery powered insurer risk scoring platform")
+    print()
+    print("🧬 Biotech & Novel Inputs:")
+    print("   - CRISPR-edited crops targeting nutrient density & shelf life")
+    print("   - Microbial biofertilizer consortia for nitrogen fixation")
+    print("   - Black soldier fly larvae production for circular protein feed")
+    print()
+    print("🌐 Digital & Data Platforms:")
+    print("   - Variable rate nitrogen prescription engine from historical yield maps")
+    print("   - Farm management platform integrating IoT soil sensor telemetry")
+    print("   - Blockchain + IoT cold chain integrity monitoring")
+    print()
+    print("🧪 Packaging & Shelf Life:")
+    print("   - Biodegradable smart packaging with freshness indicators")
+    print("   - Modified atmosphere packaging to extend berry shelf life")
+    print("   - Edible coatings reducing moisture loss in leafy greens")
+    print()
+    print("🔄 Circular & Energy Systems:")
+    print("   - Anaerobic digestion of dairy manure for RNG + fertilizer")
+    print("   - Waste heat recovery integration in vertical farms")
+    print("   - Brine valorization from desalination-powered greenhouses")
     print()
     print("📊 Sequential Analysis Flow:")
     print("   1. 🌱 Agronomy: Crop science, yield, soil requirements")
