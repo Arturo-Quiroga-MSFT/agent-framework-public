@@ -265,7 +265,7 @@ async def create_healthcare_workflow():
         """Dispatcher that extracts description from HealthcareProductInput and forwards to agents."""
         
         @handler
-        async def dispatch(self, input_data: HealthcareProductInput, ctx: WorkflowContext) -> None:
+        async def dispatch(self, input_data: HealthcareProductInput, ctx: WorkflowContext[Any]) -> None:
             """Extract description and send to all healthcare agents.
             
             Args:
