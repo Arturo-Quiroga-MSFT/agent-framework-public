@@ -1,11 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+import os
+from pathlib import Path
 from typing import cast
 
 from agent_framework import ChatMessage, Role, SequentialBuilder, WorkflowOutputEvent
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import AzureCliCredential
+from dotenv import load_dotenv
 
 """
 Sample: Sequential workflow (agent-focused API) with shared conversation context
@@ -28,8 +31,20 @@ Prerequisites:
 
 
 async def main() -> None:
-    # 1) Create agents
-    chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+    # 0) Load local .env (same directory) so AZURE_OPENAI_* vars are available
+    load_dotenv(Path(__file__).parent / ".env")
+
+    # 1) Create agents (use explicit env-driven configuration)
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME")
+    if not endpoint or not deployment:
+        raise RuntimeError("Missing AZURE_OPENAI_ENDPOINT or AZURE_OPENAI_DEPLOYMENT_NAME in .env")
+
+    chat_client = AzureOpenAIChatClient(
+        credential=AzureCliCredential(),
+        endpoint=endpoint,
+        deployment_name=deployment,
+    )
 
     writer = chat_client.create_agent(
         instructions=("You are a concise copywriter. Provide a single, punchy marketing sentence based on the prompt."),

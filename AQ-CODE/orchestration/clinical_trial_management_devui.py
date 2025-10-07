@@ -35,7 +35,7 @@ TRACING OPTIONS:
 import asyncio
 import os
 from contextlib import AsyncExitStack
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -71,20 +71,32 @@ class ClinicalTrialInput(BaseModel):
     )
 
 
-def format_clinical_trial_results(results) -> str:
-    """Format clinical trial agent outputs for DevUI display and save to file.
-    
+def format_clinical_trial_results(results, start_time: datetime | None = None) -> str:
+    """Format clinical trial agent outputs for DevUI display and save to files.
+
+    Adds elapsed time information (if ``start_time`` provided) and writes both a
+    ``.txt`` and ``.md`` artifact to ``workflow_outputs``.
+
     Args:
-        results: List of AgentExecutorResponse objects from concurrent agents
-        
+        results: List of AgentExecutorResponse objects from concurrent agents.
+        start_time: Optional datetime captured when the workflow execution for this
+            user request started. If provided, elapsed time will be computed and
+            appended to the artifacts.
+
     Returns:
-        Formatted string with all agent responses
+        Formatted string with all agent responses (plain text flavor) used as the
+        aggregator output.
     """
     output_lines = []
     output_lines.append("=" * 80)
     output_lines.append("🔬 COMPREHENSIVE CLINICAL TRIAL ANALYSIS")
     output_lines.append("=" * 80)
     output_lines.append("")
+    if start_time is not None:
+        elapsed: timedelta = datetime.now() - start_time
+        human_elapsed = str(elapsed).split(".")[0]  # trim microseconds for readability
+        output_lines.append(f"⏱️ Elapsed Time: {human_elapsed}")
+        output_lines.append("")
     
     # Process each agent's response
     for result in results:
@@ -128,21 +140,41 @@ def format_clinical_trial_results(results) -> str:
     
     output_lines.append("=" * 80)
     output_lines.append("✅ Clinical Trial Analysis Complete - All perspectives reviewed")
+    if start_time is not None:
+        elapsed_final: timedelta = datetime.now() - start_time
+        human_elapsed_final = str(elapsed_final).split(".")[0]
+        output_lines.append(f"⏱️ Total Elapsed Time: {human_elapsed_final}")
     output_lines.append("=" * 80)
     
     formatted_output = "\n".join(output_lines)
     
-    # Save to file with timestamp
+    # Save to files with timestamp (text + markdown)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(__file__).parent / "workflow_outputs"
     output_dir.mkdir(exist_ok=True)
     
-    output_file = output_dir / f"clinical_trial_analysis_{timestamp}.txt"
+    output_file_txt = output_dir / f"clinical_trial_analysis_{timestamp}.txt"
+    output_file_md = output_dir / f"clinical_trial_analysis_{timestamp}.md"
     
     try:
-        with open(output_file, "w", encoding="utf-8") as f:
+        with open(output_file_txt, "w", encoding="utf-8") as f:
             f.write(formatted_output)
-        print(f"\n💾 Clinical trial analysis saved to: {output_file}")
+        # Basic markdown variant (re-use but add markdown headings)
+        md_lines = [
+            "# Comprehensive Clinical Trial Analysis",
+            "",
+            f"_Generated_: {datetime.now().isoformat(timespec='seconds')}",
+        ]
+        if start_time is not None:
+            md_lines.append(f"_Elapsed Time_: {human_elapsed_final}")
+        md_lines.append("")
+        # The plain formatted output already has separators; we preserve below under details section
+        md_lines.append("## Detailed Multi-Agent Output")
+        md_lines.append("\n" + formatted_output)
+        with open(output_file_md, "w", encoding="utf-8") as fmd:
+            fmd.write("\n".join(md_lines))
+        print(f"\n💾 Clinical trial analysis saved to: {output_file_txt}")
+        print(f"💾 Markdown version saved to: {output_file_md}")
     except Exception as e:
         print(f"\n⚠️ Failed to save output to file: {e}")
     
@@ -324,7 +356,11 @@ async def create_clinical_trial_workflow():
     
     # Build workflow with custom components
     dispatcher = ClinicalTrialDispatcher(id="clinical_trial_dispatcher")
-    aggregator_func = format_clinical_trial_results
+    # Capture start time to compute elapsed duration for this workflow execution
+    workflow_start_time = datetime.now()
+
+    def aggregator_func(results):  # closure to include timing
+        return format_clinical_trial_results(results, start_time=workflow_start_time)
     
     # Use WorkflowBuilder to create the complete workflow
     from agent_framework._workflows._concurrent import _CallbackAggregator
