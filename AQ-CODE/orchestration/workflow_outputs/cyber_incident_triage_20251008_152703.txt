@@ -1,0 +1,543 @@
+================================================================================
+🛡️ CYBERSECURITY INCIDENT TRIAGE REPORT
+================================================================================
+(Automated Summary: Review each section for validation.)
+
+────────────────────────────────────────────────────────────────────────────────
+🔍 THREAT INTELLIGENCE
+────────────────────────────────────────────────────────────────────────────────
+
+Based on your observations:
+
+- **Unmanaged crypto-mining processes found:** This typically indicates compromise or misuse.
+- **Elevated CPU usage:** Consistent with mining activity.
+- **Suspicious container images pulled:** Points to potential exploit of container orchestration or supply chain.
+
+## Recommended Actions
+
+### 1. **Immediate Containment**
+- **Isolate affected nodes:** Remove compromised nodes from service.
+- **Pause suspicious containers:** Prevent further resource drain.
+- **Block network egress:** Prevent data exfiltration or command & control communication.
+
+### 2. **Investigation**
+- **Identify attack vector:**
+  - Check if Kubernetes API was exposed to the internet.
+  - Review `kubectl` audit logs for unusual commands.
+- **Examine suspicious images:** Check their origin and contents.
+- **Check for persistence:** Look for cronjobs, daemonsets, or modified init containers designed to re-deploy miner.
+
+### 3. **Remediation**
+- **Remove crypto-mining containers/processes.**
+- **Delete malicious images.**
+- **Patch nodes:** Ensure all worker nodes are updated and have latest security patches.
+- **Change cluster credentials:** Rotate service account tokens and kubeconfig files.
+
+### 4. **Prevention**
+- **Restrict API access:** Use RBAC policies; limit exposure.
+- **Enable container image scanning:** Use tools like Clair, Trivy, or Aqua.
+- **Implement resource quotas:** Prevent excessive CPU usage.
+- **Enable node autoscaling alerts:** To detect abnormal resource patterns.
+- **Monitor new deployments:** Use admission controllers to block untrusted images.
+
+### 5. **Review Security Posture**
+- **Enable Kubernetes Audit logging.**
+- **Scan for vulnerabilities:** Regularly audit cluster configuration with tools like kube-bench, kube-hunter.
+- **Educate team on supply chain threats.**
+
+## Next Steps
+
+1. **Create incident ticket and document findings.**
+2. **Forensics:** If possible, preserve affected container/disk images for analysis.
+3. **Notify stakeholders:** Include your security team, as crypto-mining may be symptomatic of broader compromise.
+
+**If you share logs or further details, more specific guidance can be provided.**  
+**Crypto-mining on Kubernetes is a critical incident; act immediately and perform a full cluster security review.**
+
+────────────────────────────────────────────────────────────────────────────────
+🌐 NETWORK FORENSICS
+────────────────────────────────────────────────────────────────────────────────
+
+You’re facing a likely security incident: **cryptojacking** has compromised your Kubernetes cluster. Here are recommended steps to respond and remediate:
+
+---
+
+## **Immediate Response**
+
+1. **Containment**
+   - **Isolate affected nodes**: Taint or cordon the suspect worker nodes (`kubectl cordon <node>`), or remove them from your load balancer/pool.
+   - **Block suspicious containers**: Use `kubectl delete pod` to evict known coin-mining containers immediately.
+   - **Restrict image pulls**: Disable external image repository access unless necessary; block via network policies or firewall.
+
+2. **Investigation**
+   - **Identify suspicious images:** 
+     - `kubectl get pods -A -o wide`
+     - Examine images/pod names, look for unfamiliar repositories.
+     - `kubectl describe pod <pod>`
+   - **Review audit logs**: Check Cloud Provider, Kubernetes API audit logs for unusual actions or privilege escalation.
+   - **Check resource usage:** 
+     - `kubectl top nodes` / `kubectl top pods`
+     - Identify which pods/nodes are consuming excessive CPU.
+   - **Examine containers:** Use `kubectl exec` and inspect filesystem/processes.
+
+3. **Eradication**
+   - **Remove malicious images**: From internal registry if present.
+   - **Delete compromised pods/deployments**: Remove all pods using suspicious images.
+   - **Rebuild nodes**: Consider reimaging/rebuilding compromised worker nodes.
+   - **Rotate secrets and credentials**: If pod has access to secrets, rotate affected credentials (Kubernetes Secrets, cloud IAM, etc).
+   - **Patch Kubernetes and host OS**: Apply latest updates to mitigate known vulnerabilities.
+
+---
+
+## **Root Cause Analysis**
+
+- **How did attackers get in?**
+  - Exposed API server? Misconfigured RBAC? Insecure image pulls? Known vulnerability? Weak service accounts?
+- **Review image sources:**
+  - Are you pulling from trusted registries?
+- **Network policies and RBAC:**
+  - Are your clusters locked down by RBAC & NetworkPolicy?
+
+---
+
+## **Prevention**
+
+1. **Image Controls**
+   - Use admission controllers (PodSecurityPolicy, OPA/Gatekeeper) to restrict image sources.
+   - Only allow trusted registries.
+
+2. **RBAC Hardening**
+   - Minimize permissions for service accounts.
+   - Review clusterrolebindings.
+
+3. **Node Security**
+   - Apply security patches regularly.
+   - Use container runtime security features (seccomp, AppArmor).
+
+4. **Runtime Protection**
+   - Monitor node/pod CPU, network, and pod creation with tools (Prometheus, Falco, Datadog).
+   - Use alerts for abnormal resource usage.
+
+5. **Audit Logging**
+   - Enable and review audit logs regularly.
+
+---
+
+## **Reference Commands**
+
+- **List all running pods (show images):**
+
+  ```
+  kubectl get pods --all-namespaces -o jsonpath="{range .items[*]}{.metadata.namespace}:{.metadata.name} -> {.spec.containers[*].image}{'\n'}{end}"
+  ```
+
+- **Check images in use:**
+
+  ```
+  kubectl describe pod <pod>
+  ```
+
+- **Delete a suspicious pod:**
+
+  ```
+  kubectl delete pod <pod> -n <namespace>
+  ```
+
+- **Cordon a node:**
+
+  ```
+  kubectl cordon <node>
+  ```
+
+---
+
+## **Summary Checklist**
+
+- [ ] Contain and stop mining processes
+- [ ] Investigate scope & root cause
+- [ ] Remove malicious containers & images
+- [ ] Patch and harden
+- [ ] Review access controls & logging
+- [ ] Set up monitoring/alerting for early detection
+
+---
+
+**This is a serious incident; for regulated environments, escalate to your security, legal, and compliance teams. Full forensic analysis may be required.**
+
+Let me know if you need help with specific investigation commands or forensic steps!
+
+────────────────────────────────────────────────────────────────────────────────
+💻 ENDPOINT ANALYSIS
+────────────────────────────────────────────────────────────────────────────────
+
+You're describing symptoms strongly indicative of a **compromised Kubernetes cluster**, where threat actors have deployed **malicious containers** for unauthorized crypto-mining. Let me break down the concerns, next steps for investigation, and recommendations:
+
+---
+
+### Key Indicators & Observations
+
+- **Unmanaged crypto-mining processes:** Discovery of mining processes not associated with legitimate workloads.
+- **High CPU usage:** Typical in mining compromises, as miners try to maximize resource extraction.
+- **Suspicious images pulled:** Attackers often use public, seemingly benign images as a base, or their own images, to evade detection.
+
+---
+
+## Immediate Response
+
+**1. Isolate Affected Nodes:**
+   - Cordoning and draining compromised nodes can contain spread.
+   - Consider restricting external image pulls until remediation.
+
+**2. Investigate Processes and Containers:**
+   - **List running containers & images:**
+     ```bash
+     kubectl get pods -A -o wide
+     docker ps      # On nodes, or containerd/crictl equivalent
+     ```
+   - **Check suspicious containers:**
+     Look for atypical image sources, containers running as root, or those not defined in your manifests.
+
+   - **Inspect process tree:** Mining processes (e.g., `xmrig`, `minerd`, etc.) running inside containers or bare on nodes.
+
+**3. Check for Persistence Mechanisms:**
+   - Attackers may establish CronJobs, DaemonSets, or modify existing deployment specs, so review:
+     ```bash
+     kubectl get daemonsets -A
+     kubectl get cronjobs -A
+     kubectl get deployments -A
+     ```
+
+---
+
+## Forensic Steps
+
+- **Identify malicious images:** Note image repositories, tags, digests.
+- **Check for credential/secret theft:** Examine logs and kube-api server audit logs for signs of privilege escalation.
+- **Review network traffic:** Miners often communicate with external mining pools (e.g., via port 3333, 4444, etc.).
+
+---
+
+## Remediation Steps
+
+**1. Remove Malicious Resources:**
+   - Kill rogue containers, delete suspicious pods, remove unknown deployments/daemonsets.
+
+**2. **Patch vulnerabilities:** 
+   - Was this a result of exposed API server, unauthenticated kubelet ports, or privilege issues?
+   - Check your RBAC policies and network controls.
+
+**3. Rotate Credentials:** 
+   - Rotate and re-issue any secrets, service account tokens, and ensure no external exposure.
+
+**4. Audit Cluster Configuration:**
+   - Harden endpoints, upgrade software and container runtimes.
+
+---
+
+## Prevention and Detection
+
+- **Enable admission controllers:** Block unknown images and enforce security policies (e.g., PodSecurityPolicies, OPA/Gatekeeper).
+- **Monitor nodes and pods:** Use Kubernetes audit logs, runtime security tools (Falco, Sysdig), and EDR solutions.
+- **Restrict image pulls:** Use private, trusted registries.
+- **Network segmentation:** Block egress to known mining pools.
+
+---
+
+## Final Notes
+
+**This scenario merits urgent action:**  
+Crypto-mining is often only the start — attackers may escalate privileges, persist, or exfiltrate further.  
+If you're not sure of full compromise scope, a clean node rebuild and thorough cluster audit is advisable.
+
+### References:
+- [Kubernetes Security Best Practices](https://kubernetes.io/docs/concepts/security/)
+- [Detecting Crypto Mining in Kubernetes](https://sysdig.com/blog/detecting-crypto-mining-kubernetes/)
+- [Falco Rules for Crypto Mining](https://github.com/falcosecurity/falco/blob/master/rules/falco_rules.yaml)
+
+---
+
+**If you need help with specific commands or forensic procedures, supply more details about:**
+- Container runtime
+- Kubernetes platform (EKS/GKE/AKS/on-prem)
+- Any initial indicators
+
+**Take action quickly—crypto-mining is noisy and, if left unchecked, can degrade performance and increase your attack surface.**
+
+────────────────────────────────────────────────────────────────────────────────
+🧬 MALWARE BEHAVIOR
+────────────────────────────────────────────────────────────────────────────────
+
+You've described signs of a possible security incident affecting your Kubernetes cluster:
+
+- **Unmanaged crypto-mining processes** observed on worker nodes  
+- **Elevated CPU usage**  
+- **Suspicious container images** being pulled  
+
+This combination strongly suggests that your cluster may be compromised, with attackers running illicit cryptocurrency miners via unauthorized containers.
+
+**Immediate Incident Response Steps:**
+
+1. **Containment:**
+   - **Isolate affected nodes.** Taint/drain them (`kubectl drain <node> --ignore-daemonsets`) or remove them from service.
+   - **Stop malicious containers.** Identify and delete suspicious pods and deployments using `kubectl get pods`/`kubectl delete pod` and `kubectl get deployments`.
+
+2. **Investigation:**
+   - **Identify container images.** Use `kubectl get pods -A -o wide` and inspect image sources for unfamiliar or public images.
+   - **Review audit logs.** Check Kubernetes audit logs and cloud provider logs for evidence of unauthorized access (e.g., `kubectl logs`, `/var/log/kube-apiserver.log`).
+   - **Check node processes.** SSH into affected nodes and use tools like `ps aux`, `top`, or `htop` to identify crypto-miner binaries.
+   - **Scan for vulnerabilities.** Use tools like `kube-hunter`, `kube-bench`, or `Trivy` to check cluster and container images.
+
+3. **Eradication:**
+   - **Remove unauthorized containers and images.** Delete any unknown deployments, DaemonSets, CronJobs, or containers.
+   - **Check for persistence mechanisms.** Look for unexpected Kubernetes RBAC roles, ServiceAccounts, secrets, or DaemonSets.
+   - **Delete compromised node pools.** In severe cases, consider terminating/replacing affected nodes.
+
+4. **Recovery:**
+   - **Patch vulnerabilities.** Update Kubernetes, container runtimes, and base images.
+   - **Reset credentials.** Change all cluster access credentials (API tokens, kubeconfigs), and rotate secrets.
+   - **Review RBAC policies.** Minimize permissions—principle of least privilege.
+   - **Rebuild cluster.** If root cause isn't clear, consider rebuilding from known-good manifests after forensic backup.
+
+5. **Post-Incident:**
+   - **Audit what happened.** Document findings, notify stakeholders, and update your threat models.
+   - **Enhance monitoring.** Add container runtime monitoring (e.g., Falco, GuardDuty for EKS), image scanning, and anomaly detection.
+   - **Restrict image registries.** Only allow approved sources via admission controllers.
+   - **Implement Network Policies.** Limit pod-to-pod/node communications.
+
+---
+
+**Key Commands for Investigation:**
+
+```bash
+# List pods in all namespaces with images:
+kubectl get pods --all-namespaces -o jsonpath="{..image}" | tr -s '[[:space:]]' '\n' | sort | uniq -c
+
+# View resource usage:
+kubectl top nodes
+kubectl top pods --all-namespaces
+
+# Check running processes on node (SSH required):
+ps aux | grep -E 'xmrig|miner|cryptominers|cpu_usage'
+
+# Inspect Kubernetes audit logs:
+cat /var/log/kubernetes/audit.log | grep -i 'create\|exec'
+```
+
+---
+
+**If You Need Help With Forensics:**
+- Do not delete evidence before backing up logs and artifacts.
+- Engage your security incident response team (SOC/IR).
+- Consider contacting Google/AWS/Azure support if using managed services.
+
+---
+
+**Summary:**  
+Your cluster shows strong signals of a breach (crypto-mining containers, suspect images, high CPU). Act fast: contain, investigate, eradicate, and harden your environment.
+
+If you'd like help with any of these steps, share more specifics (e.g., node OS, image registry logs, cluster setup), and I can provide targeted guidance or command examples.
+
+────────────────────────────────────────────────────────────────────────────────
+📋 RISK & COMPLIANCE
+────────────────────────────────────────────────────────────────────────────────
+
+**You’re facing an incident involving potential unauthorized cryptomining activity in your Kubernetes cluster. Here’s what you should do in response:**
+
+---
+
+## **Immediate Steps: Incident Response**
+
+1. **Isolate Affected Nodes**
+   - **Drain** and **cordon** compromised worker nodes (`kubectl drain NODE_NAME --ignore-daemonsets`, `kubectl cordon NODE_NAME`).
+   - Remove them from load balancers/clusters if possible.
+
+2. **Preserve Evidence**
+   - Do not delete suspicious pods/containers/images yet; obtain forensic snapshots:
+     - `kubectl describe pod POD_NAME`
+     - `kubectl logs POD_NAME`
+     - Get container/image hashes (`docker inspect`, `kubectl get pods -o yaml`)
+
+3. **Identify Malicious Containers & Processes**
+   - List running containers: `docker ps` or `crictl ps`
+   - Look for images not approved by your organization.
+   - Identify containers generating abnormal CPU: `kubectl top pods --all-namespaces`
+   - Discover anomalous processes inside containers: `kubectl exec -it POD_NAME -- ps aux`
+
+4. **Review Cluster Events & Audit Logs**
+   - Check events: `kubectl get events --all-namespaces` and your cloud provider’s Kubernetes audit logs.
+
+---
+
+## **Investigation**
+
+1. **How Did They Get In?**
+   - Look for signs of open Kubernetes API, misconfigured RBAC, exposed dashboard, leaked secrets or credentials.
+   - Check for recently created service accounts, role bindings, clusterrolebindings (`kubectl get serviceaccounts --all-namespaces`, etc.)
+
+2. **Verify Image Sources**
+   - For suspicious images, check registry logs: Who pulled these, when, from where?
+   - Consider scanning images (Trivy, Clair) for malware/miners.
+
+3. **Check For Persistence**
+   - Inspect deployments, daemonsets, cronjobs, init containers for persistence mechanisms.
+   - Look for unknown third-party tools, scripts, or scheduled jobs.
+
+---
+
+## **Remediation**
+
+1. **Remove/Shutdown All Malicious Containers**
+   - `kubectl delete pod POD_NAME --force --grace-period=0`
+   - Remove images from local cache and registry.
+
+2. **Patch Cluster & Fix Configurations**
+   - Rotate all credentials/secrets (Kubernetes, cloud provider, container registry).
+   - Enforce RBAC; remove unauthorized accounts/bindings.
+   - Patch node OS and Kubernetes to latest versions.
+   - Restrict public ingress, API access, and network policies.
+
+3. **Scan Remaining Cluster**
+   - Run image scans, node/host malware scans.
+   - Check for rootkits, residual mining activity (`ps aux` or `htop` on nodes).
+
+---
+
+## **Prevention Recommendations**
+
+- **Restrict image sources** using admission controllers (e.g., OPA/Gatekeeper) or allowlists.
+- **Network policies:** Limit pod communication.
+- **Pod Security Policies / PodSecurity Standards** to prevent privileged containers.
+- **Audit** and **monitor** API and cluster changes.
+- **Alerting** for abnormal resource usage (CPU spikes, new/unknown pods/images).
+
+---
+
+## **Summary Table**
+
+| Action                        | Command / Tool                         | Purpose                         |
+|-------------------------------|----------------------------------------|----------------------------------|
+| Isolate node                  | `kubectl cordon/drain`                 | Prevent further compromise       |
+| List/kill pods                | `kubectl get/delete pod`               | Remove malicious containers      |
+| Check running processes       | `kubectl exec ps aux`                  | Detect miners                    |
+| Audit RBAC                    | `kubectl get clusterrolebinding`       | Detect privilege escalation      |
+| Scan images                   | `trivy image`                          | Hunt for malware/miners          |
+| Forensic data                 | `kubectl logs/describe`                | Evidence collection              |
+| Update credentials/secrets    | Manual                                 | Block ongoing access             |
+
+---
+
+## **Follow Up**
+- **Write a root cause analysis** once the cluster is clean.
+- **Review and update incident response playbooks**.
+- **Train staff** on Kubernetes security hygiene.
+
+---
+
+**If you need specific commands or guidance for forensics, post your cluster version and environment (cloud/physical, etc.).**  
+**Act quickly—crypto-miners often escalate permissions or propagate laterally.**
+
+────────────────────────────────────────────────────────────────────────────────
+🚑 CONTAINMENT & REMEDIATION
+────────────────────────────────────────────────────────────────────────────────
+
+It looks like your Kubernetes environment might be compromised. Here’s how to approach this situation:
+
+---
+
+## **Immediate Actions**
+
+1. **Isolate Affected Nodes Immediately:**
+   - **Cordoning and Draining**:  
+     ```bash
+     kubectl cordon <node>
+     kubectl drain <node> --ignore-daemonsets --delete-local-data
+     ```
+   - Consider removing compromised nodes from your cluster entirely.
+
+2. **Identify Suspicious Containers and Images:**
+   - List running pods:
+     ```bash
+     kubectl get pods -A -o wide
+     ```
+   - Look for unfamiliar namespaces, pod names, and container images.
+   - Investigate images:
+     ```bash
+     kubectl describe pod <pod-name> -n <namespace>
+     # Note the container image and commands
+     ```
+
+3. **Check for Unauthorized Processes:**
+   - SSH into nodes with elevated usage.
+   - Run `ps aux` or `top` to spot suspicious high-CPU processes (often named like `kworker`, but could be disguised).
+
+4. **Terminate Malicious Pods & Containers:**
+   - Delete suspect pods:
+     ```bash
+     kubectl delete pod <pod-name> -n <namespace>
+     ```
+   - Remove suspect images and containers at the host level if needed (using `docker` or `containerd` commands).
+
+5. **Block Network Egress If Possible:**
+   - Disallow outbound connections from affected pods/nodes; use NetworkPolicies if available.
+
+---
+
+## **Investigation**
+
+1. **Audit Cluster Activity:**
+   - Review Kubernetes audit logs.
+   - Check for unexpected `kubectl`/API actions and container image pulls.
+
+2. **Analyze Pulled Images:**
+   - Inspect unknown images:
+     ```bash
+     docker image inspect <image>
+     ```
+   - Search image hashes on [Docker Hub](https://hub.docker.com/) or [Container Registry Security Scanners](https://www.trivy.dev/).
+
+3. **Check for Exploited Vulnerabilities:**
+   - Look for exposed K8s dashboards, misconfigured RBAC, public kubelets, weak secrets, or default tokens.
+
+---
+
+## **Remediation & Prevention**
+
+- **Rotate Credentials:**  
+  Immediately rotate Kubernetes secrets, tokens, and node credentials.
+
+- **Patch & Harden:**  
+  Update cluster components and underlying OS. Limit node permissions.
+
+- **Restrict Image Pulls:**  
+  Implement PodSecurityPolicies (or alternatives) and Admission Controllers to restrict who can pull/run which images.
+
+- **Enable Resource Limits:**  
+  Set CPU/memory limits to minimize risk from runaway pods.
+
+- **Implement Monitoring:**  
+  Use tools like Falco, Kube Audit, or Prometheus to detect abnormal behavior early.
+
+- **Conduct a Full Postmortem:**  
+  Document the attack vector, timeline, affected assets, and lessons learned.
+
+- **Contact Cloud Provider or Cybersecurity Team:**  
+  If running on managed Kubernetes (GKE, EKS, AKS), contact vendor support.
+
+---
+
+## **References**
+
+- [Kubernetes Security Best Practices](https://kubernetes.io/docs/concepts/security/)
+- [Crypto-mining Container Attacks on K8s](https://cloud.google.com/blog/products/containers-kubernetes/threat-detection-for-kubernetes-crypto-mining)
+
+---
+
+**Summary:**  
+Your cluster is likely compromised by crypto-mining container malware. Isolate affected nodes, terminate malicious processes, investigate logs/images, patch vulnerabilities, rotate credentials, and review your cluster security posture.
+
+If you need help analyzing a specific suspicious image hash or log excerpt, provide more details!
+
+================================================================================
+✅ Triage complete - validate before execution.
+================================================================================
+⏱️ Elapsed Time: 7.94 seconds
