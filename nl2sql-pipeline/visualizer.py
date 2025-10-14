@@ -114,10 +114,14 @@ class QueryResultsVisualizer:
         # Create chart based on type
         if chart_type == "bar":
             chart_path = self._create_bar_chart(rows, column_names, user_question, timestamp)
+        elif chart_type == "hbar":
+            chart_path = self._create_horizontal_bar_chart(rows, column_names, user_question, timestamp)
         elif chart_type == "line":
             chart_path = self._create_line_chart(rows, column_names, user_question, timestamp)
         elif chart_type == "pie":
             chart_path = self._create_pie_chart(rows, column_names, user_question, timestamp)
+        elif chart_type == "heatmap":
+            chart_path = self._create_heatmap(rows, column_names, user_question, timestamp)
         else:
             logger.info(f"No suitable chart type determined")
             return None
@@ -139,9 +143,22 @@ class QueryResultsVisualizer:
             user_question: User's question for context
             
         Returns:
-            Chart type: "bar", "line", "pie", or "none"
+            Chart type: "bar", "hbar", "line", "pie", "heatmap", or "none"
         """
         question_lower = user_question.lower()
+        
+        # Heatmap keywords (matrix data)
+        if any(word in question_lower for word in ["heatmap", "heat map", "matrix", "correlation"]):
+            if len(column_names) >= 3:  # Need at least 3 columns for meaningful heatmap
+                return "heatmap"
+        
+        # Check if we have matrix-style data (multiple numeric columns)
+        if len(column_names) >= 3:
+            numeric_cols = sum(1 for col in column_names if self._is_numeric_column(rows, col))
+            if numeric_cols >= 2:
+                # Keywords suggesting cross-tabulation
+                if any(word in question_lower for word in ["by", "across", "compare", "vs", "versus"]):
+                    return "heatmap"
         
         # Pie chart keywords
         if any(word in question_lower for word in ["percentage", "proportion", "distribution", "breakdown", "share"]):
@@ -157,12 +174,37 @@ class QueryResultsVisualizer:
             if any(word in col_name.lower() for word in ["date", "month", "year", "quarter", "day", "time"]):
                 return "line"
         
-        # Default to bar chart for rankings, comparisons, top N
+        # Default to horizontal bar chart for rankings, comparisons, top N
+        # (horizontal is better for long category names)
         if any(word in question_lower for word in ["top", "bottom", "highest", "lowest", "compare", "rank", "most", "least"]):
-            return "bar"
+            return "hbar"
         
-        # Default to bar chart for general categorical data
-        return "bar"
+        # Default to horizontal bar chart for general categorical data
+        return "hbar"
+    
+    def _is_numeric_column(self, rows: list[dict], column_name: str) -> bool:
+        """Check if a column contains numeric data.
+        
+        Args:
+            rows: Data rows
+            column_name: Name of the column to check
+            
+        Returns:
+            True if column contains numeric data
+        """
+        if not rows:
+            return False
+        
+        # Check first few rows
+        for row in rows[:5]:
+            value = row.get(column_name)
+            if value is not None:
+                try:
+                    float(str(value).replace(",", "").replace("$", ""))
+                    return True
+                except (ValueError, TypeError, AttributeError):
+                    pass
+        return False
     
     def _identify_columns(self, rows: list[dict], column_names: list[str]) -> tuple[str, str]:
         """Identify category and value columns.
@@ -235,6 +277,61 @@ class QueryResultsVisualizer:
             ax.text(bar.get_x() + bar.get_width()/2., height,
                    f'{height:,.0f}',
                    ha='center', va='bottom', fontsize=8)
+        
+        plt.tight_layout()
+        
+        # Save
+        filename = f"chart_{timestamp}.png"
+        filepath = self.output_dir / filename
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        return filepath
+    
+    def _create_horizontal_bar_chart(
+        self,
+        rows: list[dict],
+        column_names: list[str],
+        user_question: str,
+        timestamp: str,
+    ) -> Path:
+        """Create a horizontal bar chart (better for long category names)."""
+        import matplotlib.pyplot as plt
+        
+        category_col, value_col = self._identify_columns(rows, column_names)
+        
+        # Extract data (limit to first 15 for readability)
+        display_rows = rows[:15]
+        categories = [str(row.get(category_col, ""))[:40] for row in display_rows]  # Allow longer names
+        values = []
+        
+        for row in display_rows:
+            val = row.get(value_col, 0)
+            try:
+                values.append(float(str(val).replace(",", "").replace("$", "")))
+            except (ValueError, TypeError):
+                values.append(0)
+        
+        # Create figure (taller for horizontal bars)
+        fig, ax = plt.subplots(figsize=(12, max(6, len(categories) * 0.4)))
+        
+        # Create horizontal bars with gradient color
+        colors = plt.cm.viridis(range(len(categories)))
+        bars = ax.barh(range(len(categories)), values, color=colors)
+        
+        # Customize
+        ax.set_yticks(range(len(categories)))
+        ax.set_yticklabels(categories)
+        ax.set_xlabel(value_col or "Value")
+        ax.set_ylabel(category_col or "Category")
+        ax.set_title(f"{user_question}\n", fontsize=12, fontweight='bold')
+        ax.invert_yaxis()  # Highest values at top
+        
+        # Add value labels on bars
+        for i, (bar, value) in enumerate(zip(bars, values)):
+            width = bar.get_width()
+            ax.text(width, i, f' {value:,.0f}',
+                   ha='left', va='center', fontsize=9)
         
         plt.tight_layout()
         
@@ -337,6 +434,83 @@ class QueryResultsVisualizer:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
             autotext.set_fontsize(9)
+        
+        ax.set_title(f"{user_question}\n", fontsize=12, fontweight='bold')
+        
+        plt.tight_layout()
+        
+        # Save
+        filename = f"chart_{timestamp}.png"
+        filepath = self.output_dir / filename
+        plt.savefig(filepath, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        return filepath
+    
+    def _create_heatmap(
+        self,
+        rows: list[dict],
+        column_names: list[str],
+        user_question: str,
+        timestamp: str,
+    ) -> Path:
+        """Create a heatmap for matrix-style data."""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+        
+        # Convert to DataFrame for easier manipulation
+        df = pd.DataFrame(rows)
+        
+        # Identify categorical and numeric columns
+        categorical_cols = []
+        numeric_cols = []
+        
+        for col in column_names:
+            if self._is_numeric_column(rows, col):
+                numeric_cols.append(col)
+            else:
+                categorical_cols.append(col)
+        
+        # Need at least 1 categorical and 1 numeric column
+        if not categorical_cols or not numeric_cols:
+            logger.info("Insufficient columns for heatmap")
+            return None
+        
+        # If we have 2+ categorical columns and numeric columns, create pivot table
+        if len(categorical_cols) >= 2 and len(numeric_cols) >= 1:
+            # Use first categorical as index, second as columns, first numeric as values
+            try:
+                pivot_df = df.pivot_table(
+                    index=categorical_cols[0],
+                    columns=categorical_cols[1] if len(categorical_cols) > 1 else categorical_cols[0],
+                    values=numeric_cols[0],
+                    aggfunc='sum',
+                    fill_value=0
+                )
+            except Exception as e:
+                logger.warning(f"Could not create pivot table: {e}")
+                # Fallback: use all numeric columns as-is
+                pivot_df = df[numeric_cols].head(15)
+        else:
+            # Use numeric columns directly (limit to first 15 rows)
+            pivot_df = df[numeric_cols].head(15)
+            if categorical_cols:
+                pivot_df.index = df[categorical_cols[0]].head(15)
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, max(6, len(pivot_df) * 0.4)))
+        
+        # Create heatmap
+        sns.heatmap(
+            pivot_df,
+            annot=True,
+            fmt='.0f',
+            cmap='YlOrRd',
+            cbar_kws={'label': numeric_cols[0] if numeric_cols else 'Value'},
+            linewidths=0.5,
+            ax=ax
+        )
         
         ax.set_title(f"{user_question}\n", fontsize=12, fontweight='bold')
         

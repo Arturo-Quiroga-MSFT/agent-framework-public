@@ -1,0 +1,7 @@
+# Question: Show me the proportion of customers by region
+# Generated: query_results_20251014_162527
+#
+Region,CustomerCount,PercentOfCustomers
+Small Business,637,56.88
+Middle Market,367,32.77
+Large Corporate,116,10.36

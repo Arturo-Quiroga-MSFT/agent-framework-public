@@ -9,22 +9,28 @@ The NL2SQL pipeline now includes **automatic data visualization** that generates
 ### ✨ Automatic Chart Generation
 - **Smart Detection**: Automatically identifies when results would benefit from visualization
 - **Chart Type Selection**: Chooses the best chart type based on data structure and user question
-- **Multiple Formats**: Bar charts, line charts, and pie charts
+- **Multiple Formats**: Horizontal bar charts, line charts, pie charts, and heatmaps
 - **Beautiful Styling**: Professional-looking charts with proper formatting
 
 ### 📊 Supported Chart Types
 
-#### 1. Bar Charts
-**Best for**: Rankings, comparisons, top N queries
+#### 1. Horizontal Bar Charts (Default)
+**Best for**: Rankings, comparisons, top N queries, long category names
 
 **Triggered by keywords**:
 - "top", "bottom", "highest", "lowest"
 - "compare", "rank", "most", "least"
+- Default for most categorical data
 
 **Example questions**:
 - "What are the top 10 customers by revenue?"
 - "Show me the highest selling products"
 - "Compare sales by region"
+
+**Features**:
+- Better readability for long labels
+- Values shown on the right of each bar
+- Automatically sized based on number of items
 
 #### 2. Line Charts
 **Best for**: Time series, trends over time
@@ -48,12 +54,33 @@ The NL2SQL pipeline now includes **automatic data visualization** that generates
 - "percentage", "proportion", "distribution"
 - "breakdown", "share"
 
-**Limitations**: Only works well with ≤10 categories
+**Limitations**: Works best with ≤12 categories
 
 **Example questions**:
 - "What is the revenue breakdown by product category?"
 - "Show me the market share distribution"
 - "What percentage of orders come from each region?"
+
+#### 4. Heatmaps (NEW!)
+**Best for**: Matrix data, cross-tabulations, correlations
+
+**Triggered by keywords**:
+- "heatmap", "heat map", "matrix"
+- "correlation", "by X and Y" (cross-tabulation patterns)
+
+**Requirements**: 
+- At least 3 columns
+- At least 2 numeric columns OR 2 categorical + 1 numeric
+
+**Example questions**:
+- "Show me sales by region and product category as a heatmap"
+- "What's the correlation between customer segment and loan amount?"
+- "Display revenue by industry and region"
+
+**Features**:
+- Color-coded intensity (yellow to red)
+- Annotated values in each cell
+- Automatic pivot table creation for cross-tabs
 
 ## How It Works
 
@@ -220,7 +247,7 @@ plt.show()
 
 ### Required Libraries
 ```bash
-pip install matplotlib seaborn
+pip install matplotlib seaborn pandas
 ```
 
 ### Optional Enhancement
