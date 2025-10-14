@@ -745,11 +745,11 @@ export function WorkflowView({
 
       {/* Bottom Panel - Execution Details */}
       <div
-        className="flex-shrink-0 border-t overflow-hidden"
+        className="flex-shrink-0 border-t overflow-hidden flex flex-col"
         style={{ height: `${bottomPanelHeight}px` }}
       >
         {/* Full Width - Execution Details */}
-        <div className="h-full flex gap-4 p-4">
+        <div className="h-full flex gap-4 p-4 min-h-0 overflow-hidden">
           {selectedExecutor ||
           activeExecutors.length > 0 ||
           executorHistory.length > 0 ||
@@ -1006,7 +1006,7 @@ export function WorkflowView({
 
                   return (
                     <div
-                      className={`border-2 ${theme.border} rounded ${theme.bg} shadow flex-1 flex flex-col min-w-0 relative`}
+                      className={`border-2 ${theme.border} rounded ${theme.bg} shadow flex-1 flex flex-col min-w-0 relative min-h-0`}
                     >
                       <div
                         className={`border-b ${theme.border} px-4 py-3 ${theme.headerBg} rounded-t flex-shrink-0`}
@@ -1024,7 +1024,8 @@ export function WorkflowView({
                       </div>
                       <div
                         ref={resultContentRef}
-                        className="p-4 overflow-auto flex-1 min-h-0 relative"
+                        className="workflow-output-scrollable p-4 overflow-y-scroll overflow-x-hidden flex-1 min-h-0 relative"
+                        style={{ maxHeight: '100%' }}
                       >
                         <div className="text-foreground whitespace-pre-wrap break-words text-sm pb-12">
                           {workflowResult}
