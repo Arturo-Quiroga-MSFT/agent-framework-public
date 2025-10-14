@@ -36,7 +36,7 @@ Natural Language Answer + Insights
 ✅ **Export Results** - Automatic CSV and Excel export with formatting  
 ✅ **Table Formatting** - Beautiful ASCII tables for readability  
 ✅ **Schema Caching** - 100-500x faster with intelligent caching (< 1ms vs 500ms)  
-✅ **Data Visualization** - Automatic chart generation (bar, line, pie charts)  
+✅ **Data Visualization** - Automatic chart generation (horizontal bars, line, pie, heatmap)  
 
 ## Prerequisites
 
@@ -85,7 +85,7 @@ source .venv/bin/activate
 pip install -r python/packages/core/requirements.txt
 
 # Install additional dependencies for this pipeline
-pip install pyodbc openpyxl matplotlib seaborn
+pip install pyodbc openpyxl matplotlib seaborn pandas
 ```
 
 ## Usage
