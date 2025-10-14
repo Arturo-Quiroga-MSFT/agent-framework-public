@@ -1,0 +1,14 @@
+# Question: Show me the breakdown of customers by industry
+# Generated: query_results_20251014_160535
+#
+Industry,CustomerCount
+Manufacturing,236
+Healthcare Services,182
+Software & IT Services,161
+Retail Trade,124
+Real Estate Development,123
+Consulting & Legal,82
+Freight & Logistics,54
+Commercial Construction,48
+Hotels & Restaurants,9
+Wholesale Distribution,6
