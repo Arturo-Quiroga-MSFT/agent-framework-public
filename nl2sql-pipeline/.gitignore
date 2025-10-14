@@ -27,6 +27,9 @@ env/
 # Exports (optional - comment out if you want to track exports)
 exports/
 
+# Visualizations
+visualizations/
+
 # Workflow outputs (optional - comment out if you want to track outputs)
 workflow_outputs/
 

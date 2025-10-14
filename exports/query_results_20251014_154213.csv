@@ -1,0 +1,7 @@
+# Question: Show me the revenue breakdown by region
+# Generated: query_results_20251014_154213
+#
+Region,TotalRevenue
+Large Corporate,26466788634.00
+Middle Market,9841943817.00
+Small Business,1988632573.00

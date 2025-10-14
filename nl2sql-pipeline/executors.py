@@ -449,7 +449,31 @@ class QueryExecutorExecutor(Executor):
             # Format results
             results_text = self._format_results(result, execution_time)
 
-            results_msg = ChatMessage(role=Role.SYSTEM, text=results_text)
+            # Store structured data in message text for visualizer to extract
+            # Convert Decimal types to float for JSON serialization
+            import json
+            from decimal import Decimal
+            
+            def convert_decimals(obj):
+                """Convert Decimal objects to float for JSON serialization."""
+                if isinstance(obj, list):
+                    return [convert_decimals(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {key: convert_decimals(value) for key, value in obj.items()}
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                return obj
+            
+            serializable_data = {
+                "columns": result.get("columns", []),
+                "rows": convert_decimals(result.get("rows", [])),
+                "rowCount": result.get("rowCount", 0)
+            }
+            
+            results_data_json = json.dumps(serializable_data)
+            results_text_with_data = f"{results_text}\n\n<!-- VISUALIZATION_DATA\n{results_data_json}\n-->"
+
+            results_msg = ChatMessage(role=Role.SYSTEM, text=results_text_with_data)
             await ctx.send_message(messages + [results_msg])
 
         except Exception as e:
@@ -788,3 +812,87 @@ Total rows exported: {len(results_data['rows'])}
         
         wb.save(filepath)
         logger.info(f"Excel export complete: {filepath}")
+
+
+class ResultsVisualizerExecutor(Executor):
+    """Creates visualizations for query results when appropriate."""
+
+    def __init__(self, id: str = "results_visualizer"):
+        super().__init__(id=id)
+
+    @handler
+    async def visualize_results(self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]) -> None:
+        """Create visualization if appropriate."""
+        try:
+            import json
+            import re
+            
+            # Find the query results in messages
+            results = None
+            user_question = None
+            timestamp = None
+            
+            for msg in reversed(messages):
+                # Extract user question
+                if msg.role == Role.USER:
+                    if "User Question:" in msg.text:
+                        user_question = msg.text.split("User Question:", 1)[1].strip().split("\n")[0]
+                    else:
+                        # Direct question without prefix
+                        user_question = msg.text.strip()
+                    # Remove surrounding quotes if present
+                    user_question = user_question.strip('"').strip("'")
+                
+                # Extract embedded visualization data from query results
+                if msg.role == Role.SYSTEM and "QUERY RESULTS:" in msg.text:
+                    # Extract JSON data from hidden comment
+                    data_match = re.search(r'<!-- VISUALIZATION_DATA\n(.*?)\n-->', msg.text, re.DOTALL)
+                    if data_match:
+                        try:
+                            results = json.loads(data_match.group(1))
+                            logger.info("Found visualization data in query results")
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Failed to parse visualization data: {e}")
+            
+            # Extract timestamp from any message
+            for msg in reversed(messages):
+                match = re.search(r"(\d{8}_\d{6})", msg.text)
+                if match:
+                    timestamp = match.group(1)
+                    break
+            
+            if not results:
+                logger.info("No query results found for visualization")
+                await ctx.send_message(messages)
+                return
+            
+            if not user_question:
+                user_question = "Query Results"
+            
+            if not timestamp:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Try to create visualization
+            from visualizer import QueryResultsVisualizer
+            
+            visualizer = QueryResultsVisualizer()
+            chart_path = visualizer.create_visualization(results, user_question, timestamp)
+            
+            if chart_path:
+                viz_message = ChatMessage(
+                    role=Role.SYSTEM,
+                    text=f"📊 **Visualization Created**\n\nChart saved to: `{chart_path}`\n\nThe chart visualizes the query results in a format that makes patterns and insights easier to understand.",
+                )
+                logger.info(f"Visualization created: {chart_path}")
+                await ctx.send_message(messages + [viz_message])
+            else:
+                # No visualization needed - pass through
+                logger.info("Results not suitable for visualization")
+                await ctx.send_message(messages)
+
+        except Exception as e:
+            logger.warning(f"Visualization failed: {e}")
+            # Non-critical - pass through without visualization
+            await ctx.send_message(messages)
+

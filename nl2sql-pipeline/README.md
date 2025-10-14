@@ -36,6 +36,7 @@ Natural Language Answer + Insights
 ✅ **Export Results** - Automatic CSV and Excel export with formatting  
 ✅ **Table Formatting** - Beautiful ASCII tables for readability  
 ✅ **Schema Caching** - 100-500x faster with intelligent caching (< 1ms vs 500ms)  
+✅ **Data Visualization** - Automatic chart generation (bar, line, pie charts)  
 
 ## Prerequisites
 
@@ -82,6 +83,9 @@ Ensure your Azure SQL Database has:
 cd /Users/arturoquiroga/GITHUB/agent-framework-public
 source .venv/bin/activate
 pip install -r python/packages/core/requirements.txt
+
+# Install additional dependencies for this pipeline
+pip install pyodbc openpyxl matplotlib seaborn
 ```
 
 ## Usage
@@ -244,6 +248,12 @@ See `examples/` directory for:
 - Multi-table joins
 - Error recovery scenarios
 - Custom validator implementations
+
+## Additional Documentation
+
+- **[SCHEMA_CACHE_GUIDE.md](SCHEMA_CACHE_GUIDE.md)** - Schema caching for 100-500x performance improvement
+- **[VISUALIZATION_GUIDE.md](VISUALIZATION_GUIDE.md)** - Automatic chart generation and customization
+- **[WEATHER_API_GUIDE.md](../AQ-CODE/azure_ai/WEATHER_API_GUIDE.md)** - Weather API integration (if needed)
 
 ## License
 
