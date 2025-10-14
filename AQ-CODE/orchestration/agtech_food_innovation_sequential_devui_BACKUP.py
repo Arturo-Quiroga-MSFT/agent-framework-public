@@ -43,9 +43,6 @@ from dotenv import load_dotenv
 from typing_extensions import Never
 
 from agent_framework import (
-    AgentExecutor,
-    AgentExecutorRequest,
-    AgentExecutorResponse,
     ChatMessage,
     Executor,
     Role,
@@ -314,73 +311,91 @@ def format_sequential_results(conversation: list[ChatMessage]) -> str:
     return formatted_output
 
 
-async def create_agtech_workflow():
-    """Create and return the DevUI-compatible AgTech sequential workflow with visible agents."""
-    # Get the 7 sequential agents
-    agent_protocols = await create_sequential_agents()
+class SequentialWorkflowExecutor(Executor):
+    """Executor that wraps a sequential workflow and runs it internally."""
     
-    # Wrap each agent in an AgentExecutor for visualization
-    agronomy_executor = AgentExecutor(agent_protocols[0], id="agronomy")
-    engineering_executor = AgentExecutor(agent_protocols[1], id="engineering")
-    food_science_executor = AgentExecutor(agent_protocols[2], id="food_science")
-    sustainability_executor = AgentExecutor(agent_protocols[3], id="sustainability")
-    economics_executor = AgentExecutor(agent_protocols[4], id="economics")
-    supply_chain_executor = AgentExecutor(agent_protocols[5], id="supply_chain")
-    regulations_executor = AgentExecutor(agent_protocols[6], id="regulations")
-    
-    # Create dispatcher that converts AgTechInput to AgentExecutorRequest
-    class AgTechInputDispatcher(Executor):
-        """Dispatcher that converts AgTechInput to AgentExecutorRequest for sequential agents."""
+    def __init__(self, agents: list, **kwargs):
+        """Initialize with list of agents for sequential processing.
         
-        @handler
-        async def dispatch_to_sequential(self, input_data: AgTechInput, ctx: WorkflowContext[Never, AgentExecutorRequest]) -> None:
-            """Extract description from AgTechInput and create AgentExecutorRequest.
-            
-            Args:
-                input_data: AgTechInput with description field
-                ctx: WorkflowContext for sending messages
-            """
-            # Create AgentExecutorRequest for the first agent
-            request = AgentExecutorRequest(
-                messages=[ChatMessage(Role.USER, text=input_data.description)],
-                should_respond=True
-            )
-            await ctx.send_message(request)
+        Args:
+            agents: List of agents to process sequentially
+            **kwargs: Additional Executor arguments
+        """
+        super().__init__(**kwargs)
+        self.agents = agents
+        self._workflow = SequentialBuilder().participants(agents).build()
     
+    @handler
+    async def run_sequential(self, input_text: str, ctx: WorkflowContext[Never, list[ChatMessage]]) -> None:
+        """Run the sequential workflow and capture the final conversation.
+        
+        Args:
+            input_text: User input text to process through sequential agents
+            ctx: WorkflowContext for sending the result
+        """
+        # Run the sequential workflow and collect outputs
+        outputs: list[list[ChatMessage]] = []
+        async for event in self._workflow.run_stream(input_text):
+            if isinstance(event, WorkflowOutputEvent):
+                outputs.append(event.data)
+        
+        # Send the final conversation (list of ChatMessages) to the next executor
+        if outputs:
+            await ctx.send_message(outputs[-1])
+
+
+class AgTechInputDispatcher(Executor):
+    """Dispatcher that converts AgTechInput to a string for the sequential workflow."""
+    
+    @handler
+    async def dispatch_to_sequential(self, input_data: AgTechInput, ctx: WorkflowContext[Never, str]) -> None:
+        """Extract description from AgTechInput and send as string.
+        
+        Args:
+            input_data: AgTechInput with description field
+            ctx: WorkflowContext for sending messages
+        """
+        # Sequential workflow expects a string input
+        await ctx.send_message(input_data.description)
+
+
+class SequentialOutputFormatter(Executor):
+    """Executor that formats the complete sequential conversation for display."""
+    
+    @handler
+    async def format_output(self, conversation: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage], str]) -> None:
+        """Format the complete sequential conversation and yield it.
+        
+        Args:
+            conversation: Complete list of ChatMessage objects from the sequential workflow
+            ctx: WorkflowContext for yielding formatted output
+        """
+        formatted_output = format_sequential_results(conversation)
+        await ctx.yield_output(formatted_output)
+
+
+async def create_agtech_workflow():
+    """Create and return the DevUI-compatible AgTech sequential workflow."""
+    # Get the 7 sequential agents
+    agents = await create_sequential_agents()
+    
+    # Create a wrapper executor that runs the sequential workflow internally
+    sequential_executor = SequentialWorkflowExecutor(
+        agents=agents,
+        id="sequential_processor"
+    )
+    
+    # Create dispatcher that converts AgTechInput to string
     dispatcher = AgTechInputDispatcher(id="input_dispatcher")
     
-    # Create output formatter that handles AgentExecutorResponse
-    class SequentialOutputFormatter(Executor):
-        """Executor that formats the complete sequential conversation for display."""
-        
-        @handler
-        async def format_output(self, response: AgentExecutorResponse, ctx: WorkflowContext[AgentExecutorResponse, str]) -> None:
-            """Format the complete sequential conversation and yield it.
-            
-            Args:
-                response: AgentExecutorResponse from the final agent
-                ctx: WorkflowContext for yielding formatted output
-            """
-            # Extract the full conversation from the final agent's response
-            conversation = response.full_conversation or []
-            formatted_output = format_sequential_results(conversation)
-            await ctx.yield_output(formatted_output)
-    
+    # Create output formatter to handle the final conversation list
     output_formatter = SequentialOutputFormatter(id="output_formatter")
     
-    # Build the workflow with sequential edges
+    # Build the workflow: dispatcher -> sequential executor -> formatter
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
-    
-    # Chain all agents sequentially
-    builder.add_edge(dispatcher, agronomy_executor)
-    builder.add_edge(agronomy_executor, engineering_executor)
-    builder.add_edge(engineering_executor, food_science_executor)
-    builder.add_edge(food_science_executor, sustainability_executor)
-    builder.add_edge(sustainability_executor, economics_executor)
-    builder.add_edge(economics_executor, supply_chain_executor)
-    builder.add_edge(supply_chain_executor, regulations_executor)
-    builder.add_edge(regulations_executor, output_formatter)
+    builder.add_edge(dispatcher, sequential_executor)
+    builder.add_edge(sequential_executor, output_formatter)
     
     workflow = builder.build()
     
