@@ -1,0 +1,43 @@
+================================================================================
+🔍 NL2SQL PIPELINE RESULTS
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 1: system
+────────────────────────────────────────────────────────────────────────────────
+
+QUERY RESULTS:
+
+⏱️  Execution Time: 1141.64ms
+📊 Rows Returned: 5
+
+│ Customer_ID   │ Company_Name   │ Annual_Revenue   │ Lifetime_Revenue   │ Total_Loans_Count   │ Total_Loan_Volume   │ Customer_Segment   │ Customer_Tier   │
+├───────────────┼────────────────┼──────────────────┼────────────────────┼─────────────────────┼─────────────────────┼────────────────────┼─────────────────┤
+│ CUST00792     │ Morales Inc    │ 494242874.00     │ 4345442.00         │ 21                  │ 86908845.00         │ Large Corporate    │ Bronze          │
+│ CUST00708     │ Ballard Ltd    │ 481967957.00     │ 5941433.00         │ 17                  │ 118828673.00        │ Large Corporate    │ Bronze          │
+│ CUST00918     │ Ward-Nelson    │ 474603245.00     │ 2870282.00         │ 10                  │ 57405653.00         │ Large Corporate    │ Bronze          │
+│ CUST00316     │ Stein-Silva    │ 473033143.00     │ 3000316.00         │ 25                  │ 60006323.00         │ Large Corporate    │ Gold            │
+│ CUST00591     │ Ortiz-Morgan   │ 462591729.00     │ 3916420.00         │ 19                  │ 78328415.00         │ Large Corporate    │ Platinum        │
+└───────────────┴────────────────┴──────────────────┴────────────────────┴─────────────────────┴─────────────────────┴────────────────────┴─────────────────┘
+
+Please interpret these results and provide a natural language answer to the user's question.
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 2: results_interpreter
+────────────────────────────────────────────────────────────────────────────────
+
+**Answer:** The query returned five large corporate customers with high annual revenues, varied tiers, and substantial loan volumes.
+
+**Insights:**
+- All listed customers are in the "Large Corporate" segment, but belong to different tiers: Bronze (3), Gold (1), and Platinum (1).
+- Annual revenues for these companies range from ~$462 million to ~$494 million, indicating a highly profitable customer base.
+- Loan volumes and lifetime revenues vary, with Ballard Ltd having the highest loan volume ($118.8M) and Stein-Silva having the highest total number of loans (25).
+- Customer tier does not directly correlate with loan count or loan volume; for example, the single Platinum customer (Ortiz-Morgan) has fewer loans than the Gold-tier customer (Stein-Silva).
+
+**Suggestions:**
+- Which customer tier typically generates the most total loan volume or revenue among large corporates?
+- How do lending patterns differ between the various customer segments (e.g., Large Corporate vs. Small Business)?
+
+================================================================================
+✅ NL2SQL Pipeline Complete
+================================================================================

@@ -1,0 +1,501 @@
+================================================================================
+🧭 AI GOVERNANCE & COMPLIANCE ASSESSMENT
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+🗂️ GOVERNANCE PLAN & CHECKLIST
+────────────────────────────────────────────────────────────────────────────────
+
+**Context Summary:**  
+The project involves deploying an **autonomous drone navigation AI model** to monitor agricultural crops. The system must reliably maneuver across farmland under diverse (weather, lighting, terrain) conditions, collect data (e.g., imagery, moisture levels), and operate with minimal human intervention. Ensuring operational safety, data integrity, fairness, resilience, and regulatory compliance is essential.
+
+**Applicable Standards:**  
+- **ISO/IEC 42001:** AI Management System Standard (AIMS)—focus on governance, lifecycle management, risk assessment, transparency, robustness, compliance, data management.
+- **NIST AI Risk Management Framework (AI RMF):** Covers risk mapping, governance, trustworthiness (validity, safety, security, explainability), and context-specific controls.
+
+---
+
+# **Evaluation Checklist for Autonomous Drone Agri-Monitoring AI**
+
+## **Domains, Key Questions, and Risk Categories**
+
+### 1. **Governance & Compliance**
+   - **Key Questions:**
+       - Is there documented AI management policy in place?
+       - Are clear organizational roles and responsibilities defined (ISO 42001 6.2, 6.3)?
+       - Are regulatory requirements identified and met (privacy, aviation, environmental)?
+   - **Risk Categories:**
+       - Legal/regulatory non-compliance
+       - Lack of oversight
+       - Policy gaps
+
+### 2. **Operational Safety**
+   - **Key Questions:**
+       - Are fail-safes and emergency protocols implemented (e.g., collision avoidance)?
+       - Are drones tested for safe operation under all identified environmental conditions?
+       - Is there a process for incident reporting and post-incident review?
+   - **Risk Categories:**
+       - Physical harm (to people, animals, property)
+       - Environmental damage
+       - Systemic failure
+
+### 3. **Data Management & Quality**
+   - **Key Questions:**
+       - Are data collection practices clearly documented and compliant with privacy laws?
+       - Is input data accurate, complete, and representative of all conditions?
+       - Are mechanisms in place for data validation, anonymization, and retention?
+   - **Risk Categories:**
+       - Biased/incomplete datasets
+       - Data privacy breach
+       - Data loss/corruption
+
+### 4. **Model Robustness & Performance**
+   - **Key Questions:**
+       - Is the navigation model validated for all operational scenarios (weather, crop types)?
+       - Is continuous monitoring for drift or unpredictable behavior performed?
+       - Are retraining and update procedures defined?
+   - **Risk Categories:**
+       - Model failure in rare/unseen conditions
+       - False navigation decisions
+       - Performance degradation
+
+### 5. **Security & Resilience**
+   - **Key Questions:**
+       - Are drones protected against unauthorized access and cyber-attacks?
+       - Is secure communication between drones and base stations ensured?
+       - Are resilience plans in place for system/software faults or malicious input?
+   - **Risk Categories:**
+       - Cyber intrusion
+       - Data tampering
+       - Service disruption
+
+### 6. **Transparency & Explainability**
+   - **Key Questions:**
+       - Is the AI decision-making process documented and explainable to stakeholders (NIST RMF Trustworthiness, ISO 42001 Transparency)?
+       - Can erroneous model decisions be traced and logically explained?
+       - Are model limitations and capabilities disclosed?
+   - **Risk Categories:**
+       - Lack of stakeholder trust
+       - Unaccountable decisions
+
+### 7. **Human Oversight, Control & Accountability**
+   - **Key Questions:**
+       - Is there a mechanism for human intervention in real time if necessary?
+       - Are users trained to understand system outputs and potential failures?
+       - Is accountability for outcomes attributed and tracked?
+   - **Risk Categories:**
+       - Unmitigated automation risk
+       - Absence of escalation paths
+
+### 8. **Fairness & Non-Discrimination**
+   - **Key Questions:**
+       - Does the model perform equitably across different crop types, terrains, and conditions?
+       - Are data and algorithms checked for inherent biases?
+       - Is regular fairness assessment conducted?
+   - **Risk Categories:**
+       - Unfair resource allocation
+       - Biased monitoring/reporting
+
+---
+
+## **Critical Risk Domains (Highest Priority):**
+1. **Operational Safety:**  
+   Direct impact on human, animal, and crop safety; physical damage; regulatory liability.
+2. **Model Robustness & Performance:**  
+   Unexpected navigation/model failures under variable conditions; leads to safety and data risks.
+3. **Security & Resilience:**  
+   High risk of cyber threats (drone hijacking, data exfiltration), potential for widespread service disruption.
+4. **Governance & Compliance:**  
+   Failure to meet legal and regulatory obligations—can halt operations or incur penalties.
+5. **Data Management & Quality:**  
+   Inaccurate or biased data can undermine analysis and decision-making, causing harm.
+
+---
+
+## **Summary Table**
+
+| Domain                          | Key Evaluation Questions                                                               | Risk Categories                  |
+|----------------------------------|---------------------------------------------------------------------------------------|-----------------------------------|
+| Governance & Compliance          | Policies, roles, legal adherence                                                      | Regulatory, oversight             |
+| Operational Safety               | Fail-safes, incident protocols, testing                                               | Physical, environmental, failure  |
+| Data Management & Quality        | Collection, privacy, validation                                                       | Bias, privacy, loss/corruption    |
+| Model Robustness & Performance   | Validation, monitoring, updating                                                      | Model failure, decisions, drift   |
+| Security & Resilience            | Cybersecurity, communications, fault tolerance                                        | Cyber, tampering, disruption      |
+| Transparency & Explainability    | Documentation, traceability, disclosure                                               | Trust, accountability             |
+| Human Oversight & Accountability | Intervention, training, attribution                                                   | Automation risk, escalation       |
+| Fairness & Non-Discrimination    | Equity checks, bias monitoring                                                        | Unfair outcomes, bias             |
+
+---
+
+## **Reference Links:**
+- [ISO/IEC 42001:2023](https://www.iso.org/standard/81230.html)
+- [NIST AI RMF](https://www.nist.gov/artificial-intelligence/ai-risk-management-framework)
+
+---
+
+**This checklist can be adapted to specific implementation stages (design, operation, post-deployment), and supported with ongoing reviews in line with ISO 42001 and NIST AI RMF frameworks.**
+
+────────────────────────────────────────────────────────────────────────────────
+📦 DATA PROVENANCE & QUALITY
+────────────────────────────────────────────────────────────────────────────────
+
+Certainly! Here's a structured review for your autonomous drone navigation model for agricultural crop monitoring, focusing on data provenance, labeling, quality, drift, and mitigations:
+
+---
+
+## 1. Data Sources & Lineage
+
+**Sources:**
+- **Aerial imagery:** Captured by drones over farmland, including multispectral, RGB, thermal, and possibly LiDAR data.
+- **GPS/IMU data:** Flight telemetry, positional coordinates, altitude, and orientation.
+- **Environmental sensors:** Weather station data (temperature, humidity, wind), soil moisture sensors (if available), light intensity.
+- **Ground Truth:** Manual field inspections, crop health assessment surveys, annotated images.
+
+**Lineage:**
+- **Raw collection:** Data logged during drone flights, typically stored onboard and later uploaded to a central system.
+- **Processing:** Images and sensor data are timestamped and geo-referenced. Pre-processing may include noise reduction, calibration, and synchronization across modalities.
+- **Annotation:** Human labelers or semi-automated tools mark crop regions, obstacles, boundaries, and pathways for navigation.
+- **Versioning:** Data tracked by flight session, location, and environmental condition metadata.
+
+---
+
+## 2. Labeling & QA
+
+**Labeling Approaches:**
+- **Manual annotation:** Experts label crop rows, field boundaries, navigable paths, obstacles, weed patches, and stress indicators in image data.
+- **Automated pre-labeling:** Use rule-based or pretrained models to suggest navigation paths or classify objects; verified/corrected by humans.
+- **Sensor fusion:** Combine camera data with telemetry for more precise annotation (e.g., obstacle location).
+
+**QA Practices:**
+- **Cross-validation:** Independent reviewers check a sample of annotations against reference datasets.
+- **Consistency checks:** Automated scripts flag anomalies in labels or missing data.
+- **Golden dataset:** Curated, high-quality labeled images for benchmarking and QA audits.
+- **Inter-annotator agreement:** Metrics (e.g., Cohen's kappa) used to assess consistency.
+
+---
+
+## 3. Quality Metrics
+
+- **Coverage:** Spatiotemporal spread of data (seasons, weather, varieties, growth stages, lighting).
+- **Completeness:** % of flights/images successfully annotated; % of sensor metadata attached.
+- **Accuracy:** 
+  - Navigation path labeling accuracy (comparison with expert-defined reference).
+  - Object detection precision and recall (obstacles, boundaries, crops).
+  - GPS/IMU alignment error.
+- **Noise/Error rate:** 
+  - Missing/corrupted data points.
+  - Image artifacts (blurring, improper exposure).
+- **Balance:** Representation of different crop types, field conditions, weather scenarios.
+
+---
+
+## 4. Drift Risks
+
+- **Seasonal changes:** Crops, field layouts, lighting, and weather conditions alter appearance and navigational complexity.
+- **Crop variety:** New or rotated crops may present unfamiliar visual features.
+- **Sensor drift:** Calibration changes in drone cameras, GPS errors, or aging hardware.
+- **Operational changes:** Drone hardware or navigation algorithm updates without retraining.
+- **Pest/disease outbreaks:** Unusual patterns may confound detection and navigation.
+
+---
+
+## 5. Mitigations
+
+- **Continuous data collection:** Regular flights across seasons, fields, and crop cycles to keep dataset current.
+- **Active feedback loop:** Monitor performance metrics in deployment; flag anomalies for retraining.
+- **Scheduled audits:** Periodic QA reviews of annotated data and model predictions.
+- **Sensor calibration:** Routine checks and recalibration of cameras and telemetry devices.
+- **Model retraining:** Incorporate new data reflecting changing conditions; use transfer learning for novel crops or sensor updates.
+- **Domain adaptation:** Use techniques to generalize across lighting, weather, and growth stages.
+- **Alert systems:** Trigger retraining or human review when navigation error rates or detection accuracy drop significantly.
+
+---
+
+**Summary:**  
+To ensure reliable autonomous drone navigation, maintaining rigorous data provenance, accurate and validated labeling, robust quality metrics, and proactive drift management are essential. Regular QA, continuous data refresh, and field diversity form the backbone of a resilient agricultural monitoring solution.
+
+────────────────────────────────────────────────────────────────────────────────
+⚖️ FAIRNESS & BIAS
+────────────────────────────────────────────────────────────────────────────────
+
+Certainly! Here’s an audit outline for fairness & bias in an autonomous drone navigation model for agricultural crop monitoring:
+
+---
+
+### Sensitive Attributes Considered
+- **Crop type** (e.g., maize, wheat, rice)
+- **Field location/region** (local, national, global disparities)
+- **Owner/operator demographics** (e.g., smallholder vs. large-scale farms)
+- **Land characteristics** (soil type, water access)
+- **Seasonal/temporal variations** (weather, phenological stage)
+- **Technological infrastructure** (areas with/without connectivity)
+
+### Potential Disparities
+- **Uneven Coverage:** Some crop types or regions may receive better monitoring, leading to unequal insights or resource allocation.
+- **Missed Detection:** Crops grown by marginalized groups might be less accurately monitored, affecting their outcomes.
+- **Accessibility:** Smallholder farms may not benefit equally if the system favors field layouts typical of large farms.
+- **Data Bias:** Historical training data may underrepresent certain crops, regions, or conditions (e.g., drought-prone areas).
+- **Weather/Road Access:** Adverse conditions or remote locations may decrease model accuracy disproportionately for some farmers.
+
+### Metrics Needed
+- **Coverage Distribution:** Percentage of fields monitored, stratified by crop, region, and owner type.
+- **Accuracy Across Groups:** Detection/assessment accuracy by crop type, region, farm size, and environmental conditions.
+- **False Positive/Negative Rates:** Disaggregated error rates by sensitive attribute.
+- **Resource Utilization/Recommendations:** Quality and distribution of recommendations provided as outputs (e.g., irrigation, pest control), stratified by sensitive attributes.
+- **User Access Stats:** Usage frequency and performance across different operator demographics.
+- **Intervention Outcomes:** Yield or profit changes post model intervention, tracked across sensitive groups.
+
+### Bias Mitigation Strategies
+- **Representative Data Collection:** Ensure training data includes diverse crops, regions, farm sizes, and conditions.
+- **Stratified Performance Evaluation:** Regular audits of model performance by sensitive subgroups.
+- **Algorithmic Adjustments:** Weighted loss functions or upsampling for underrepresented conditions/crops.
+- **Human-in-the-Loop Review:** Periodic feedback cycles from farmers/operators of different backgrounds.
+- **Transparency & Explainability:** Make recommendations and their rationale clear, with auditing of recommendation fairness.
+- **Accessibility Initiatives:** Adapt models/interface for low-resource settings (offline use, multilingual support).
+- **Continuous Monitoring:** Implement dashboards for ongoing fairness assessment and automatic flagging of emerging disparities.
+
+---
+
+**Summary:**  
+Audit drone navigation models for fairness by monitoring disparities related to crop types, locations, farm size, and technical access. Use stratified accuracy, coverage, and error metrics, and mitigate bias by improving data representativeness, algorithm design, and continual fairness evaluation.
+
+────────────────────────────────────────────────────────────────────────────────
+🔐 PRIVACY & MINIMIZATION
+────────────────────────────────────────────────────────────────────────────────
+
+Certainly. Here’s a privacy and data minimization analysis for an autonomous drone navigation model deployed for agricultural crop monitoring under varying conditions.
+
+---
+
+**1. Personal Data Types:**
+- Direct personal data is rarely collected, but the following may be involved indirectly:
+    - **Geolocation data:** GPS coordinates of farmland; may link to landowners.
+    - **Visual imagery:** High-resolution images/videos; may inadvertently capture persons, buildings, vehicles, or identifying landmarks.
+    - **Metadata:** Timestamps, drone operator IDs, device identifiers.
+    - **Communication data:** Data exchanges between drones, ground stations, or cloud services (may include operator login data).
+    - **Environmental sensor data:** Usually non-personal, but can sometimes correlate to private property characteristics.
+
+---
+
+**2. Minimization Approach:**
+- **Purpose limitation:** Limit data collection to what is strictly necessary for crop monitoring/navigation - avoid capturing beyond the field area.
+- **Granularity control:** Lower spatial and temporal image resolution if not needed for agronomic analysis.
+- **Field boundary enforcement:** Pre-program flight paths to exclude non-target areas (e.g., neighboring properties).
+- **Sensor configuration:** Restrict sensor activation to relevant periods/locations; disable audio or visual capture where unnecessary.
+- **Operator data controls:** Limit logs to essential operational details (e.g., role, not identity).
+
+---
+
+**3. Anonymization / Pseudonymization:**
+- **Image processing:** Blur or mask sections capturing people, vehicles, or dwellings (if present).
+- **Geolocation fuzzing:** Use generalized coordinates that cover agricultural blocks, not specific property lines, where feasible.
+- **Pseudonymize operator/device IDs:** Replace identifiable strings with random tokens for internal tracking.
+- **Aggregate data:** For reporting/analysis, provide results in aggregate to avoid references to individual plots or properties.
+- **Remove EXIF metadata:** Strip images of metadata that may include device or location data when sharing externally.
+
+---
+
+**4. Retention & Consent:**
+- **Retention policy:** Store imagery and geolocation data only as long as needed for model training, crop monitoring, and regulatory requirements.
+- **Retention minimization:** Regularly review and delete or archive outdated or non-essential data.
+- **Consent management:**
+    - **Landowner permissions:** Explicit consent should be obtained from property owners before data capture over their land.
+    - **Operator notices:** Ensure any personnel whose data might be captured (e.g., operators, ground crew) are informed and consent where required.
+
+---
+
+**5. Privacy Risks:**
+- **Unintended surveillance:** Drones may inadvertently record individuals or private property details adjacent to target fields.
+- **Re-identification risk:** Combining geolocation and imagery could allow re-identification of landowners or specific locations.
+- **Data breach risk:** Centralized storage of visual and location data is a target for unauthorized access.
+- **Function creep:** Datasets may be reused for purposes beyond original intent, risking privacy violations.
+- **Third-party sharing:** Transmission to cloud or analysis services could expose data to external parties lacking proper safeguards.
+
+---
+
+**Summary Table**
+
+| Aspect                | Recommendations & Risks                                                                                                               |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Personal Data Types   | Geolocation, imagery (possible persons/property), metadata, operator/device info                                                      |
+| Minimization Approach | Limit scope to field areas, restrict sensors/config, reduce resolution, flight path controls                                           |
+| Anonymization         | Blur/mask identifiable objects, pseudonymize IDs, aggregate or generalize locations, strip metadata                                   |
+| Retention/Consent     | Store only as necessary, consent from landowners, inform operators, periodic deletion/archive                                         |
+| Privacy Risks         | Unintended recording, re-identification, breach exposure, function creep, risks with third-party data handling                         |
+
+---
+
+**Notes:**  
+- Employ privacy-by-design principles in both hardware and software.
+- If deployed in regions under GDPR/CPRA or similar, treat any imagery or geolocation tied to individuals as personal data.
+- Regularly audit mitigation measures and update protocols as technology and usage evolve.
+
+Let me know if you need compliance mapping, technical recommendations, or risk mitigation strategies for a specific jurisdiction.
+
+────────────────────────────────────────────────────────────────────────────────
+🛡️ SECURITY & ROBUSTNESS
+────────────────────────────────────────────────────────────────────────────────
+
+Certainly! Here’s a structured analysis for an autonomous drone navigation model used in agricultural crop monitoring:
+
+---
+
+## Threat Model Summary
+
+- **Assets:** Drone hardware/sensors, navigation model (software, ML model), collected crop data, control commands, network communications.
+- **Entry Points:** Wireless communication interfaces (Wi-Fi, 4G/5G, proprietary), physical access to drone, software update mechanisms, APIs for remote control/data.
+- **Actors:**
+  - **External adversaries:** Hackers, competitors, criminal groups seeking to disrupt operations, steal data or hijack drones.
+  - **Insider threats:** Malicious or negligent employees/contractors.
+  - **Supply chain:** Vendors providing hardware, sensors, firmware, or 3rd party AI models.
+  - **Environmental:** Adverse weather, radio frequency interference.
+
+---
+
+## Adversarial Risks
+
+- **Model Manipulation/Adversarial Inputs:** Drone vision/navigation models may be vulnerable to adversarial examples (e.g., crafted images or patterns in crop fields that confuse navigation/obstacle avoidance).
+- **Data Poisoning:** If training/update data is compromised, model behavior could be skewed, causing navigation failures or missed monitoring coverage.
+- **Physical/Signal Jamming:** GPS spoofing/jamming, radio frequency interference, disrupting navigation or communication.
+- **Hijacking:** Unauthorized takeover via network protocols, exploiting weak authentication.
+- **Privacy Breaches:** Theft of crop imagery or farm data for economic espionage.
+
+---
+
+## Supply Chain Concerns
+
+- **Malicious Hardware/Firmware:** Compromised components (sensors, boards, communication modules) could introduce backdoors or fail under load.
+- **Model/Software Tampering:** Pre-trained models or update packages from 3rd parties could be poisoned or trojanized.
+- **Dependency Vulnerabilities:** Use of vulnerable open-source libraries for navigation/data processing.
+- **Update Integrity:** Insecure update channels could allow implanting malicious code during routine maintenance.
+
+---
+
+## Hardening & Monitoring Controls
+
+### Hardening Controls
+- **Secure Boot/Hardware Root of Trust:** Ensure only verified firmware/software runs.
+- **End-to-End Encryption:** Encrypt command/data channels and storage.
+- **Authentication & Access Control:** Strong authentication for command/control; restrict control privileges and API access.
+- **Model Robustness:** Evaluate AI models on adversarial samples; apply adversarial training or certified defenses.
+- **GPS/Signal Verification:** Cross-check GPS/IMU data consistency; implement fallback navigation (visual odometry).
+- **Firmware & Software Signing:** Require signed updates; validate source before deployment.
+- **Component Vetting:** Audit supply chain for trustworthy vendors/hardware; regular vulnerability assessments.
+
+### Monitoring Controls
+- **Intrusion Detection:** Monitor for abnormal network activity or command patterns.
+- **Anomaly Detection in Navigation/Data:** Watch for unusual movement, unexpected model outputs; set up alerting.
+- **Physical Tamper Detection:** Sensors for unauthorized access to drone body/hardware.
+- **Update Auditing:** Log and review all software/model updates; periodic forensic audits.
+- **Telemetry Logging:** Comprehensive, tamper-resistant logging of flight data and system state for incident response.
+
+---
+
+**Summary:** Autonomous drone navigation for crop monitoring faces adversarial ML risks, supply chain threats, and operational hazards. Addressing these requires robust controls across hardware/supply chain, resilient models, secure communication, and ongoing surveillance/incident response.
+
+────────────────────────────────────────────────────────────────────────────────
+📜 REGULATORY ALIGNMENT
+────────────────────────────────────────────────────────────────────────────────
+
+Certainly. Here's an analysis tailored for an autonomous drone navigation model used for agricultural crop monitoring under varying conditions, mapped to regulatory requirements and scope:
+
+---
+
+**1. Jurisdictional Scope**
+
+- **EU AI Act Level:**  
+  - Likely falls under **high-risk AI systems** as per Annex III (1)(c): "Safety components of products... that are regulated by Union harmonisation legislation," especially if the drone provides safety-critical guidance or interacts physically.
+  - If used solely for monitoring (not controlling equipment or performing interventions), it may be **low-medium risk**, but subject to general requirements on transparency and human oversight.
+
+- **USA (FDA, FAA):**  
+  - **FDA:** Not applicable unless drone makes health-related decisions (e.g., pest/disease diagnosis with downstream human health impact), which is unlikely for basic crop monitoring.
+  - **FAA (Federal Aviation Administration):** Applicable for drone operations: mandates for Unmanned Aircraft System (UAS) usage — operator certification, flight approval, airspace restrictions.
+  - **USDA:** If data is used for regulatory compliance with agricultural standards, USDA oversight may apply.
+
+- **Other Jurisdictions:**  
+  - Local Civil Aviation Authorities (CAAs): Most countries (e.g., UK CAA, Australia CASA, etc.) regulate drone operations.
+  - Data protection laws (GDPR in EU) if images or data are linked to individuals or private property.
+
+---
+
+**2. Required Documentation**
+
+- **EU AI Act:**
+  - Risk management system documentation (Annex IV)
+  - Data governance and training data records, including bias and representativeness
+  - Model design and development documentation (purpose, limitations, performance metrics under varying conditions)
+  - Post-market monitoring plan
+  - Logging procedures (continuous monitoring of operational events)
+  - Conformity assessment — technical documentation for notified body/review
+
+- **FAA/USDA (US):**
+  - Drone registration certificate
+  - Operational risk assessment
+  - Flight logs, route planning and collision-avoidance documentation
+  - UAS safety documentation (if autonomous flight)
+  - Data management plan (especially if sharing or storing sensitive data)
+
+- **General:**
+  - Explainability report (how decisions are made)
+  - Human oversight and intervention protocols
+  - Privacy impact assessment if personal data is processed
+
+---
+
+**3. Conformance Gaps**
+
+Potential compliance gaps for typical autonomous drone navigation models in this context:
+
+- **Insufficient or non-standardized risk management procedures** (EU AI Act Annex VIII requirements)
+- **Lack of event/decision logging** (needed for post-market monitoring)
+- **Insufficient documentation of dataset sources/representativeness** (risk of bias in monitoring)
+- **No formal conformity assessment or notified body involvement** (for high-risk use cases)
+- **Limited evidence of human oversight — ability to override or intervene during autonomous operation**
+- **Possible omission of explanation protocols for navigation/decision-making logic**
+- **Flight operation permissions and registration** (gaps are common with new deployments, especially for autonomous flight)
+- **Failure to address privacy (images with identifiable data, geo-tagging on private land)**
+
+---
+
+**4. Upcoming Regulatory Changes**
+
+- **EU AI Act:**
+  - Final text slated for full effect within 24 months (mid-2026), with some provisions in effect earlier.
+  - Strengthening of requirements for **high-risk AI**, including stricter documentation, transparency, and market surveillance.
+  - Expansion of conformity assessment requirements; post-market monitoring and mandatory incident reporting.
+
+- **FAA:**
+  - Ongoing updates to UAS and autonomous flight rules; focus on **Beyond Visual Line Of Sight (BVLOS)** operations — likely increased requirements for safety and monitoring.
+
+- **GDPR/Privacy Laws:**
+  - Evolving interpretation of image data in agriculture; possible tighter regimes for drone data collection.
+
+---
+
+**Summary Table**
+
+| Regulation         | Scope               | Documentation                      | Gaps                              | Changes           |
+|--------------------|---------------------|------------------------------------|-----------------------------------|-------------------|
+| EU AI Act          | High/Medium Risk AI | Risk mgmt., tech doc, logs, PMM    | Data, logging, conform. assessmt. | Full rollout 2026 |
+| FAA                | Drone ops           | Registration, flight logs, UAS doc | Permissions, autonomous operation | BVLOS rules       |
+| GDPR/Privacy       | Data collection     | DPIA, consent, data mgmt.          | Privacy, consent, data storage    | Stronger rules    |
+
+---
+
+**If you need a gap assessment checklist, documentation templates, or jurisdiction-specific workflow, let me know.**
+
+================================================================================
+🗒️ RISK REGISTER (Derivation Prototype)
+================================================================================
+Risk | Impact | Likelihood | Mitigation | Owner | ETA
+-----|--------|-----------|-----------|-------|----
+Data Drift in Critical Feature | High | Medium | Monitor + Adaptive Retraining | Data Team | 90d
+Unmeasured Fairness Metric | Medium | High | Add disparity metrics & re-audit | AI Governance | 30d
+Opaque Third-Party Model Component | High | Medium | Contractual Transparency + Testing | Procurement | 45d
+Insufficient Adversarial Testing | Medium | Medium | Add Red-Team & Robustness Tests | Security | 60d
+
+(Note: Populate dynamically in future enhancement.)
+================================================================================
+✅ Assessment complete - validate and extend risk register.
+================================================================================
+⏱️ Elapsed Time: 47.42 seconds

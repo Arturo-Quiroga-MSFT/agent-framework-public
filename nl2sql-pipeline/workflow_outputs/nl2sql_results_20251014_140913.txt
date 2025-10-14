@@ -1,0 +1,43 @@
+================================================================================
+🔍 NL2SQL PIPELINE RESULTS
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 1: system
+────────────────────────────────────────────────────────────────────────────────
+
+QUERY RESULTS:
+
+Execution Time: 1070.16ms
+Rows Returned: 4
+
+Columns: Customer ID, Company Name, Tax ID, Legal Entity Type, Year Founded, Employee Count, Annual Revenue, Customer Segment, Customer Tier, Is VIP, Is High Risk
+
+Data:
+  Row 1: Customer ID=CUST00355, Company Name=Barnett, Rogers and Snyder, Tax ID=68-2794698, Legal Entity Type=Corporation, Year Founded=2004, Employee Count=55, Annual Revenue=3286839.00, Customer Segment=Small Business, Customer Tier=Gold, Is VIP=False, Is High Risk=False
+  Row 2: Customer ID=CUST00298, Company Name=Lee, Horton and Snyder, Tax ID=90-5859883, Legal Entity Type=Partnership, Year Founded=2015, Employee Count=92, Annual Revenue=3906551.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+  Row 3: Customer ID=CUST00184, Company Name=Snyder, Campos and Callahan, Tax ID=70-4731818, Legal Entity Type=Corporation, Year Founded=2014, Employee Count=34, Annual Revenue=2370018.00, Customer Segment=Small Business, Customer Tier=Platinum, Is VIP=False, Is High Risk=False
+  Row 4: Customer ID=CUST01101, Company Name=Vargas-Snyder, Tax ID=59-6539168, Legal Entity Type=Partnership, Year Founded=2015, Employee Count=5, Annual Revenue=2444739.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=True
+
+Please interpret these results and provide a natural language answer to the user's question.
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 2: results_interpreter
+────────────────────────────────────────────────────────────────────────────────
+
+**Answer:**  
+All four customers are small businesses, none are designated VIPs, and only one (Vargas-Snyder) is classified as high risk.
+
+**Insights:**
+- All companies operate as either corporations or partnerships and fall within the small business segment.
+- Customer Tiers vary, including Gold, Bronze, and Platinum, indicating differing account statuses or value levels.
+- Only one company (Vargas-Snyder) is flagged as high risk, and none are marked as VIPs.
+- Employee counts and annual revenues vary considerably, with employee counts ranging from 5 to 92 and revenues from approximately $2.37M to $3.9M.
+
+**Suggestions:**
+- What criteria are used to determine high risk or VIP status for these customers?
+- Would you like to see data on medium or large business customers for comparison?
+
+================================================================================
+✅ NL2SQL Pipeline Complete
+================================================================================
