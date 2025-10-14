@@ -1025,7 +1025,7 @@ export function WorkflowView({
                       <div
                         ref={resultContentRef}
                         className="workflow-output-scrollable p-4 overflow-y-scroll overflow-x-hidden flex-1 min-h-0 relative"
-                        style={{ maxHeight: '100%' }}
+                        style={{ maxHeight: '600px' }}
                       >
                         <div className="text-foreground whitespace-pre-wrap break-words text-sm pb-12">
                           {workflowResult}
