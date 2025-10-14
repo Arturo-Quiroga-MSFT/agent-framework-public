@@ -12,6 +12,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from agent_framework import ChatMessage, Executor, Role, WorkflowContext, handler
@@ -554,3 +555,214 @@ class QueryExecutorExecutor(Executor):
         lines.append("Please interpret these results and provide a natural language answer to the user's question.")
 
         return "\n".join(lines)
+
+
+# ============================================================================
+# Results Exporter Executor
+# ============================================================================
+
+
+class ResultsExporterExecutor(Executor):
+    """Exports query results to CSV and Excel formats."""
+    
+    def __init__(self, export_dir: str = "exports", id: str = "results_exporter"):
+        super().__init__(id=id)
+        self.export_dir = export_dir
+    
+    @handler
+    async def export_results(self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]) -> None:
+        """Extract query results from messages and export to CSV/Excel.
+        
+        Looks for QUERY RESULTS in the conversation and exports the data.
+        """
+        import csv
+        from datetime import datetime
+        from pathlib import Path
+        
+        logger.info("Checking for query results to export...")
+        
+        # Find the message with query results
+        results_data = None
+        user_question = None
+        
+        for msg in messages:
+            # Extract user question
+            if msg.role == Role.USER and not user_question:
+                user_question = msg.text
+            
+            # Look for QUERY RESULTS in system messages
+            if msg.role == Role.SYSTEM and "QUERY RESULTS:" in msg.text:
+                results_data = self._extract_results_from_message(msg.text)
+                break
+        
+        if not results_data or not results_data.get("rows"):
+            logger.info("No data to export (query returned no rows)")
+            return
+        
+        # Create exports directory
+        export_path = Path(self.export_dir)
+        export_path.mkdir(exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_filename = f"query_results_{timestamp}"
+        
+        # Export to CSV
+        csv_file = export_path / f"{base_filename}.csv"
+        self._export_to_csv(results_data, csv_file, user_question)
+        
+        # Export to Excel (if openpyxl is available)
+        try:
+            excel_file = export_path / f"{base_filename}.xlsx"
+            self._export_to_excel(results_data, excel_file, user_question)
+            
+            logger.info(f"✅ Results exported to CSV and Excel: {base_filename}")
+            
+            # Send confirmation message
+            export_msg = ChatMessage(
+                role=Role.SYSTEM,
+                text=f"""📊 **Export Complete**
+
+Results have been saved to:
+- CSV: `{csv_file}`
+- Excel: `{excel_file}`
+
+Total rows exported: {len(results_data['rows'])}""",
+            )
+            await ctx.send_message([export_msg])
+            
+        except ImportError:
+            logger.warning("openpyxl not installed - Excel export skipped")
+            
+            # Send CSV-only confirmation
+            export_msg = ChatMessage(
+                role=Role.SYSTEM,
+                text=f"""📊 **Export Complete**
+
+Results have been saved to:
+- CSV: `{csv_file}`
+
+Total rows exported: {len(results_data['rows'])}
+
+💡 Tip: Install openpyxl for Excel export: `pip install openpyxl`""",
+            )
+            await ctx.send_message([export_msg])
+    
+    def _extract_results_from_message(self, text: str) -> dict | None:
+        """Extract structured results data from formatted message text.
+        
+        Parses the table format to extract column names and row data.
+        """
+        lines = text.split("\n")
+        
+        # Find the table header line (starts with │)
+        header_line = None
+        data_start_idx = None
+        
+        for i, line in enumerate(lines):
+            if line.strip().startswith("│") and "│" in line[1:]:
+                # Check if this is the header (not the separator line with ─)
+                if "─" not in line:
+                    header_line = line
+                    # Data starts after the separator line
+                    data_start_idx = i + 2
+                    break
+        
+        if not header_line or data_start_idx is None:
+            return None
+        
+        # Parse column names from header
+        column_names = [col.strip() for col in header_line.split("│")[1:-1]]
+        
+        # Parse data rows
+        rows = []
+        for line in lines[data_start_idx:]:
+            if line.strip().startswith("│") and "─" not in line and "└" not in line:
+                values = [val.strip() for val in line.split("│")[1:-1]]
+                if len(values) == len(column_names):
+                    row_dict = dict(zip(column_names, values))
+                    rows.append(row_dict)
+            elif "└" in line:
+                break  # End of table
+        
+        return {
+            "columns": [{"name": col} for col in column_names],
+            "rows": rows,
+        }
+    
+    def _export_to_csv(self, results_data: dict, filepath: Path, user_question: str | None = None):
+        """Export results to CSV file."""
+        import csv
+        
+        columns = [col["name"] for col in results_data["columns"]]
+        rows = results_data["rows"]
+        
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            # Add user question as comment if available
+            if user_question:
+                f.write(f"# Question: {user_question}\n")
+                f.write(f"# Generated: {filepath.stem}\n")
+                f.write("#\n")
+            
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        logger.info(f"CSV export complete: {filepath}")
+    
+    def _export_to_excel(self, results_data: dict, filepath: Path, user_question: str | None = None):
+        """Export results to Excel file with formatting."""
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+            from openpyxl.utils import get_column_letter
+        except ImportError:
+            raise ImportError("openpyxl is required for Excel export. Install with: pip install openpyxl")
+        
+        columns = [col["name"] for col in results_data["columns"]]
+        rows = results_data["rows"]
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Query Results"
+        
+        # Add user question at the top if available
+        current_row = 1
+        if user_question:
+            ws.cell(row=current_row, column=1, value="User Question:")
+            ws.cell(row=current_row, column=1).font = Font(bold=True)
+            current_row += 1
+            
+            ws.cell(row=current_row, column=1, value=user_question)
+            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(columns))
+            current_row += 2  # Add blank row
+        
+        # Write headers with formatting
+        header_row = current_row
+        for col_idx, col_name in enumerate(columns, 1):
+            cell = ws.cell(row=header_row, column=col_idx, value=col_name)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Write data rows
+        for row_idx, row_data in enumerate(rows, header_row + 1):
+            for col_idx, col_name in enumerate(columns, 1):
+                value = row_data.get(col_name, "")
+                ws.cell(row=row_idx, column=col_idx, value=value)
+        
+        # Auto-size columns
+        for col_idx, col_name in enumerate(columns, 1):
+            max_length = len(col_name)
+            for row_data in rows[:100]:  # Check first 100 rows for width
+                value_str = str(row_data.get(col_name, ""))
+                max_length = max(max_length, len(value_str))
+            
+            # Set column width (limit to reasonable max)
+            ws.column_dimensions[get_column_letter(col_idx)].width = min(max_length + 2, 50)
+        
+        # Freeze header row
+        ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
+        
+        wb.save(filepath)
+        logger.info(f"Excel export complete: {filepath}")

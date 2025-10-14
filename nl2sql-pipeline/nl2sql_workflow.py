@@ -50,6 +50,7 @@ from executors import (
     SchemaRetrieverExecutor,
     SQLValidatorExecutor,
     QueryExecutorExecutor,
+    ResultsExporterExecutor,
 )
 
 # Load environment
@@ -361,11 +362,14 @@ Be concise, clear, and actionable.""",
     
     output_formatter = OutputFormatter(id="output_formatter")
     
+    # Create results exporter
+    results_exporter = ResultsExporterExecutor(export_dir="exports", id="results_exporter")
+    
     # Create conversation adapters for agent -> executor conversions
     sql_gen_adapter = _ResponseToConversation(id="to-conversation:sql_generator")
     results_adapter = _ResponseToConversation(id="to-conversation:results_interpreter")
     
-    # Build workflow: dispatcher -> sequential pipeline with adapters -> formatter
+    # Build workflow: dispatcher -> sequential pipeline with adapters -> exporter -> formatter
     builder = WorkflowBuilder()
     builder.set_start_executor(input_dispatcher)
     
@@ -377,7 +381,8 @@ Be concise, clear, and actionable.""",
     builder.add_edge(sql_validator, query_executor)
     builder.add_edge(query_executor, results_interpreter)     # agent
     builder.add_edge(results_interpreter, results_adapter)    # convert AgentExecutorResponse -> list[ChatMessage]
-    builder.add_edge(results_adapter, output_formatter)
+    builder.add_edge(results_adapter, results_exporter)       # export to CSV/Excel
+    builder.add_edge(results_exporter, output_formatter)      # final formatting
     
     workflow = builder.build()
     return workflow
