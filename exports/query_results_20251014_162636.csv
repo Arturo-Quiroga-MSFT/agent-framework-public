@@ -1,0 +1,9 @@
+# Question: What is the distribution of orders by status
+# Generated: query_results_20251014_162636
+#
+OrderStatus,OrderCount,PercentOfOrders
+Approved,1788,59.60
+Declined,630,21.00
+Withdrawn by Applicant,303,10.10
+Under Review,228,7.60
+Submitted,51,1.70
