@@ -35,6 +35,7 @@ Natural Language Answer + Insights
 ✅ **Full Observability** - Traces every pipeline step  
 ✅ **Export Results** - Automatic CSV and Excel export with formatting  
 ✅ **Table Formatting** - Beautiful ASCII tables for readability  
+✅ **Schema Caching** - 100-500x faster with intelligent caching (< 1ms vs 500ms)  
 
 ## Prerequisites
 

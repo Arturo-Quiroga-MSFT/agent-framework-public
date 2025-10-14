@@ -149,7 +149,8 @@ ORIGINAL USER QUESTION:
 Your task: Generate a SQL query to answer this question using the provided schema.""",
             )
 
-            await ctx.send_message([enhanced_message])
+            # Pass through original messages plus the schema context
+            await ctx.send_message(messages + [enhanced_message])
 
         except Exception as e:
             logger.error(f"Schema retrieval failed: {e}")
@@ -160,22 +161,39 @@ Your task: Generate a SQL query to answer this question using the provided schem
             await ctx.send_message([error_message])
 
     async def _get_real_schema(self) -> str:
-        """Retrieve real schema from the database.
+        """Retrieve real schema from the database (with caching).
         
         Returns:
             Formatted schema text for LLM consumption
         """
         from db_utils import create_connection_from_env
+        from schema_cache import get_global_cache
         
-        logger.info("Connecting to database to retrieve schema...")
-        
+        # Get database connection info for cache key
         with create_connection_from_env() as db:
-            schema_info = db.get_schema_info()
+            server = db.server
+            database = db.database
         
-        # Format schema for LLM
+        # Try to get schema from cache first
+        cache = get_global_cache()
+        cached_schema = cache.get(server, database)
+        
+        if cached_schema:
+            logger.info(f"✅ Using cached schema for {database}")
+            schema_info = cached_schema
+        else:
+            logger.info("🔄 Fetching schema from database...")
+            
+            with create_connection_from_env() as db:
+                schema_info = db.get_schema_info()
+            
+            # Store in cache for next time
+            cache.set(server, database, schema_info)
+        
+        # Format schema for LLM (using connection info from earlier)
         lines = [
-            f"Database: {db.database}",
-            f"Server: {db.server}",
+            f"Database: {database}",
+            f"Server: {server}",
             "",
             "Available Tables:",
         ]
@@ -300,7 +318,7 @@ class SQLValidatorExecutor(Executor):
                 role=Role.SYSTEM,
                 text="Error: No valid SQL query found in the response. Please regenerate.",
             )
-            await ctx.send_message([error_msg])
+            await ctx.send_message(messages + [error_msg])
             return
 
         # Perform safety checks
@@ -311,7 +329,7 @@ class SQLValidatorExecutor(Executor):
                 role=Role.SYSTEM,
                 text=f"SQL Safety Check Failed:\n{chr(10).join(warnings)}\n\nPlease generate a safer query.",
             )
-            await ctx.send_message([error_msg])
+            await ctx.send_message(messages + [error_msg])
             return
 
         # Add row limit if not present
@@ -323,7 +341,7 @@ class SQLValidatorExecutor(Executor):
             role=Role.SYSTEM,
             text=f"VALIDATED SQL QUERY:\n```sql\n{sql_query}\n```\n\nQuery is safe to execute.",
         )
-        await ctx.send_message([validated_msg])
+        await ctx.send_message(messages + [validated_msg])
 
     def _extract_sql_from_message(self, text: str) -> str | None:
         """Extract SQL query from LLM response."""
@@ -413,7 +431,7 @@ class QueryExecutorExecutor(Executor):
             error_msg = ChatMessage(
                 role=Role.SYSTEM, text="Error: No validated SQL query found to execute."
             )
-            await ctx.send_message([error_msg])
+            await ctx.send_message(messages + [error_msg])
             return
 
         try:
@@ -432,7 +450,7 @@ class QueryExecutorExecutor(Executor):
             results_text = self._format_results(result, execution_time)
 
             results_msg = ChatMessage(role=Role.SYSTEM, text=results_text)
-            await ctx.send_message([results_msg])
+            await ctx.send_message(messages + [results_msg])
 
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
@@ -440,7 +458,7 @@ class QueryExecutorExecutor(Executor):
                 role=Role.SYSTEM,
                 text=f"Query Execution Error:\n{str(e)}\n\nPlease review and regenerate the query.",
             )
-            await ctx.send_message([error_msg])
+            await ctx.send_message(messages + [error_msg])
     
     async def _execute_real_query(self, sql: str) -> dict:
         """Execute query against real database.
@@ -597,6 +615,8 @@ class ResultsExporterExecutor(Executor):
         
         if not results_data or not results_data.get("rows"):
             logger.info("No data to export (query returned no rows)")
+            # Pass through existing messages without adding export confirmation
+            await ctx.send_message(messages)
             return
         
         # Create exports directory
@@ -618,7 +638,7 @@ class ResultsExporterExecutor(Executor):
             
             logger.info(f"✅ Results exported to CSV and Excel: {base_filename}")
             
-            # Send confirmation message
+            # Create confirmation message and append to conversation
             export_msg = ChatMessage(
                 role=Role.SYSTEM,
                 text=f"""📊 **Export Complete**
@@ -629,12 +649,13 @@ Results have been saved to:
 
 Total rows exported: {len(results_data['rows'])}""",
             )
-            await ctx.send_message([export_msg])
+            # Pass through all existing messages plus the export confirmation
+            await ctx.send_message(messages + [export_msg])
             
         except ImportError:
             logger.warning("openpyxl not installed - Excel export skipped")
             
-            # Send CSV-only confirmation
+            # Create CSV-only confirmation and append to conversation
             export_msg = ChatMessage(
                 role=Role.SYSTEM,
                 text=f"""📊 **Export Complete**
@@ -646,7 +667,8 @@ Total rows exported: {len(results_data['rows'])}
 
 💡 Tip: Install openpyxl for Excel export: `pip install openpyxl`""",
             )
-            await ctx.send_message([export_msg])
+            # Pass through all existing messages plus the export confirmation
+            await ctx.send_message(messages + [export_msg])
     
     def _extract_results_from_message(self, text: str) -> dict | None:
         """Extract structured results data from formatted message text.
