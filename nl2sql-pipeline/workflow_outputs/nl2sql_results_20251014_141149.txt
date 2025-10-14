@@ -1,0 +1,50 @@
+================================================================================
+🔍 NL2SQL PIPELINE RESULTS
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 1: system
+────────────────────────────────────────────────────────────────────────────────
+
+QUERY RESULTS:
+
+Execution Time: 1081.73ms
+Rows Returned: 10
+
+Columns: Customer ID, Company Name, Tax ID, Legal Entity Type, Year Founded, Employee Count, Annual Revenue, Customer Segment, Customer Tier, Is VIP, Is High Risk
+
+Data:
+  Row 1: Customer ID=CUST00058, Company Name=Fleet Transportation Corp, Tax ID=109910111, Legal Entity Type=Corporation, Year Founded=2010, Employee Count=475, Annual Revenue=62000000.00, Customer Segment=Large Corporate, Customer Tier=Platinum, Is VIP=True, Is High Risk=False
+  Row 2: Customer ID=CUST00844, Company Name=Flores, Butler and Hernandez, Tax ID=96-3230219, Legal Entity Type=Partnership, Year Founded=1996, Employee Count=804, Annual Revenue=26338402.00, Customer Segment=Middle Market, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+  Row 3: Customer ID=CUST00838, Company Name=Flores, Harper and Chambers, Tax ID=32-4635160, Legal Entity Type=LLC, Year Founded=2019, Employee Count=94, Annual Revenue=900606.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+  Row 4: Customer ID=CUST01093, Company Name=Flores, Mckenzie and Duncan, Tax ID=98-4510199, Legal Entity Type=Corporation, Year Founded=2019, Employee Count=88, Annual Revenue=2477524.00, Customer Segment=Small Business, Customer Tier=Platinum, Is VIP=False, Is High Risk=True
+  Row 5: Customer ID=CUST00172, Company Name=Flowers, Martin and Kelly, Tax ID=41-2264748, Legal Entity Type=Corporation, Year Founded=2020, Employee Count=88, Annual Revenue=623797.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=True
+  Row 6: Customer ID=CUST01023, Company Name=Flynn Group, Tax ID=97-8367376, Legal Entity Type=LLC, Year Founded=2012, Employee Count=7, Annual Revenue=2050280.00, Customer Segment=Small Business, Customer Tier=Silver, Is VIP=False, Is High Risk=True
+  Row 7: Customer ID=CUST00934, Company Name=Mccann, Taylor and Flores, Tax ID=54-2743531, Legal Entity Type=Partnership, Year Founded=2016, Employee Count=371, Annual Revenue=10125069.00, Customer Segment=Middle Market, Customer Tier=Bronze, Is VIP=False, Is High Risk=True
+  Row 8: Customer ID=CUST00311, Company Name=Mitchell, Nelson and Flores, Tax ID=36-9204110, Legal Entity Type=Partnership, Year Founded=2015, Employee Count=97, Annual Revenue=2793928.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+  Row 9: Customer ID=CUST00259, Company Name=Nolan-Flynn, Tax ID=39-9393009, Legal Entity Type=Partnership, Year Founded=1989, Employee Count=99, Annual Revenue=854857.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+  Row 10: Customer ID=CUST00625, Company Name=Walker-Flores, Tax ID=24-3929534, Legal Entity Type=Corporation, Year Founded=2013, Employee Count=27, Annual Revenue=2691545.00, Customer Segment=Small Business, Customer Tier=Bronze, Is VIP=False, Is High Risk=False
+
+Please interpret these results and provide a natural language answer to the user's question.
+
+────────────────────────────────────────────────────────────────────────────────
+🤖 Step 2: results_interpreter
+────────────────────────────────────────────────────────────────────────────────
+
+**Answer:**  
+Among these ten customers, only one (Fleet Transportation Corp) is a VIP, and four customers are classified as high risk. Customers span small business, middle market, and large corporate segments.
+
+**Insights:**
+- The only VIP is Fleet Transportation Corp, a large corporate, platinum-tier customer with the highest employee count (475) and revenue ($62M).
+- Four customers are marked as high risk: three small businesses and one middle market company.
+- Most customers (7 out of 10) are in the small business segment; the others are middle market or large corporate.
+- There is broad diversity in company size (from 7 to 804 employees) and revenue (from ~$623K up to $62M).
+- The majority of customers are bronze-tier, with only two in platinum and one in silver.
+
+**Suggestions:**
+- Are you interested in analyzing the characteristics or risk factors of high-risk customers vs. non-high-risk customers?
+- Would you like detailed comparisons between VIP, high-risk, and standard customers across all segments or tiers?
+
+================================================================================
+✅ NL2SQL Pipeline Complete
+================================================================================

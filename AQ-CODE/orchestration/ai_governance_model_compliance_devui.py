@@ -131,7 +131,7 @@ async def create_ai_governance_workflow():
     class GovernanceDispatcher(Executor):
         @handler
         async def dispatch(self, input_data: AIGovernanceInput, ctx: WorkflowContext[Any]) -> None:
-            from agent_framework._workflows._executor import AgentExecutorRequest
+            from agent_framework._workflows._agent_executor import AgentExecutorRequest
             global START_TIME
             START_TIME = datetime.now()
             request = AgentExecutorRequest(
