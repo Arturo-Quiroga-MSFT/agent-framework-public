@@ -51,6 +51,7 @@ from executors import (
     SQLValidatorExecutor,
     QueryExecutorExecutor,
     ResultsExporterExecutor,
+    ResultsVisualizerExecutor,
 )
 
 # Load environment
@@ -217,19 +218,36 @@ async def create_nl2sql_workflow():
 Given a user question and database schema context, generate accurate SQL queries.
 
 CRITICAL RULES:
-1. **Choose the simplest query** - Prefer dimension tables over complex joins when possible
-2. **For customer revenue questions** - Use DimCustomer.AnnualRevenue or DimCustomer.LifetimeRevenue directly
-3. **For aggregate questions** - Only join fact tables if dimension tables don't have the needed data
-4. **Use only SELECT statements** unless explicitly told otherwise
-5. **Always include TOP clause** to limit results (e.g., TOP 10, TOP 100)
-6. **Use descriptive aliases** for better readability
-7. **Test your logic** - Make sure joins won't produce empty results
+1. **ONLY USE COLUMNS THAT EXIST IN THE PROVIDED SCHEMA** - Never invent or assume column names
+2. **If a column doesn't exist, use the closest available column** - For example:
+   - If "Region" doesn't exist but "CustomerSegment" does, use CustomerSegment
+   - If "Revenue" doesn't exist but "AnnualRevenue" does, use AnnualRevenue
+3. **Choose the simplest query** - Prefer dimension tables over complex joins when possible
+4. **For customer revenue questions** - Use DimCustomer.AnnualRevenue or DimCustomer.LifetimeRevenue directly
+5. **For aggregate questions** - Only join fact tables if dimension tables don't have the needed data
+6. **Use only SELECT statements** unless explicitly told otherwise
+7. **Always include TOP clause** to limit results (e.g., TOP 10, TOP 100)
+8. **Use descriptive aliases** for better readability
+9. **Test your logic** - Make sure joins won't produce empty results
+
+SCHEMA VALIDATION:
+Before writing your query, CHECK the schema to verify:
+- The table name exists
+- ALL column names exist in that table
+- The column data types match your query logic
 
 QUERY STRATEGY:
 - For "top customers by revenue" → Use DimCustomer.AnnualRevenue
 - For "loan information" → Use FACT_LOAN_ORIGINATION
 - For "financial metrics" → Use FACT_CUSTOMER_FINANCIALS
 - For "payments" → Use FACT_PAYMENT_TRANSACTION
+
+COLUMN SELECTION FOR BETTER VISUALIZATION:
+- **Always prefer descriptive names over IDs** (CompanyName instead of CustomerID)
+- For customers: Select CompanyName, CustomerName, or similar descriptive fields
+- For products: Select ProductName instead of ProductID
+- For locations: Select City/Region/Country instead of LocationID
+- IDs should only be included if specifically requested or as a secondary column
 
 OUTPUT FORMAT:
 ```sql
@@ -351,11 +369,15 @@ Be concise, clear, and actionable.""",
                 role_emoji = "🤖"
                 author = msg.author_name or msg.role.value
                 
+                # Clean the message text (remove visualization data comments)
+                import re
+                clean_text = re.sub(r'<!-- VISUALIZATION_DATA\n.*?\n-->', '', msg.text, flags=re.DOTALL).strip()
+                
                 output_lines.append("─" * 80)
                 output_lines.append(f"{role_emoji} Step {step_num}: {author}")
                 output_lines.append("─" * 80)
                 output_lines.append("")
-                output_lines.append(msg.text)
+                output_lines.append(clean_text)
                 output_lines.append("")
                 step_num += 1
             
@@ -385,6 +407,9 @@ Be concise, clear, and actionable.""",
     # Create results exporter
     results_exporter = ResultsExporterExecutor(export_dir="exports", id="results_exporter")
     
+    # Create results visualizer
+    results_visualizer = ResultsVisualizerExecutor(id="results_visualizer")
+    
     # Create conversation adapters for agent -> executor conversions
     sql_gen_adapter = _ResponseToConversation(id="to-conversation:sql_generator")
     results_adapter = _ResponseToConversation(id="to-conversation:results_interpreter")
@@ -401,7 +426,8 @@ Be concise, clear, and actionable.""",
     builder.add_edge(sql_validator, query_executor)
     builder.add_edge(query_executor, results_interpreter)     # agent
     builder.add_edge(results_interpreter, results_adapter)    # convert AgentExecutorResponse -> list[ChatMessage]
-    builder.add_edge(results_adapter, results_exporter)       # export to CSV/Excel
+    builder.add_edge(results_adapter, results_visualizer)     # create charts if applicable
+    builder.add_edge(results_visualizer, results_exporter)    # export to CSV/Excel
     builder.add_edge(results_exporter, output_formatter)      # final formatting
     
     workflow = builder.build()
