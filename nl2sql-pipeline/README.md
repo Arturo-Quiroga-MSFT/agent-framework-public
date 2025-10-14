@@ -30,9 +30,11 @@ Natural Language Answer + Insights
 ✅ **Automatic Schema Discovery** - Retrieves relevant tables and columns  
 ✅ **SQL Safety Validation** - Prevents destructive operations  
 ✅ **Error Recovery** - Automatically retries with corrected queries  
-✅ **Azure SQL Integration** - Uses MSSQL MCP tools  
+✅ **Azure SQL Integration** - Real database connectivity with pyodbc  
 ✅ **DevUI Interface** - Visual testing and debugging  
 ✅ **Full Observability** - Traces every pipeline step  
+✅ **Export Results** - Automatic CSV and Excel export with formatting  
+✅ **Table Formatting** - Beautiful ASCII tables for readability  
 
 ## Prerequisites
 
