@@ -1,0 +1,14 @@
+# Question: Show me the breakdown of customers by industry
+# Generated: query_results_20251014_161720
+#
+IndustryName,CustomerCount,TotalAnnualRevenue,AvgAnnualRevenue,PercentOfCustomers
+Manufacturing,236,8065092299.00,34174119.911016,21.07
+Healthcare Services,182,6224365244.00,34199809.032967,16.25
+Software & IT Services,161,5877236489.00,36504574.465838,14.38
+Retail Trade,124,3723015787.00,30024320.862903,11.07
+Real Estate Development,123,4255216035.00,34595252.317073,10.98
+Unknown,95,3688400000.00,38825263.157894,8.48
+Consulting & Legal,82,2186167162.00,26660575.146341,7.32
+Freight & Logistics,54,1223875821.00,22664367.055555,4.82
+Commercial Construction,48,2591013915.00,53979456.562500,4.29
+Hotels & Restaurants,9,373810344.00,41534482.666666,0.80

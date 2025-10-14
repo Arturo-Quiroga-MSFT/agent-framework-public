@@ -145,7 +145,7 @@ class QueryResultsVisualizer:
         
         # Pie chart keywords
         if any(word in question_lower for word in ["percentage", "proportion", "distribution", "breakdown", "share"]):
-            if len(rows) <= 10:  # Pie charts work best with fewer categories
+            if len(rows) <= 12:  # Pie charts work best with fewer categories (increased from 10 to 12)
                 return "pie"
         
         # Line chart keywords (time series)
