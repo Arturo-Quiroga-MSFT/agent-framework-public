@@ -40,12 +40,10 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import get_tracer, setup_observability
+from agent_framework.observability import setup_observability
 from azure.identity import AzureCliCredential
-from opentelemetry.trace import SpanKind
-from opentelemetry.trace.span import format_trace_id
 from pydantic import BaseModel, Field
 
 # Load environment variables from workflows/.env file
@@ -318,7 +316,6 @@ async def create_smart_city_workflow():
                 input_data: SmartCityInput with description field
                 ctx: WorkflowContext for dispatching to agents
             """
-            from agent_framework._workflows._executor import AgentExecutorRequest
             request = AgentExecutorRequest(
                 messages=[ChatMessage(Role.USER, text=input_data.description)],
                 should_respond=True
@@ -327,11 +324,25 @@ async def create_smart_city_workflow():
     
     # Build workflow with custom components
     dispatcher = SmartCityDispatcher(id="smart_city_dispatcher")
-    aggregator_func = format_smart_city_results
+    
+    # Create custom aggregator executor
+    class SmartCityAggregator(Executor):
+        """Aggregator that formats results from all smart city agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_smart_city_results(results)
+            await ctx.yield_output(formatted_output)
+    
+    aggregator = SmartCityAggregator(id="smart_city_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    from agent_framework._workflows._concurrent import _CallbackAggregator
-    
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
     
@@ -348,8 +359,7 @@ async def create_smart_city_workflow():
     builder.add_fan_out_edges(dispatcher, agents)
     
     # Add aggregator
-    aggregator_executor = _CallbackAggregator(aggregator_func)
-    builder.add_fan_in_edges(agents, aggregator_executor)
+    builder.add_fan_in_edges(agents, aggregator)
     
     workflow = builder.build()
     
