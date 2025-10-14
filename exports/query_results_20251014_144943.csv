@@ -1,0 +1,14 @@
+# Question: What are the top 10 customers by revenue?
+# Generated: query_results_20251014_144943
+#
+Customer ID,Company Name,Annual Revenue
+CUST00792,Morales Inc,494242874.00
+CUST00708,Ballard Ltd,481967957.00
+CUST00918,Ward-Nelson,474603245.00
+CUST00316,Stein-Silva,473033143.00
+CUST00591,Ortiz-Morgan,462591729.00
+CUST00341,Sanders-Espinoza,460351294.00
+CUST00398,Lyons-Bender,457446987.00
+CUST00691,"Mendoza, Jenkins and Ortiz",454810263.00
+CUST00854,"Ramsey, Hansen and Mendoza",448462361.00
+CUST00516,Lam LLC,439842749.00

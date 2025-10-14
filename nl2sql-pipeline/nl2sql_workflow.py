@@ -216,28 +216,27 @@ async def create_nl2sql_workflow():
 
 Given a user question and database schema context, generate accurate SQL queries.
 
-RULES:
-1. Use only SELECT statements unless explicitly told otherwise
-2. Always use proper JOIN syntax
-3. Include TOP clause to limit results (e.g., TOP 100)
-4. Use descriptive aliases for columns
-5. Add comments explaining complex logic
-6. Return ONLY the SQL query in a ```sql code block
-7. After the code block, provide a brief explanation
+CRITICAL RULES:
+1. **Choose the simplest query** - Prefer dimension tables over complex joins when possible
+2. **For customer revenue questions** - Use DimCustomer.AnnualRevenue or DimCustomer.LifetimeRevenue directly
+3. **For aggregate questions** - Only join fact tables if dimension tables don't have the needed data
+4. **Use only SELECT statements** unless explicitly told otherwise
+5. **Always include TOP clause** to limit results (e.g., TOP 10, TOP 100)
+6. **Use descriptive aliases** for better readability
+7. **Test your logic** - Make sure joins won't produce empty results
 
-EXAMPLE OUTPUT:
+QUERY STRATEGY:
+- For "top customers by revenue" → Use DimCustomer.AnnualRevenue
+- For "loan information" → Use FACT_LOAN_ORIGINATION
+- For "financial metrics" → Use FACT_CUSTOMER_FINANCIALS
+- For "payments" → Use FACT_PAYMENT_TRANSACTION
+
+OUTPUT FORMAT:
 ```sql
-SELECT TOP 10 
-    c.CustomerName,
-    SUM(o.TotalAmount) as TotalRevenue
-FROM Customers c
-JOIN Orders o ON c.CustomerID = o.CustomerID
-WHERE o.OrderDate >= DATEADD(month, -1, GETDATE())
-GROUP BY c.CustomerName
-ORDER BY TotalRevenue DESC
+[Your SQL query here]
 ```
 
-This query retrieves the top 10 customers by revenue from the last month.""",
+Brief explanation of what the query does and why you chose this approach.""",
         name="sql_generator",
     )
     
@@ -306,6 +305,15 @@ Be concise, clear, and actionable.""",
             output_lines.append("=" * 80)
             output_lines.append("")
             
+            # Add model information
+            model_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "Unknown")
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            output_lines.append(f"🤖 Model: {model_name}")
+            output_lines.append(f"📅 Timestamp: {timestamp}")
+            output_lines.append("")
+            output_lines.append("=" * 80)
+            output_lines.append("")
+            
             # Extract the original user question from first USER message
             user_question = None
             for msg in conversation:
@@ -322,11 +330,23 @@ Be concise, clear, and actionable.""",
                 output_lines.append("=" * 80)
                 output_lines.append("")
             
-            # Extract and format each step (skip USER messages since we showed it above)
+            # Extract and format each step (skip USER messages and internal/technical messages)
             step_num = 1
             for msg in conversation:
                 if msg.role == Role.USER:
                     continue  # Skip user messages in the step-by-step output
+                
+                # Skip internal schema context messages
+                if "DATABASE SCHEMA CONTEXT:" in msg.text:
+                    continue
+                
+                # Skip SQL validation messages (technical detail)
+                if "VALIDATED SQL QUERY:" in msg.text:
+                    continue
+                
+                # Skip SQL generator output (technical detail) - check by author or SQL block
+                if msg.author_name == "sql_generator" or (msg.text.startswith("```sql") or "```sql\n" in msg.text[:100]):
+                    continue
                 
                 role_emoji = "🤖"
                 author = msg.author_name or msg.role.value
