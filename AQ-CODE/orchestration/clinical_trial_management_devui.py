@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import get_tracer, setup_observability
 from azure.identity import AzureCliCredential
@@ -334,7 +334,7 @@ async def create_clinical_trial_workflow():
         name="patient_advocacy",
     )
     
-    # Build the clinical trial workflow with structured input handling
+        # Build the clinical trial workflow with structured input handling
     # Create custom dispatcher that handles ClinicalTrialInput
     class ClinicalTrialDispatcher(Executor):
         """Dispatcher that extracts description from ClinicalTrialInput and forwards to agents."""
@@ -347,7 +347,6 @@ async def create_clinical_trial_workflow():
                 input_data: ClinicalTrialInput with description field
                 ctx: WorkflowContext for dispatching to agents
             """
-            from agent_framework._workflows._executor import AgentExecutorRequest
             request = AgentExecutorRequest(
                 messages=[ChatMessage(Role.USER, text=input_data.description)],
                 should_respond=True
@@ -359,12 +358,32 @@ async def create_clinical_trial_workflow():
     # Capture start time to compute elapsed duration for this workflow execution
     workflow_start_time = datetime.now()
 
+    # Create custom aggregator executor
+    class ClinicalTrialAggregator(Executor):
+        """Aggregator that formats results from all clinical trial agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_clinical_trial_results(results, workflow_start_time)
+            await ctx.yield_output(formatted_output)
+    
+    aggregator = ClinicalTrialAggregator(id="clinical_trial_aggregator")
+    
+    # Build workflow with custom components
+    dispatcher = ClinicalTrialDispatcher(id="clinical_trial_dispatcher")
+    # Capture start time to compute elapsed duration for this workflow execution
+    workflow_start_time = datetime.now()
+
     def aggregator_func(results):  # closure to include timing
         return format_clinical_trial_results(results, start_time=workflow_start_time)
     
     # Use WorkflowBuilder to create the complete workflow
-    from agent_framework._workflows._concurrent import _CallbackAggregator
-    
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
     
@@ -381,8 +400,7 @@ async def create_clinical_trial_workflow():
     builder.add_fan_out_edges(dispatcher, agents)
     
     # Add aggregator
-    aggregator_executor = _CallbackAggregator(aggregator_func)
-    builder.add_fan_in_edges(agents, aggregator_executor)
+    builder.add_fan_in_edges(agents, aggregator)
     
     workflow = builder.build()
     

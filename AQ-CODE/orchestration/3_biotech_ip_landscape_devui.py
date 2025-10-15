@@ -45,7 +45,7 @@ from typing import Any, Dict
 START_TIME: datetime | None = None
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import setup_observability
 from azure.identity import AzureCliCredential
@@ -145,8 +145,7 @@ async def create_biotech_ip_workflow():
 
     class IPDispatcher(Executor):
         @handler
-        async def dispatch(self, input_data: BiotechIPInput, ctx: WorkflowContext[Any]) -> None:
-            from agent_framework._workflows._executor import AgentExecutorRequest
+        async def dispatch(self, input_data: BiotechIPInput, ctx: WorkflowContext) -> None:
             # Capture start time when first user description is dispatched
             global START_TIME
             START_TIME = datetime.now()
@@ -264,10 +263,22 @@ async def create_biotech_ip_workflow():
             print(f"⚠️ Failed to save report: {e}")
         return "\n".join(lines)
 
-    from agent_framework._workflows._concurrent import _CallbackAggregator
+    class IPAggregator(Executor):
+        """Aggregator that formats results from all biotech IP agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output with synthesis.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_results(results)
+            await ctx.yield_output(formatted_output)
 
     dispatcher = IPDispatcher(id="ip_dispatcher")
-    aggregator = _CallbackAggregator(format_results)
+    aggregator = IPAggregator(id="ip_aggregator")
 
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)

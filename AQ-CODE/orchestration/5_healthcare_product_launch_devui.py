@@ -35,15 +35,13 @@ import os
 from contextlib import AsyncExitStack
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import ChatMessage, Executor, Role, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import get_tracer, setup_observability
+from agent_framework.observability import setup_observability
+from agent_framework._workflows import WorkflowBuilder
 from azure.identity import AzureCliCredential
-from opentelemetry.trace import SpanKind
-from opentelemetry.trace.span import format_trace_id
 from pydantic import BaseModel, Field
 
 # Load environment variables from workflows/.env file
@@ -128,7 +126,7 @@ def format_healthcare_results(results) -> str:
     
     # Save to file with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path(__file__).parent / "workflow_outputs"
+    output_dir = Path(__file__).parent.parent.parent / "workflow_outputs"
     output_dir.mkdir(exist_ok=True)
     
     output_file = output_dir / f"healthcare_analysis_{timestamp}.txt"
@@ -188,13 +186,12 @@ def setup_tracing():
 
 async def create_healthcare_workflow():
     """Create and return a healthcare product launch workflow for DevUI."""
+    
     # Create async context stack for managing resources
     stack = AsyncExitStack()
     
-    # Initialize async credential (no context manager needed)
-    credential = AzureCliCredential()
-    
     # Initialize Azure OpenAI client
+    credential = AzureCliCredential()
     chat_client = AzureOpenAIChatClient(
         credential=credential,
         endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
@@ -265,14 +262,13 @@ async def create_healthcare_workflow():
         """Dispatcher that extracts description from HealthcareProductInput and forwards to agents."""
         
         @handler
-        async def dispatch(self, input_data: HealthcareProductInput, ctx: WorkflowContext[Any]) -> None:
+        async def dispatch(self, input_data: HealthcareProductInput, ctx: WorkflowContext) -> None:
             """Extract description and send to all healthcare agents.
             
             Args:
                 input_data: HealthcareProductInput with description field
                 ctx: WorkflowContext for dispatching to agents
             """
-            from agent_framework._workflows._executor import AgentExecutorRequest
             request = AgentExecutorRequest(
                 messages=[ChatMessage(Role.USER, text=input_data.description)],
                 should_respond=True
@@ -281,21 +277,40 @@ async def create_healthcare_workflow():
     
     # Build workflow with custom components
     dispatcher = HealthcareDispatcher(id="healthcare_dispatcher")
-    aggregator_func = format_healthcare_results
+    
+    # Create custom aggregator executor
+    class HealthcareAggregator(Executor):
+        """Aggregator that formats results from all healthcare agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_healthcare_results(results)
+            await ctx.yield_output(formatted_output)
+    
+    aggregator = HealthcareAggregator(id="healthcare_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    from agent_framework._workflows._concurrent import _CallbackAggregator
-    
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
     
     # Add all healthcare agent participants
-    agents = [clinical_researcher, compliance_officer, economics_analyst, patient_experience, data_security]
+    agents = [
+        clinical_researcher,
+        compliance_officer,
+        economics_analyst,
+        patient_experience,
+        data_security
+    ]
     builder.add_fan_out_edges(dispatcher, agents)
     
     # Add aggregator
-    aggregator_executor = _CallbackAggregator(aggregator_func)
-    builder.add_fan_in_edges(agents, aggregator_executor)
+    builder.add_fan_in_edges(agents, aggregator)
     
     workflow = builder.build()
     
@@ -321,11 +336,10 @@ def launch_devui():
     print("=" * 70)
     print("🚀 Launching Healthcare Product Launch Workflow in DevUI")
     print("=" * 70)
-    print("✅ Workflow Type: Healthcare Product Analysis (Fan-out/Fan-in)")
+    print("✅ Workflow Type: Healthcare Product Analysis (Concurrent)")
     print("✅ Participants: 5 specialized healthcare agents")
     print("✅ Web UI: http://localhost:8094")
     print("✅ API: http://localhost:8094/v1/*")
-    print("✅ Entity ID: workflow_healthcare")
     print(f"🔍 DevUI Tracing: {'Enabled' if enable_devui_tracing else 'Disabled'}")
     if enable_devui_tracing:
         print("   → Traces will appear in DevUI web interface")
@@ -359,17 +373,12 @@ def launch_devui():
     print()
     
     # Launch the DevUI server
-    try:
-        serve(
-            entities=[workflow],
-            port=8094,
-            auto_open=True,
-            tracing_enabled=enable_devui_tracing,
-        )
-    finally:
-        # Clean up resources
-        if hasattr(workflow, "_devui_stack"):
-            asyncio.run(workflow._devui_stack.aclose())
+    serve(
+        entities=[workflow],
+        port=8094,
+        auto_open=True,
+        tracing_enabled=enable_devui_tracing,
+    )
 
 
 if __name__ == "__main__":
