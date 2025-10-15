@@ -1,0 +1,14 @@
+# Question: Show me sales by region and product category as a heatmap
+# Generated: query_results_20251014_164013
+#
+Region,ProductCategory,TotalSales
+Large Corporate,Commercial,2470905223.00
+Middle Market,Commercial,678538832.00
+Large Corporate,Real Estate,652968870.00
+Large Corporate,Equipment,642614610.00
+Large Corporate,SBA,517596345.00
+Middle Market,Real Estate,294862336.00
+Middle Market,Equipment,210324424.00
+Middle Market,SBA,154740914.00
+Small Business,Commercial,117831708.00
+Small Business,Real Estate,54419502.00
