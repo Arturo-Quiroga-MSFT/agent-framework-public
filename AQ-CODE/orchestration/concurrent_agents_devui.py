@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, ConcurrentBuilder, Executor, WorkflowBuilder, WorkflowContext, handler
+from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import get_tracer, setup_observability
 from azure.identity import AzureCliCredential
@@ -230,14 +230,13 @@ async def create_concurrent_workflow():
         """Dispatcher that extracts description from ProductLaunchInput and forwards to agents."""
         
         @handler
-        async def dispatch(self, input_data: ProductLaunchInput, ctx: WorkflowContext[None]) -> None:
+        async def dispatch(self, input_data: ProductLaunchInput, ctx: WorkflowContext) -> None:
             """Extract description and send to all agents.
             
             Args:
                 input_data: ProductLaunchInput with description field
-                ctx: WorkflowContext with None output type (dispatcher doesn't yield output)
+                ctx: WorkflowContext for dispatching to agents
             """
-            from agent_framework._workflows._executor import AgentExecutorRequest
             request = AgentExecutorRequest(
                 messages=[ChatMessage(Role.USER, text=input_data.description)],
                 should_respond=True
@@ -246,12 +245,25 @@ async def create_concurrent_workflow():
     
     # Build workflow with custom components
     dispatcher = ProductLaunchDispatcher(id="dispatcher")
-    aggregator_func = format_concurrent_results
+    
+    # Create custom aggregator executor
+    class ProductAggregator(Executor):
+        """Aggregator that formats results from all product analysis agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_concurrent_results(results)
+            await ctx.yield_output(formatted_output)
+    
+    aggregator = ProductAggregator(id="product_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    from agent_framework._workflows._concurrent import _CallbackAggregator
-    from agent_framework import Role
-    
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
     
@@ -260,8 +272,7 @@ async def create_concurrent_workflow():
     builder.add_fan_out_edges(dispatcher, agents)
     
     # Add aggregator
-    aggregator_executor = _CallbackAggregator(aggregator_func)
-    builder.add_fan_in_edges(agents, aggregator_executor)
+    builder.add_fan_in_edges(agents, aggregator)
     
     workflow = builder.build()
     

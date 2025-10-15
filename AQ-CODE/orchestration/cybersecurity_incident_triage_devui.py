@@ -39,7 +39,7 @@ from typing import Any
 START_TIME: datetime | None = None
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import setup_observability
 from azure.identity import AzureCliCredential
@@ -145,8 +145,7 @@ async def create_cybersecurity_workflow():
 
     class IncidentDispatcher(Executor):
         @handler
-        async def dispatch(self, input_data: CyberIncidentInput, ctx: WorkflowContext[Any]) -> None:
-            from agent_framework._workflows._executor import AgentExecutorRequest
+        async def dispatch(self, input_data: CyberIncidentInput, ctx: WorkflowContext) -> None:
             global START_TIME
             START_TIME = datetime.now()
             request = AgentExecutorRequest(
@@ -222,10 +221,22 @@ async def create_cybersecurity_workflow():
             print(f"⚠️ Failed to save report: {e}")
         return "\n".join(lines)
 
-    from agent_framework._workflows._concurrent import _CallbackAggregator
+    class IncidentAggregator(Executor):
+        """Aggregator that formats results from all cybersecurity agents."""
+        
+        @handler
+        async def aggregate(self, results: list[AgentExecutorResponse], ctx: WorkflowContext) -> None:
+            """Aggregate results from all agents and format output.
+            
+            Args:
+                results: List of AgentExecutorResponse objects from agents
+                ctx: WorkflowContext for yielding output
+            """
+            formatted_output = format_results(results)
+            await ctx.yield_output(formatted_output)
 
     dispatcher = IncidentDispatcher(id="incident_dispatcher")
-    aggregator = _CallbackAggregator(format_results)
+    aggregator = IncidentAggregator(id="incident_aggregator")
 
     builder = WorkflowBuilder()
     builder.set_start_executor(dispatcher)
