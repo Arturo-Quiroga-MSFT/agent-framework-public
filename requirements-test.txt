@@ -1,0 +1,11 @@
+# Install local agent-framework packages for testing (editable installs)
+-e python/packages/core
+-e python/packages/a2a
+-e python/packages/azure-ai
+-e python/packages/mem0
+-e python/packages/redis
+-e python/packages/devui
+
+# Test tools
+pytest>=8.4.1
+pytest-asyncio>=1.0.0
