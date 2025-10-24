@@ -8,8 +8,8 @@ from agent_framework import ChatAgent, MCPStreamableHTTPTool
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from AQ-CODE/.env
-env_path = Path(__file__).parent.parent.parent.parent.parent / "AQ-CODE" / ".env"
+# Load environment variables from getting_started/.env
+env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 """
