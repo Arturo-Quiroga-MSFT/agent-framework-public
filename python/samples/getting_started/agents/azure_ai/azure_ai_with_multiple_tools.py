@@ -2,10 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
-
-from dotenv import load_dotenv
 
 from agent_framework import (
     AgentProtocol,
@@ -16,9 +13,6 @@ from agent_framework import (
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Multiple Tools Example
 
@@ -26,18 +20,17 @@ This sample demonstrates integrating multiple tools (MCP and Web Search) with Az
 including user approval workflows for function call security.
 
 Prerequisites:
-1. Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-2. For Bing search functionality, set BING_CONNECTION_ID in .env file to your Bing connection ID
+1. Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME environment variables
+2. For Bing search functionality, set BING_CONNECTION_ID environment variable to your Bing connection ID
    Example: BING_CONNECTION_ID="/subscriptions/{subscription-id}/resourceGroups/{resource-group}/
             providers/Microsoft.CognitiveServices/accounts/{ai-service-name}/projects/{project-name}/
             connections/{connection-name}"
-3. Run 'az login' for Azure CLI authentication
 
 To set up Bing Grounding:
 1. Go to Azure AI Foundry portal (https://ai.azure.com)
 2. Navigate to your project's "Connected resources" section
 3. Add a new connection for "Grounding with Bing Search"
-4. Copy the connection ID and set it as the BING_CONNECTION_ID in your .env file
+4. Copy the connection ID and set it as the BING_CONNECTION_ID environment variable
 """
 
 

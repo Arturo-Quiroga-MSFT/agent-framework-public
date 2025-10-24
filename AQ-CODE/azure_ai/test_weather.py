@@ -35,7 +35,7 @@ def test_weather_functions():
         print(f"   Key preview: {api_key[:8]}...{api_key[-4:]}")
     
     # Test cities
-    test_cities = ["Seattle", "London", "Tokyo"]
+    test_cities = ["Seattle", "London", "Tokyo", "Toronto", "Mexico City"]
     
     # Test mock weather (always works)
     print("\n" + "=" * 70)

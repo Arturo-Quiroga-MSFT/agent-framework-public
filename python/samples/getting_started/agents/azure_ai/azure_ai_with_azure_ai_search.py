@@ -1,16 +1,10 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from agent_framework import ChatAgent, HostedFileSearchTool
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
-
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
 
 """
 Azure AI Agent with Azure AI Search Example
@@ -19,11 +13,14 @@ This sample demonstrates how to create an Azure AI agent that uses Azure AI Sear
 to search through indexed hotel data and answer user questions about hotels.
 
 Prerequisites:
-1. Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
+1. Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME environment variables
 2. Ensure you have an Azure AI Search connection configured in your Azure AI project
 3. The search index "hotels-sample-index" should exist in your Azure AI Search service
    (you can create this using the Azure portal with sample hotel data)
-4. Run 'az login' for Azure CLI authentication
+
+Environment variables:
+- AZURE_AI_PROJECT_ENDPOINT: Your Azure AI project endpoint
+- AZURE_AI_MODEL_DEPLOYMENT_NAME: The name of your model deployment
 """
 
 # Test queries to verify Azure AI Search is working with the hotels-sample-index

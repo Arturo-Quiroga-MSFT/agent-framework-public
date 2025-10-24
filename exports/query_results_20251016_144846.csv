@@ -1,0 +1,14 @@
+# Question: Display revenue by industry and region
+# Generated: query_results_20251016_144846
+#
+Industry,Region,TotalAnnualRevenue
+Manufacturing,Large Corporate,5460734315.00
+Healthcare Services,Large Corporate,4740956306.00
+Software & IT Services,Large Corporate,4338999373.00
+Real Estate Development,Large Corporate,2888833168.00
+Retail Trade,Large Corporate,2564316056.00
+Manufacturing,Middle Market,2215625908.00
+Commercial Construction,Large Corporate,2165663915.00
+None,Large Corporate,2002000000.00
+Consulting & Legal,Large Corporate,1433310383.00
+None,Middle Market,1417000000.00

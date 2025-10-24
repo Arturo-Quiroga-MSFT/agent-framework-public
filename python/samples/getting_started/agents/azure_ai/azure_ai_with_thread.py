@@ -1,9 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-from pathlib import Path
-
-from dotenv import load_dotenv
-
 import asyncio
 from random import randint
 from typing import Annotated
@@ -13,18 +9,11 @@ from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Thread Management Example
 
 This sample demonstrates thread management with Azure AI Agents, comparing
 automatic thread creation with explicit thread management for persistent context.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 

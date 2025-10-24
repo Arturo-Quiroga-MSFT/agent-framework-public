@@ -1,9 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-from pathlib import Path
-
-from dotenv import load_dotenv
-
 import asyncio
 
 from agent_framework import AgentRunResponse, ChatResponseUpdate, HostedCodeInterpreterTool
@@ -13,18 +9,11 @@ from azure.ai.agents.models import (
 )
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Code Interpreter Example
 
 This sample demonstrates using HostedCodeInterpreterTool with Azure AI Agents
 for Python code execution and mathematical problem solving.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 

@@ -37,6 +37,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+from typing import Optional
+import json
 from agent_framework import ChatMessage, Role, WorkflowContext, handler, Executor
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import setup_observability
@@ -79,6 +81,11 @@ class NL2SQLInput(BaseModel):
             "What is the average order value by region?",
             "List all employees hired after January 1, 2024",
         ]
+    )
+    # Optional session id to enable follow-up questions in the same conversational context
+    session_id: Optional[str] = Field(
+        None,
+        description="Optional session identifier for conversational follow-ups. When provided, the workflow will load prior conversation history (if available) and persist the updated conversation at the end."
     )
 
 
@@ -300,6 +307,36 @@ Be concise, clear, and actionable.""",
                 input_data: NL2SQLInput with question field
                 ctx: WorkflowContext for sending messages
             """
+            # If a session id is provided, publish a SYSTEM message with the session id
+            # and attempt to load previous conversation messages from disk so agents
+            # can use the prior context to resolve follow-ups.
+            if getattr(input_data, "session_id", None):
+                session_id = input_data.session_id
+                # Announce session id as a system message so downstream components
+                # (and the output formatter) can detect and persist session state.
+                session_msg = ChatMessage(role=Role.SYSTEM, text=f"SESSION_ID:{session_id}")
+                await ctx.send_message([session_msg])
+
+                # Try to load prior conversation if available
+                session_dir = Path(__file__).parent / "workflow_outputs" / "sessions"
+                session_dir.mkdir(parents=True, exist_ok=True)
+                session_file = session_dir / f"{session_id}.json"
+                if session_file.exists():
+                    try:
+                        with open(session_file, "r", encoding="utf-8") as sf:
+                            data = json.load(sf)
+                        for m in data.get("conversation", []):
+                            role_name = m.get("role", "SYSTEM")
+                            try:
+                                role = getattr(Role, role_name)
+                            except Exception:
+                                role = Role.SYSTEM
+                            # Reconstruct ChatMessage from saved dict
+                            msg = ChatMessage(role=role, text=m.get("text", ""), author_name=m.get("author_name"))
+                            await ctx.send_message([msg])
+                    except Exception as e:
+                        print(f"⚠️ Failed to load session {session_id}: {e}")
+
             # Create user message with the question
             message = ChatMessage(role=Role.USER, text=input_data.question)
             await ctx.send_message([message])
@@ -400,6 +437,53 @@ Be concise, clear, and actionable.""",
             except Exception as e:
                 print(f"\n⚠️ Failed to save output: {e}")
             
+            # Persist session conversation if a session id was provided earlier
+            try:
+                session_id = None
+                for msg in conversation:
+                    if msg.role == Role.SYSTEM and isinstance(msg.text, str) and msg.text.startswith("SESSION_ID:"):
+                        session_id = msg.text.split("SESSION_ID:", 1)[1].strip()
+                        break
+
+                if session_id:
+                    session_dir = Path(__file__).parent / "workflow_outputs" / "sessions"
+                    session_dir.mkdir(parents=True, exist_ok=True)
+                    session_file = session_dir / f"{session_id}.json"
+                    # Persist a compact session summary instead of the full conversation.
+                    # We capture the last SQL generated (if present) and a small sample of results.
+                    last_sql = None
+                    last_result_sample = []
+                    # Walk messages in reverse to find SQL and results
+                    for msg in reversed(conversation):
+                        if last_sql is None and isinstance(msg.text, str) and msg.text.strip().startswith("```sql"):
+                            # Extract SQL block
+                            try:
+                                sql_block = msg.text.strip().split("```sql", 1)[1].rsplit("```", 1)[0].strip()
+                                last_sql = sql_block
+                            except Exception:
+                                last_sql = None
+                        # Heuristic: results interpreter often outputs a small table or 'Rows Returned' line
+                        if not last_result_sample and isinstance(msg.text, str) and ("Rows Returned:" in msg.text or "|" in msg.text[:200]):
+                            # Save a small snippet as sample
+                            sample = msg.text.strip()
+                            last_result_sample = sample.splitlines()[:20]
+                        if last_sql and last_result_sample:
+                            break
+
+                    session_summary = {
+                        "session_id": session_id,
+                        "last_sql": last_sql,
+                        "last_result_sample": last_result_sample,
+                        "saved_at": datetime.now().isoformat(),
+                    }
+
+                    with open(session_file, "w", encoding="utf-8") as sf:
+                        json.dump(session_summary, sf, indent=2)
+
+                    print(f"💾 Session summary persisted: {session_file}")
+            except Exception as e:
+                print(f"⚠️ Failed to persist session: {e}")
+
             await ctx.yield_output(formatted_output)
     
     output_formatter = OutputFormatter(id="output_formatter")

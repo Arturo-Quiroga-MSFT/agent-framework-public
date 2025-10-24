@@ -1,28 +1,18 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
-from pathlib import Path
 from random import randint
 from typing import Annotated
-
-from dotenv import load_dotenv
 
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
-
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
 
 """
 Azure AI Agent Basic Example
 
 This sample demonstrates basic usage of AzureAIAgentClient to create agents with automatic
 lifecycle management. Shows both streaming and non-streaming responses with function tools.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 
