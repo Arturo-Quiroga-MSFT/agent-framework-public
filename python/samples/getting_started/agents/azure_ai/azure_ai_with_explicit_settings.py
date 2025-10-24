@@ -2,13 +2,19 @@
 
 import asyncio
 import os
+from pathlib import Path
 from random import randint
 from typing import Annotated
 
+from dotenv import load_dotenv
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
+
+# Load environment variables from AQ-CODE/.env
+env_path = Path(__file__).parent.parent.parent.parent.parent / "AQ-CODE" / ".env"
+load_dotenv(dotenv_path=env_path)
 
 """
 Azure AI Agent with Explicit Settings Example

@@ -3,10 +3,15 @@
 import asyncio
 from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import ChatAgent, HostedFileSearchTool, HostedVectorStoreContent
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.models import FileInfo, VectorStore
 from azure.identity.aio import AzureCliCredential
+
+# Load environment variables from AQ-CODE/.env
+env_path = Path(__file__).parent.parent.parent.parent.parent / "AQ-CODE" / ".env"
+load_dotenv(dotenv_path=env_path)
 
 """
 The following sample demonstrates how to create a simple, Azure AI agent that

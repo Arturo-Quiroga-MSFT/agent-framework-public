@@ -1,7 +1,5 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.AI;
@@ -12,9 +10,7 @@ internal static class Step7EntryPoint
 {
     public static async ValueTask RunAsync(TextWriter writer, int maxSteps = 2)
     {
-        Workflow<List<ChatMessage>> workflow = (await Step6EntryPoint.CreateWorkflow(maxSteps)
-                                                                     .TryPromoteAsync<List<ChatMessage>>()
-                                                                     .ConfigureAwait(false))!;
+        Workflow workflow = Step6EntryPoint.CreateWorkflow(maxSteps);
 
         AIAgent agent = workflow.AsAgent("group-chat-agent", "Group Chat Agent");
 
@@ -26,7 +22,6 @@ internal static class Step7EntryPoint
                                    ?? update.AgentId
                                    ?? update.Role.ToString()
                                    ?? ChatRole.Assistant.ToString()}: {update.Text}";
-            Console.WriteLine(updateText);
             writer.WriteLine(updateText);
         }
     }
