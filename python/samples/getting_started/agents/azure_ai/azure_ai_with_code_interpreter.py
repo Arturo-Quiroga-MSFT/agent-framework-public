@@ -1,13 +1,19 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import AgentRunResponse, ChatResponseUpdate, HostedCodeInterpreterTool
 from agent_framework.azure import AzureAIAgentClient
 from azure.ai.agents.models import (
     RunStepDeltaCodeInterpreterDetailItemObject,
 )
 from azure.identity.aio import AzureCliCredential
+
+# Load environment variables from AQ-CODE/.env
+env_path = Path(__file__).parent.parent.parent.parent.parent / "AQ-CODE" / ".env"
+load_dotenv(dotenv_path=env_path)
 
 """
 Azure AI Agent with Code Interpreter Example

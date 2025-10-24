@@ -2,11 +2,17 @@
 
 import asyncio
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import AzureCliCredential
+
+# Load environment variables from AQ-CODE/.env
+env_path = Path(__file__).parent.parent.parent.parent.parent / "AQ-CODE" / ".env"
+load_dotenv(dotenv_path=env_path)
 
 """
 Azure AI Agent with Existing Agent Example

@@ -18,16 +18,16 @@ internal static class Step6EntryPoint
 {
     public static Workflow CreateWorkflow(int maxTurns) =>
         AgentWorkflowBuilder
-            .CreateGroupChatBuilderWith(agents => new AgentWorkflowBuilder.RoundRobinGroupChatManager(agents) { MaximumIterationCount = maxTurns })
+            .CreateGroupChatBuilderWith(agents => new RoundRobinGroupChatManager(agents) { MaximumIterationCount = maxTurns })
             .AddParticipants(new HelloAgent(), new EchoAgent())
             .Build();
 
-    public static async ValueTask RunAsync(TextWriter writer, int maxSteps = 2)
+    public static async ValueTask RunAsync(TextWriter writer, IWorkflowExecutionEnvironment environment, int maxSteps = 2)
     {
         Workflow workflow = CreateWorkflow(maxSteps);
 
-        StreamingRun run = await InProcessExecution.StreamAsync(workflow, Array.Empty<ChatMessage>())
-                                                   .ConfigureAwait(false);
+        StreamingRun run = await environment.StreamAsync(workflow, Array.Empty<ChatMessage>())
+                                    .ConfigureAwait(false);
         await run.TrySendMessageAsync(new TurnToken(emitEvents: true));
 
         await foreach (WorkflowEvent evt in run.WatchStreamAsync().ConfigureAwait(false))
