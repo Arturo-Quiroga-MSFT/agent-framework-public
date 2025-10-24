@@ -1,17 +1,10 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-from pathlib import Path
-
-from dotenv import load_dotenv
-
 import asyncio
 
 from agent_framework import ChatAgent, HostedWebSearchTool
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
-
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
 
 """
 The following sample demonstrates how to create an Azure AI agent that

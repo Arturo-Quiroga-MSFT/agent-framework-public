@@ -2,27 +2,17 @@
 
 import asyncio
 import os
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Existing Agent Example
 
 This sample demonstrates working with pre-existing Azure AI Agents by providing
 agent IDs, showing agent reuse patterns for production scenarios.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 

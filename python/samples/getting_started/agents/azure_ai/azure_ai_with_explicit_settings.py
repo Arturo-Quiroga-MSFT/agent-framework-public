@@ -2,29 +2,19 @@
 
 import asyncio
 import os
-from pathlib import Path
 from random import randint
 from typing import Annotated
-
-from dotenv import load_dotenv
 
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Explicit Settings Example
 
 This sample demonstrates creating Azure AI Agents with explicit configuration
 settings rather than relying on environment variable defaults.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 

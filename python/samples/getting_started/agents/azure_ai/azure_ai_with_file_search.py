@@ -3,23 +3,14 @@
 import asyncio
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from agent_framework import ChatAgent, HostedFileSearchTool, HostedVectorStoreContent
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.models import FileInfo, VectorStore
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 The following sample demonstrates how to create a simple, Azure AI agent that
 uses a file search tool to answer user questions.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 

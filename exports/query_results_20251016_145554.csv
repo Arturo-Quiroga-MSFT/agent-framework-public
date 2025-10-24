@@ -1,0 +1,14 @@
+# Question: Display revenue correlated by industry and region
+# Generated: query_results_20251016_145554
+#
+IndustryName,RegionName,RevenueByIndustryRegion,TotalRevenueByIndustry,TotalRevenueByRegion,PctOfIndustry,PctOfRegion
+Manufacturing,Large Corporate,5460734315.00,8065092299.00,26466788634.00,0.677082,0.206324
+Healthcare Services,Large Corporate,4740956306.00,6224365244.00,26466788634.00,0.761677,0.179128
+Software & IT Services,Large Corporate,4338999373.00,5877236489.00,26466788634.00,0.738272,0.163941
+Real Estate Development,Large Corporate,2888833168.00,4255216035.00,26466788634.00,0.678892,0.109149
+Retail Trade,Large Corporate,2564316056.00,3723015787.00,26466788634.00,0.688773,0.096888
+Manufacturing,Middle Market,2215625908.00,8065092299.00,9841943817.00,0.274717,0.225120
+Commercial Construction,Large Corporate,2165663915.00,2591013915.00,26466788634.00,0.835836,0.081825
+Unknown Industry,Large Corporate,2002000000.00,3688400000.00,26466788634.00,0.542782,0.075641
+Consulting & Legal,Large Corporate,1433310383.00,2186167162.00,26466788634.00,0.655627,0.054155
+Unknown Industry,Middle Market,1417000000.00,3688400000.00,9841943817.00,0.384177,0.143975

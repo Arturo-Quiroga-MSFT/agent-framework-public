@@ -12,6 +12,7 @@ from ._checkpoint import (
     InMemoryCheckpointStorage,
     WorkflowCheckpoint,
 )
+from ._checkpoint_summary import WorkflowCheckpointSummary, get_checkpoint_summary
 from ._concurrent import ConcurrentBuilder
 from ._const import DEFAULT_MAX_ITERATIONS
 from ._edge import (
@@ -49,6 +50,7 @@ from ._executor import (
     handler,
 )
 from ._function_executor import FunctionExecutor, executor
+from ._handoff import HandoffBuilder, HandoffUserInputRequest
 from ._magentic import (
     MagenticAgentDeltaEvent,
     MagenticAgentExecutor,
@@ -72,6 +74,7 @@ from ._magentic import (
     StandardMagenticManager,
 )
 from ._request_info_executor import (
+    PendingRequestDetails,
     RequestInfoExecutor,
     RequestInfoMessage,
     RequestResponse,
@@ -94,7 +97,8 @@ from ._validation import (
     validate_workflow_graph,
 )
 from ._viz import WorkflowViz
-from ._workflow import Workflow, WorkflowBuilder, WorkflowRunResult
+from ._workflow import Workflow, WorkflowRunResult
+from ._workflow_builder import WorkflowBuilder
 from ._workflow_context import WorkflowContext
 from ._workflow_executor import WorkflowExecutor
 
@@ -122,6 +126,8 @@ __all__ = [
     "FileCheckpointStorage",
     "FunctionExecutor",
     "GraphConnectivityError",
+    "HandoffBuilder",
+    "HandoffUserInputRequest",
     "InMemoryCheckpointStorage",
     "InProcRunnerContext",
     "MagenticAgentDeltaEvent",
@@ -144,6 +150,7 @@ __all__ = [
     "MagenticResponseMessage",
     "MagenticStartMessage",
     "Message",
+    "PendingRequestDetails",
     "RequestInfoEvent",
     "RequestInfoExecutor",
     "RequestInfoMessage",
@@ -163,6 +170,7 @@ __all__ = [
     "WorkflowAgent",
     "WorkflowBuilder",
     "WorkflowCheckpoint",
+    "WorkflowCheckpointSummary",
     "WorkflowContext",
     "WorkflowErrorDetails",
     "WorkflowEvent",
@@ -179,6 +187,7 @@ __all__ = [
     "WorkflowViz",
     "create_edge_runner",
     "executor",
+    "get_checkpoint_summary",
     "handler",
     "validate_workflow_graph",
 ]

@@ -1,9 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-from pathlib import Path
-
-from dotenv import load_dotenv
-
 import asyncio
 from typing import Any
 
@@ -11,18 +7,11 @@ from agent_framework import AgentProtocol, AgentThread, HostedMCPTool
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
 
-# Load environment variables from .env file in the agents directory
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 """
 Azure AI Agent with Hosted MCP Example
 
 This sample demonstrates integration of Azure AI Agents with hosted Model Context Protocol (MCP)
 servers, including user approval workflows for function call security.
-
-Prerequisites:
-- Set AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in .env file
-- Run 'az login' for Azure CLI authentication
 """
 
 
