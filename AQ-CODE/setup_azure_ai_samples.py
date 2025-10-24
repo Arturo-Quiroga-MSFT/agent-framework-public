@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-Script to automatically add dotenv loading and real weather API to Azure AI sample files.
+Script to automatically configure Azure AI sample files for local development.
 
-This script:
-1. Updates Python files in the azure_ai samples directory to load environment variables
-2. Replaces fake get_weather functions with real OpenWeatherMap API implementation
+This script sets up Azure AI samples with:
+1. Environment variable loading from .env files
+2. Real weather API integration (replaces fake functions with OpenWeatherMap)
+3. Required imports (httpx, os, dotenv)
+
+Features:
+- Idempotent: Safe to run multiple times
+- Smart detection: Only modifies files that need updates
+- Comprehensive: Handles both dotenv setup and weather API replacement
 
 Usage:
-    python add_dotenv_to_samples.py
+    python setup_azure_ai_samples.py
     
     Or make it executable and run:
-    chmod +x add_dotenv_to_samples.py
-    ./add_dotenv_to_samples.py
+    chmod +x setup_azure_ai_samples.py
+    ./setup_azure_ai_samples.py
 """
 
 import re
