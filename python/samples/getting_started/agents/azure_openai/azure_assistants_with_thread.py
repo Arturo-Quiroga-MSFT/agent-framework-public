@@ -63,7 +63,7 @@ async def example_with_automatic_thread_creation() -> None:
         tools=get_weather,
     ) as agent:
         # First conversation - no thread provided, will be created automatically
-        query1 = "What's the weather like in Seattle?"
+        query1 = "What's the weather like in Toronto?"
         print(f"User: {query1}")
         result1 = await agent.run(query1)
         print(f"Agent: {result1.text}")

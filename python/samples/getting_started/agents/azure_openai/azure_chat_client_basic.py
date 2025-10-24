@@ -62,7 +62,7 @@ async def non_streaming_example() -> None:
         tools=get_weather,
     )
 
-    query = "What's the weather like in Seattle?"
+    query = "What's the weather like in Toronto?"
     print(f"User: {query}")
     result = await agent.run(query)
     print(f"Result: {result}\n")
@@ -80,7 +80,7 @@ async def streaming_example() -> None:
         tools=get_weather,
     )
 
-    query = "What's the weather like in Portland?"
+    query = "What's the weather like in Mexico City?"
     print(f"User: {query}")
     print("Agent: ", end="", flush=True)
     async for chunk in agent.run_stream(query):
