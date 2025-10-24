@@ -110,7 +110,7 @@ async def tools_on_run_level() -> None:
         ) as agent,
     ):
         # First query with weather tool
-        query1 = "What's the weather like in Seattle?"
+        query1 = "What's the weather like in Toronto?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, tools=[get_weather])  # Tool passed to run method
         print(f"Agent: {result1}\n")

@@ -67,7 +67,7 @@ async def example_with_automatic_thread_creation() -> None:
         ) as agent,
     ):
         # First conversation - no thread provided, will be created automatically
-        first_query = "What's the weather like in Seattle?"
+        first_query = "What's the weather like in Toronto?"
         print(f"User: {first_query}")
         first_result = await agent.run(first_query)
         print(f"Agent: {first_result.text}")
