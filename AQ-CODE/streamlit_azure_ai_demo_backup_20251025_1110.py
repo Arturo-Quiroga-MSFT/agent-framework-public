@@ -38,7 +38,6 @@ print(f"[DEBUG] Loading .env from: {env_path}")
 print(f"[DEBUG] .env exists: {env_path.exists()}")
 load_dotenv(dotenv_path=env_path)
 print(f"[DEBUG] OPENWEATHER_API_KEY loaded: {bool(os.getenv('OPENWEATHER_API_KEY'))}")
-print(f"[DEBUG] FIRECRAWL_API_KEY loaded: {bool(os.getenv('FIRECRAWL_API_KEY'))}")
 print(f"[DEBUG] AZURE_AI_PROJECT_ENDPOINT loaded: {bool(os.getenv('AZURE_AI_PROJECT_ENDPOINT'))}")
 
 # Create output directory for generated images
@@ -586,98 +585,6 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
             pass
 
 
-async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
-    """
-    Run agent with Firecrawl MCP for web scraping and content extraction.
-    
-    Args:
-        query: User's question or URL to scrape
-        api_key: Firecrawl API key
-    
-    Returns:
-        Tuple of (response_text, metadata) with timing and token usage.
-    """
-    import time
-    from agent_framework import ChatMessage
-    
-    start_time = time.time()
-    
-    async with AzureCliCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            # Create Firecrawl MCP tool
-            # Firecrawl hosted MCP server format: https://mcp.firecrawl.dev/{API_KEY}/v2/mcp
-            firecrawl_url = f"https://mcp.firecrawl.dev/{api_key}/v2/mcp"
-            firecrawl_tool = HostedMCPTool(
-                name="Firecrawl Web Scraper",
-                url=firecrawl_url,
-            )
-            
-            agent = ChatAgent(
-                chat_client=client,
-                name="FirecrawlAgent",
-                instructions="You are a helpful web research assistant with access to Firecrawl for web scraping and content extraction. Use Firecrawl to fetch web pages, extract clean content, and provide accurate information from websites. Always cite your sources.",
-                tools=firecrawl_tool,
-            )
-            
-            # Create a thread for this conversation
-            thread = agent.get_new_thread()
-            
-            # Run the agent with the query
-            result = await agent.run(query, thread=thread, store=True)
-            
-            # Handle any user input requests (function call approvals)
-            # For demo purposes, we auto-approve all function calls
-            while len(result.user_input_requests) > 0:
-                new_input = []
-                for user_input_needed in result.user_input_requests:
-                    # Auto-approve the function call for demo purposes
-                    print(f"[DEBUG] Auto-approving Firecrawl function call: {user_input_needed.function_call.name}")
-                    new_input.append(
-                        ChatMessage(
-                            role="user",
-                            contents=[user_input_needed.create_response(True)],  # Auto-approve
-                        )
-                    )
-                
-                # Continue the run with approvals
-                result = await agent.run(new_input, thread=thread, store=True)
-            
-            response_text = str(result.text)
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
-                )
-            
-            # Add Firecrawl indicator and usage stats
-            response_text += f"\n\n🔥 Powered by: Firecrawl MCP (Web Scraper)"
-            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-            
-            return response_text, metadata
-
-
 async def run_hosted_mcp(query: str) -> tuple[str, dict]:
     """
     Run agent with Hosted MCP capability (Model Context Protocol).
@@ -780,7 +687,6 @@ def main():
             "Code Interpreter",
             "Bing Grounding",
             "File Search",
-            "Firecrawl MCP",
             "Hosted MCP"
         ]
     )
@@ -945,39 +851,6 @@ def main():
         else:
             st.session_state.selected_document = selected_doc
     
-    elif demo_mode == "Firecrawl MCP":
-        st.subheader("Firecrawl MCP Demo")
-        st.markdown("""
-        This demo uses **Firecrawl** through MCP for advanced web scraping and content extraction.
-        Firecrawl can extract clean, LLM-ready content from any website.
-        
-        🔥 **What is Firecrawl?** Firecrawl is a powerful web scraping service that converts 
-        websites into clean markdown, handles JavaScript rendering, and bypasses bot detection.
-        
-        **Example questions:**
-        - "Scrape the content from https://news.ycombinator.com and summarize the top stories"
-        - "What are the latest articles on https://techcrunch.com about AI?"
-        - "Extract and analyze the main content from https://example.com/article"
-        - "Get the pricing information from https://openai.com/pricing"
-        - "Summarize the documentation at https://docs.python.org/3/"
-        
-        **Note:** API key is loaded from .env file (FIRECRAWL_API_KEY)
-        """)
-        
-        # Load API key from environment
-        firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
-        
-        if not firecrawl_api_key:
-            st.warning("⚠️ Firecrawl API key not found in .env file.")
-            st.info("💡 Please add FIRECRAWL_API_KEY to your .env file. Get an API key at [firecrawl.dev](https://firecrawl.dev)")
-        else:
-            st.success("✅ Firecrawl API key loaded from .env file")
-        
-        demo_key = "firecrawl"
-        
-        # Store API key in session state
-        st.session_state.firecrawl_api_key = firecrawl_api_key
-    
     else:  # Hosted MCP
         st.subheader("Hosted MCP Demo")
         st.markdown("""
@@ -1057,17 +930,6 @@ def main():
                         response, metadata = asyncio.run(run_file_search(prompt, selected_document))
                         st.markdown(response)
                         st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
-                    elif demo_key == "firecrawl":
-                        # Check if API key is loaded from environment
-                        firecrawl_key = st.session_state.get("firecrawl_api_key", "")
-                        if not firecrawl_key:
-                            error_msg = "❌ Error: Firecrawl API key not found in .env file. Please add FIRECRAWL_API_KEY to your .env file."
-                            st.error(error_msg)
-                            st.session_state.messages[demo_key].append({"role": "assistant", "content": error_msg})
-                        else:
-                            response, metadata = asyncio.run(run_firecrawl_mcp(prompt, firecrawl_key))
-                            st.markdown(response)
-                            st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
                     elif demo_key == "hostedmcp":
                         response, metadata = asyncio.run(run_hosted_mcp(prompt))
                         st.markdown(response)
@@ -1092,13 +954,12 @@ def main():
     - **Code Interpreter** (for Python execution)
     - **Bing Grounding** (for web search)
     - **File Search** (for document Q&A)
-    - **Firecrawl MCP** (web scraping)
     - **Hosted MCP** (Model Context Protocol)
     - **Azure CLI Authentication**
     
     Make sure you're logged in with `az login` before running.
     
-    📚 Learn about [MCP and Web Scraping](./MCP_EXPLAINED.md)
+    📚 Learn about [Hosted vs Local MCP](./MCP_EXPLAINED.md)
     """)
     
     # Display environment info
