@@ -175,7 +175,7 @@ The demo will open at `http://localhost:8501` and provides an intuitive interfac
 The Streamlit app demonstrates the following capabilities:
 
 #### 1. **Basic Chat Agent**
-<!-- ![Basic Chat Demo](docs/assets/screenshots/basic-chat.png) -->
+![Basic Chat Demo](docs/assets/screenshots/basic-chat.png)
 *Screenshot: Basic chat interface showing conversational AI*
 
 - Simple conversational AI interactions
@@ -191,7 +191,7 @@ The Streamlit app demonstrates the following capabilities:
 ---
 
 #### 2. **Function Tools (Weather API)**
-<!-- ![Weather Function Tool Demo](docs/assets/screenshots/weather-tool.png) -->
+![Weather Function Tool Demo](docs/assets/screenshots/weather-tool.png)
 *Screenshot: Agent using weather API function tool*
 
 - Demonstrates function/tool calling capabilities
@@ -207,7 +207,7 @@ The Streamlit app demonstrates the following capabilities:
 ---
 
 #### 3. **Thread Management**
-<!-- ![Thread Management Demo](docs/assets/screenshots/thread-management.png) -->
+![Thread Management Demo](docs/assets/screenshots/thread-management.png)
 *Screenshot: Conversation thread persistence*
 
 - Persistent conversation threads
