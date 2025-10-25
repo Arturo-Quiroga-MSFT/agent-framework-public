@@ -2,6 +2,10 @@
 
 # Welcome to Microsoft Agent Framework!
 
+> **📌 Note**: This is a **modified version** of the official [Microsoft Agent Framework repository](https://github.com/microsoft/agent-framework) with tailored code examples and demonstrations created by **Arturo Quiroga**, Sr. Partner Solutions Architect at Microsoft (EPS - Americas).
+> 
+> This repository includes custom implementations, interactive demos, and extended samples designed to showcase real-world agent scenarios and best practices.
+
 [![Microsoft Azure AI Foundry Discord](https://dcbadge.limes.pink/api/server/b5zjErwbQM?style=flat)](https://discord.gg/b5zjErwbQM)
 [![MS Learn Documentation](https://img.shields.io/badge/MS%20Learn-Documentation-blue)](https://learn.microsoft.com/en-us/agent-framework/)
 [![PyPI](https://img.shields.io/pypi/v/agent-framework)](https://pypi.org/project/agent-framework/)
@@ -153,6 +157,215 @@ var agent = new OpenAIClient(
 Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Framework."));
 ```
 
+## 🎨 Interactive Streamlit Demo
+
+Explore the Microsoft Agent Framework capabilities through our comprehensive **Streamlit Demo Application**. This interactive UI showcases 8 different agent scenarios with real-world examples.
+
+### 🚀 Quick Start
+
+```bash
+cd AQ-CODE
+streamlit run streamlit_azure_ai_demo.py
+```
+
+The demo will open at `http://localhost:8501` and provides an intuitive interface to explore various agent capabilities.
+
+### ✨ Demo Features
+
+The Streamlit app demonstrates the following capabilities:
+
+#### 1. **Basic Chat Agent**
+<!-- ![Basic Chat Demo](docs/assets/screenshots/basic-chat.png) -->
+*Screenshot: Basic chat interface showing conversational AI*
+
+- Simple conversational AI interactions
+- Real-time response streaming
+- Token usage tracking (input/output/total)
+- Clean markdown rendering
+
+**Try asking:**
+- "What is the Microsoft Agent Framework?"
+- "Tell me about AI agents"
+- "Explain how agents work"
+
+---
+
+#### 2. **Function Tools (Weather API)**
+<!-- ![Weather Function Tool Demo](docs/assets/screenshots/weather-tool.png) -->
+*Screenshot: Agent using weather API function tool*
+
+- Demonstrates function/tool calling capabilities
+- Integration with OpenWeatherMap API
+- Real-time weather data retrieval
+- Automatic function execution and response formatting
+
+**Try asking:**
+- "What's the weather in Seattle?"
+- "Is it raining in London?"
+- "Tell me the temperature in Tokyo"
+
+---
+
+#### 3. **Thread Management**
+<!-- ![Thread Management Demo](docs/assets/screenshots/thread-management.png) -->
+*Screenshot: Conversation thread persistence*
+
+- Persistent conversation threads
+- Context maintenance across multiple interactions
+- Thread lifecycle management
+- Demonstrates stateful agent conversations
+
+**Try asking:**
+- "My name is Alex" (then later) "What's my name?"
+- "Remember that I like Python" (then later) "What programming language do I like?"
+- Multi-turn contextual conversations
+
+---
+
+#### 4. **Code Interpreter**
+<!-- ![Code Interpreter Demo](docs/assets/screenshots/code-interpreter.png) -->
+*Screenshot: Python code execution and data visualization*
+
+- Execute Python code dynamically
+- Generate data visualizations (charts, plots, graphs)
+- Mathematical computations and data analysis
+- Automatic image generation and display
+
+**Try asking:**
+- "Create a bar chart showing sales data for Q1-Q4"
+- "Calculate the fibonacci sequence and plot it"
+- "Generate a scatter plot with random data"
+- "Analyze this dataset: [1,2,3,4,5] and show statistics"
+
+---
+
+#### 5. **Bing Web Search (Grounding)**
+<!-- ![Bing Search Demo](docs/assets/screenshots/bing-search.png) -->
+*Screenshot: Web search with citations*
+
+- Real-time web search capabilities
+- Grounded responses with source citations
+- Integration with Bing Search API
+- Numbered reference system for sources
+
+**Try asking:**
+- "What are the latest news about AI?"
+- "Tell me about recent developments in quantum computing"
+- "What happened in the tech industry this week?"
+
+---
+
+#### 6. **File Search (RAG)**
+<!-- ![File Search Demo](docs/assets/screenshots/file-search.png) -->
+*Screenshot: Document search and retrieval*
+
+- Retrieval-Augmented Generation (RAG) with uploaded documents
+- Multiple document support:
+  - **employees.pdf**: Company employee directory
+  - **product_catalog.txt**: Tech product specifications
+  - **ai_research.pdf**: SigLIP research paper (2.1MB)
+- Vector store creation and management
+- Accurate document-grounded responses
+
+**Try asking:**
+- "Who is the CEO?" (employees.pdf)
+- "What products do we have?" (product_catalog.txt)
+- "What is SigLIP?" (ai_research.pdf)
+- "Summarize the research paper" (ai_research.pdf)
+
+---
+
+#### 7. **Hosted MCP - Microsoft Learn**
+<!-- ![Microsoft Learn MCP Demo](docs/assets/screenshots/mcp-mslearn.png) -->
+*Screenshot: Microsoft Learn documentation search via MCP*
+
+- Model Context Protocol (MCP) integration
+- Access to Microsoft Learn documentation
+- Hosted MCP server connection
+- Automatic function approval workflow
+- Official Microsoft documentation grounding
+
+**Try asking:**
+- "How do I create an Azure Function?"
+- "What is Azure AI Foundry?"
+- "Explain Azure OpenAI Service"
+- "Show me Azure deployment best practices"
+
+**What is MCP?** See [MCP_EXPLAINED.md](./AQ-CODE/MCP_EXPLAINED.md) for detailed documentation on Hosted vs Local MCP.
+
+---
+
+#### 8. **Firecrawl MCP - Web Scraping**
+<!-- ![Firecrawl MCP Demo](docs/assets/screenshots/mcp-firecrawl.png) -->
+*Screenshot: Web scraping with Firecrawl*
+
+- Advanced web scraping via MCP
+- Clean markdown extraction from any website
+- JavaScript rendering support
+- Bot detection bypass
+- Structured data extraction
+
+**Try asking:**
+- "Scrape https://news.ycombinator.com and summarize top stories"
+- "Extract content from https://techcrunch.com about AI"
+- "Get pricing from https://openai.com/pricing"
+- "Summarize https://docs.python.org/3/"
+
+**Setup:** Requires Firecrawl API key in `.env` file. Get one at [firecrawl.dev](https://firecrawl.dev)
+
+---
+
+### 📊 Common Features Across All Demos
+
+Every demo mode includes:
+
+- ✅ **Token Usage Display**: Real-time tracking of input, output, and total tokens
+- ⏱️ **Execution Timing**: Performance metrics for each request
+- 💬 **Chat History**: Full conversation context per demo mode
+- 🎨 **Markdown Rendering**: Beautiful formatting for code, lists, and text
+- 🔄 **Session State**: Independent chat histories for each demo
+- 📱 **Responsive Design**: Clean, modern UI built with Streamlit
+- 🛡️ **Error Handling**: Graceful error messages and recovery
+
+### 🎯 Use Cases
+
+This demo is perfect for:
+
+- **Learning**: Understand different agent capabilities through hands-on examples
+- **Prototyping**: Test agent behaviors before production implementation
+- **Demonstrations**: Show stakeholders what agents can do
+- **Development**: Quick experimentation with various agent patterns
+- **Education**: Teaching AI agent concepts with visual feedback
+
+### 🔧 Configuration
+
+The demo uses environment variables from `.env` files:
+
+```bash
+# Required
+AZURE_AI_PROJECT_ENDPOINT=your-endpoint
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4.1
+
+# Optional (enables specific demos)
+OPENWEATHER_API_KEY=your-key        # For weather demo
+BING_CONNECTION_ID=your-id          # For Bing search demo
+FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
+```
+
+### 📁 Demo Files
+
+- **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1100+ lines)
+- **MCP Documentation**: `AQ-CODE/MCP_EXPLAINED.md`
+- **Sample Documents**: `AQ-CODE/sample_documents/`
+- **Environment Config**: `python/samples/getting_started/.env`
+
+### 🎬 Getting Started Video
+
+<!-- Add video link when available -->
+*Coming soon: Watch a walkthrough of all 8 demo scenarios*
+
+---
+
 ## More Examples & Samples
 
 ### Python
@@ -160,6 +373,7 @@ Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Fram
 - [Getting Started with Agents](./python/samples/getting_started/agents): basic agent creation and tool usage
 - [Chat Client Examples](./python/samples/getting_started/chat_client): direct chat client usage patterns
 - [Getting Started with Workflows](./python/samples/getting_started/workflows): basic workflow creation and integration with agents
+- [**Interactive Streamlit Demo**](./AQ-CODE/streamlit_azure_ai_demo.py): comprehensive UI showcasing 8 agent scenarios
 
 ### .NET
 
