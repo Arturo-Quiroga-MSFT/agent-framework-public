@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from io import BytesIO
 from datetime import datetime
+import re
 
 import httpx
 import streamlit as st
@@ -26,9 +27,10 @@ from PIL import Image
 # Add parent directories to path to import agent framework
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, AgentRunResponse
+from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentRunResponse, HostedMCPTool, ChatMessage
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
+from azure.ai.agents.models import FileInfo, VectorStore
 
 # Load environment variables - use absolute path
 env_path = Path(__file__).resolve().parent.parent / "python" / "samples" / "getting_started" / ".env"
@@ -41,6 +43,12 @@ print(f"[DEBUG] AZURE_AI_PROJECT_ENDPOINT loaded: {bool(os.getenv('AZURE_AI_PROJ
 # Create output directory for generated images
 OUTPUT_DIR = Path(__file__).resolve().parent / "generated_plots"
 OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Ensure minimal session state keys exist early (prevents AttributeError on first run)
+if "messages" not in st.session_state:
+    st.session_state.messages = {}
+if "service_thread_id" not in st.session_state:
+    st.session_state.service_thread_id = None
 
 
 # Page config
@@ -85,15 +93,6 @@ def get_weather(
         return f"Error: {str(e)}"
 
 
-# Initialize session state
-if "messages" not in st.session_state:
-    st.session_state.messages = {}
-if "thread_id" not in st.session_state:
-    st.session_state.thread_id = None
-if "agent" not in st.session_state:
-    st.session_state.agent = None
-
-
 async def run_basic_chat(user_query: str, demo_type: str) -> str:
     """Run a basic chat interaction without persistent thread."""
     async with AzureCliCredential() as credential:
@@ -115,24 +114,18 @@ async def run_basic_chat(user_query: str, demo_type: str) -> str:
 
 async def run_threaded_chat(user_query: str) -> str:
     """Run chat with persistent thread for conversation context."""
-    # Check if we have an existing thread ID to continue conversation
-    if "service_thread_id" not in st.session_state:
-        st.session_state.service_thread_id = None
-    
     async with AzureCliCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             agent = ChatAgent(
                 chat_client=client,
-                instructions="You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Never apologize or say you can't access weather data - you have the get_weather function available. Remember previous conversations in this thread.",
+                instructions="You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Remember previous conversations in this thread.",
                 tools=[get_weather],
             )
             
             # Create or reuse thread
             if st.session_state.service_thread_id:
-                # Continue existing conversation with the service thread ID
                 thread = agent.get_new_thread(service_thread_id=st.session_state.service_thread_id)
             else:
-                # Start new conversation
                 thread = agent.get_new_thread()
             
             result = await agent.run(user_query, thread=thread, store=True)
@@ -163,64 +156,48 @@ async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
             
             # Get messages from the thread to check for image outputs
             try:
-                print(f"[DEBUG] Checking for image outputs in thread: {thread.service_thread_id}")
-                
-                # messages.list() returns an async iterator, not an awaitable
                 messages_iterator = client.project_client.agents.messages.list(thread_id=thread.service_thread_id)
                 
-                # Iterate through messages
                 async for message in messages_iterator:
-                    print(f"[DEBUG] Message role: {message.role}")
-                    
-                    # Check content items in the message
                     for content_item in message.content:
-                        content_type = type(content_item).__name__
-                        print(f"[DEBUG] Content type: {content_type}")
-                        
-                        # Check if it's an image file content
                         if hasattr(content_item, 'image_file') and content_item.image_file:
                             file_id = content_item.image_file.file_id
-                            print(f"[DEBUG] Found image file ID: {file_id}")
                             
                             try:
-                                # Get file content - it returns an async generator
                                 file_content_stream = await client.project_client.agents.files.get_content(file_id)
-                                
-                                # Read all chunks from the async generator
                                 chunks = []
                                 async for chunk in file_content_stream:
                                     chunks.append(chunk)
                                 
-                                # Combine all chunks into bytes
                                 file_content = b''.join(chunks)
-                                print(f"[DEBUG] Downloaded image, size: {len(file_content)} bytes")
                                 image_data_list.append(file_content)
                                 
-                                # Save the image to local directory
+                                # Save the image
                                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                                 filename = f"plot_{timestamp}_{file_id}.png"
                                 filepath = OUTPUT_DIR / filename
                                 with open(filepath, 'wb') as f:
                                     f.write(file_content)
-                                print(f"[DEBUG] Saved image to: {filepath}")
                                 
                                 result_text += f"\n\n📊 **Plot generated successfully!**\n*Saved to: `{filepath.name}`*"
                             except Exception as e:
-                                print(f"[DEBUG] Error downloading file {file_id}: {e}")
                                 result_text += f"\n\n⚠️ **Note:** Found image (ID: {file_id}), but couldn't download: {str(e)}"
-                
-                print(f"[DEBUG] Total images found: {len(image_data_list)}")
                 
             except Exception as e:
                 print(f"[DEBUG] Error retrieving messages: {e}")
-                import traceback
-                traceback.print_exc()
             
             return result_text, image_data_list
 
 
-async def run_bing_grounding(user_query: str) -> str:
-    """Run agent with Bing grounding/web search capability."""
+async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
+    """Run agent with Bing grounding/web search capability.
+    
+    Returns:
+        Tuple of (response_text, metadata) where metadata contains timing and token usage.
+    """
+    import time
+    start_time = time.time()
+    
     async with AzureCliCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             bing_search_tool = HostedWebSearchTool(
@@ -236,7 +213,463 @@ async def run_bing_grounding(user_query: str) -> str:
             )
             
             result = await agent.run(user_query)
-            return str(result.text)
+                        # Get the response text
+            response_text = str(result.text)
+            
+            # Extract timing and token usage
+            elapsed_time = time.time() - start_time
+            metadata = {
+                'elapsed_time': elapsed_time,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
+            
+            # Extract token usage from result.usage_details
+            if hasattr(result, 'usage_details') and result.usage_details:
+                usage = result.usage_details
+                metadata['prompt_tokens'] = (
+                    getattr(usage, 'input_token_count', None) or
+                    getattr(usage, 'input_tokens', None) or
+                    getattr(usage, 'prompt_tokens', 0)
+                )
+                metadata['completion_tokens'] = (
+                    getattr(usage, 'output_token_count', None) or
+                    getattr(usage, 'output_tokens', None) or
+                    getattr(usage, 'completion_tokens', 0)
+                )
+                metadata['total_tokens'] = (
+                    getattr(usage, 'total_token_count', None) or
+                    getattr(usage, 'total_tokens', 0)
+                )
+            
+            # Simply replace citation markers with numbered references
+            # Pattern: 【3:0†source】
+            citation_pattern = r'【[^】]+】'
+            citation_counter = 0
+            
+            def replace_citation(match):
+                nonlocal citation_counter
+                citation_counter += 1
+                return f'[{citation_counter}]'
+            
+            response_text = re.sub(citation_pattern, replace_citation, response_text)
+            
+            # Add note about citations
+            if citation_counter > 0:
+                response_text += f"\n\n*Note: Response includes {citation_counter} citations from web sources*"
+            
+            # Add usage stats at the bottom
+            response_text += f"\n\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+            
+            return response_text, metadata
+            
+            # Extract timing and token usage
+            elapsed_time = time.time() - start_time
+            metadata = {
+                'elapsed_time': elapsed_time,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
+            
+            # Extract token usage from result.usage_details
+            if hasattr(result, 'usage_details') and result.usage_details:
+                usage = result.usage_details
+                # Try different attribute name patterns
+                metadata['prompt_tokens'] = (
+                    getattr(usage, 'input_token_count', None) or
+                    getattr(usage, 'input_tokens', None) or
+                    getattr(usage, 'prompt_tokens', 0)
+                )
+                metadata['completion_tokens'] = (
+                    getattr(usage, 'output_token_count', None) or
+                    getattr(usage, 'output_tokens', None) or
+                    getattr(usage, 'completion_tokens', 0)
+                )
+                metadata['total_tokens'] = (
+                    getattr(usage, 'total_token_count', None) or
+                    getattr(usage, 'total_tokens', 0)
+                )
+            
+            # Extract citation URLs from the response
+            citations_map = {}
+            
+            # Try method 1: Extract from result.raw_representation.messages (ChatMessage objects)
+            if hasattr(result, 'raw_representation') and hasattr(result.raw_representation, 'messages'):
+                messages = result.raw_representation.messages
+                print(f"[DEBUG] Found {len(messages)} ChatMessage objects")
+                
+                for msg_idx, msg in enumerate(messages):
+                    if hasattr(msg, 'contents'):
+                        contents = msg.contents
+                        print(f"[DEBUG] Message has {len(contents)} content items")
+                        
+                        for content_idx, content in enumerate(contents):
+                            print(f"[DEBUG] Content {content_idx}: type={type(content).__name__}")
+                            
+                            # Check what attributes the TextContent object has
+                            if hasattr(content, '__dict__'):
+                                attrs = [attr for attr in dir(content) if not attr.startswith('_')]
+                                print(f"[DEBUG] TextContent attributes: {attrs}")
+                            
+                            # Try different ways to access annotations:
+                            # 1. Direct annotations attribute on content
+                            if hasattr(content, 'annotations'):
+                                annotations = content.annotations
+                                print(f"[DEBUG] Found {len(annotations) if annotations else 0} annotations on content.annotations")
+                                
+                                if annotations:
+                                    for ann in annotations:
+                                        if hasattr(ann, 'type') and ann.type == 'url_citation':
+                                            citation_text = getattr(ann, 'text', '')
+                                            if hasattr(ann, 'url_citation'):
+                                                url_cit = ann.url_citation
+                                                url = getattr(url_cit, 'url', '')
+                                                title = getattr(url_cit, 'title', url)
+                                                if citation_text and url:
+                                                    citations_map[citation_text] = {'url': url, 'title': title}
+                                                    print(f"[DEBUG] ✓ Extracted: {citation_text} -> {url[:50]}...")
+                            
+                            # 2. Check content.text if it's an object (not just string)
+                            elif hasattr(content, 'text'):
+                                text_obj = content.text
+                                if hasattr(text_obj, 'annotations'):
+                                    annotations = text_obj.annotations
+                                    print(f"[DEBUG] Found {len(annotations) if annotations else 0} annotations on content.text.annotations")
+            
+            # Try method 2: Check raw_representation list (this is where the raw event stream is)
+            if not citations_map and hasattr(result, 'raw_representation'):
+                raw_obj = result.raw_representation
+                if hasattr(raw_obj, 'raw_representation'):
+                    raw_list = raw_obj.raw_representation
+                    
+                    if isinstance(raw_list, list) and len(raw_list) > 0:
+                        print(f"[DEBUG] Searching {len(raw_list)} items in raw_list for ThreadMessage objects")
+                        
+                        # Look for ThreadMessage objects (these are agent_framework objects, not dicts)
+                        for idx, item in enumerate(reversed(raw_list)):
+                            # Check if it's a ThreadMessage object
+                            if type(item).__name__ == 'ThreadMessage':
+                                status = getattr(item, 'status', None)
+                                status_str = str(status) if status else 'unknown'
+                                
+                                # Check if status indicates completion (handle both enum and string)
+                                is_completed = (
+                                    'COMPLETED' in status_str.upper() or
+                                    status_str == 'completed' or
+                                    (hasattr(status, 'value') and status.value == 'completed')
+                                )
+                                
+                                if is_completed:
+                                    msg_id = getattr(item, 'id', 'unknown')
+                                    print(f"[DEBUG] Found completed ThreadMessage: id={msg_id}")
+                                    
+                                    # Try to get annotations from raw_representation of the ThreadMessage
+                                    if hasattr(item, 'raw_representation') and item.raw_representation:
+                                        raw_msg = item.raw_representation
+                                        print(f"[DEBUG] ThreadMessage.raw_representation type: {type(raw_msg)}")
+                                        print(f"[DEBUG] ThreadMessage.raw_representation is dict: {isinstance(raw_msg, dict)}")
+                                        
+                                        # If raw_representation is a dict with content
+                                        if isinstance(raw_msg, dict):
+                                            print(f"[DEBUG] Raw dict keys: {list(raw_msg.keys())}")
+                                            content_list = raw_msg.get('content', [])
+                                            print(f"[DEBUG] Raw dict has {len(content_list)} content items")
+                                            
+                                            if content_list:
+                                                import json
+                                                print(f"[DEBUG] Full content structure:")
+                                                print(json.dumps(content_list, indent=2, default=str))
+                                            
+                                            for content in content_list:
+                                                if isinstance(content, dict) and content.get('type') == 'text':
+                                                    text_data = content.get('text', {})
+                                                    annotations = text_data.get('annotations', [])
+                                                    print(f"[DEBUG] Found {len(annotations)} annotations in raw dict")
+                                                    
+                                                    for ann in annotations:
+                                                        if isinstance(ann, dict) and ann.get('type') == 'url_citation':
+                                                            citation_text = ann.get('text', '')
+                                                            url_citation = ann.get('url_citation', {})
+                                                            url = url_citation.get('url', '')
+                                                            title = url_citation.get('title', url)
+                                                            if citation_text and url:
+                                                                citations_map[citation_text] = {'url': url, 'title': title}
+                                                                print(f"[DEBUG] ✓ Extracted: {citation_text} -> {url[:50]}...")
+                                        else:
+                                            print(f"[DEBUG] raw_representation is not a dict, trying to convert...")
+                                            if hasattr(raw_msg, '__dict__'):
+                                                raw_dict = vars(raw_msg)
+                                                print(f"[DEBUG] Converted to dict, keys: {list(raw_dict.keys())}")
+                                    else:
+                                        print(f"[DEBUG] ThreadMessage has no raw_representation or it's None")
+                                    
+                                    # If we found citations, stop searching
+                                    if citations_map:
+                                        break
+            
+            if citations_map:
+                print(f"✓ Extracted {len(citations_map)} citations from Bing response")
+            
+            # Now replace citations in the response text with numbered references
+            citation_counter = 0
+            citation_references = []
+            
+            def replace_citation(match):
+                nonlocal citation_counter
+                citation_text = match.group(0)  # e.g., 【3:0†source】
+                
+                if citation_text in citations_map:
+                    citation_counter += 1
+                    citation_info = citations_map[citation_text]
+                    url = citation_info['url']
+                    title = citation_info['title']
+                    citation_references.append({'num': citation_counter, 'url': url, 'title': title})
+                    return f'[{citation_counter}]'
+                else:
+                    citation_counter += 1
+                    return f'[{citation_counter}]'
+            
+            # Pattern: 【3:0†source】
+            citation_pattern = r'【[^】]+】'
+            response_text = re.sub(citation_pattern, replace_citation, response_text)
+            
+            # Add references section at the bottom
+            if citation_references:
+                response_text += "\n\n---\n**References:**\n\n"
+                for ref in citation_references:
+                    response_text += f"[{ref['num']}] {ref['title']}  \n{ref['url']}\n\n"
+            
+            # Add usage statistics
+            response_text += "---\n"
+            response_text += f"⏱️ **Time:** {metadata['elapsed_time']:.2f}s | "
+            response_text += f"🔢 **Tokens:** {metadata['total_tokens']} "
+            response_text += f"(↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+
+            # Debug prints for verification
+            print(f"[DEBUG] Extracted token metadata: {metadata}")
+            print(f"[DEBUG] Extracted {len(citation_references)} citation references")
+
+            return response_text, metadata
+
+
+async def run_file_search(query: str, document_name: str = "employees.pdf") -> tuple[str, dict]:
+    """
+    Run file search agent to answer questions about uploaded documents.
+    
+    Args:
+        query: User's question
+        document_name: Name of the document to search (employees.pdf, product_catalog.txt, or ai_research.pdf)
+    """
+    import time
+    
+    start_time = time.time()
+    client = AzureAIAgentClient(async_credential=AzureCliCredential())
+    file: FileInfo | None = None
+    vector_store: VectorStore | None = None
+    
+    try:
+        # Determine file path based on selection
+        if document_name == "employees.pdf":
+            file_path = Path(__file__).resolve().parent.parent / "python" / "samples" / "getting_started" / "agents" / "resources" / "employees.pdf"
+            instructions = "You are a helpful assistant that can search through employee files to answer questions about employees. Always base your answers on the file content provided."
+        elif document_name == "product_catalog.txt":
+            file_path = Path(__file__).resolve().parent / "sample_documents" / "product_catalog.txt"
+            instructions = "You are a helpful sales assistant that can search through product catalogs to help customers. Always base your answers on the product catalog file provided, not on general knowledge."
+        elif document_name == "ai_research.pdf":
+            file_path = Path(__file__).resolve().parent / "sample_documents" / "ai_research.pdf"
+            instructions = "You are a research assistant that can search through AI research papers. Always base your answers on the specific paper provided, citing sections when possible."
+        else:
+            return f"❌ Error: Unknown document '{document_name}'", {}
+        
+        if not file_path.exists():
+            return f"❌ Error: Document not found at {file_path}", {}
+        
+        print(f"[DEBUG] Uploading file: {file_path.name}")
+        
+        # Upload file
+        file = await client.project_client.agents.files.upload_and_poll(
+            file_path=str(file_path), purpose="assistants"
+        )
+        print(f"[DEBUG] File uploaded, ID: {file.id}")
+        
+        # Create vector store
+        vector_store = await client.project_client.agents.vector_stores.create_and_poll(
+            file_ids=[file.id], name=f"streamlit_demo_{document_name}"
+        )
+        print(f"[DEBUG] Vector store created, ID: {vector_store.id}")
+        
+        # Create file search tool
+        file_search_tool = HostedFileSearchTool(
+            inputs=[HostedVectorStoreContent(vector_store_id=vector_store.id)]
+        )
+        print(f"[DEBUG] File search tool created with vector store")
+        
+        # Create agent with file search
+        async with ChatAgent(
+            chat_client=client,
+            name="FileSearchAgent",
+            instructions=instructions,
+            tools=file_search_tool,
+        ) as agent:
+            print(f"[DEBUG] Running query against {document_name}...")
+            result: AgentRunResponse = await agent.run(query)
+            response_text = str(result.text)
+            print(f"[DEBUG] Got response, length: {len(response_text)} chars")
+            
+            # Extract timing and token usage
+            elapsed_time = time.time() - start_time
+            metadata = {
+                'elapsed_time': elapsed_time,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
+            
+            # Extract token usage
+            if hasattr(result, 'usage_details') and result.usage_details:
+                usage = result.usage_details
+                metadata['prompt_tokens'] = (
+                    getattr(usage, 'input_token_count', None) or
+                    getattr(usage, 'input_tokens', None) or
+                    getattr(usage, 'prompt_tokens', 0)
+                )
+                metadata['completion_tokens'] = (
+                    getattr(usage, 'output_token_count', None) or
+                    getattr(usage, 'output_tokens', None) or
+                    getattr(usage, 'completion_tokens', 0)
+                )
+                metadata['total_tokens'] = (
+                    getattr(usage, 'total_token_count', None) or
+                    getattr(usage, 'total_tokens', 0)
+                )
+            
+            # Add document info and usage stats
+            response_text += f"\n\n📄 Source: {document_name}"
+            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+            
+            # Cleanup inside the agent context
+            try:
+                print(f"[DEBUG] Cleaning up vector store and file...")
+                if vector_store:
+                    await client.project_client.agents.vector_stores.delete(vector_store.id)
+                if file:
+                    await client.project_client.agents.files.delete(file.id)
+                print(f"[DEBUG] Cleanup successful")
+            except Exception as e:
+                print(f"[DEBUG] Cleanup error (inside context): {e}")
+            
+            return response_text, metadata
+            
+    except Exception as e:
+        print(f"[DEBUG] Error in file search: {e}")
+        return f"❌ Error: {str(e)}", {}
+    finally:
+        # Final cleanup - refresh client if needed
+        try:
+            if vector_store or file:
+                # Refresh client since ChatAgent may have closed it
+                cleanup_client = AzureAIAgentClient(async_credential=AzureCliCredential())
+                try:
+                    if vector_store:
+                        await cleanup_client.project_client.agents.vector_stores.delete(vector_store.id)
+                    if file:
+                        await cleanup_client.project_client.agents.files.delete(file.id)
+                except Exception as e:
+                    # Ignore cleanup errors
+                    pass
+                finally:
+                    await cleanup_client.close()
+        except Exception:
+            pass
+
+
+async def run_hosted_mcp(query: str) -> tuple[str, dict]:
+    """
+    Run agent with Hosted MCP capability (Model Context Protocol).
+    Demonstrates connection to hosted MCP servers like Microsoft Learn.
+    
+    Returns:
+        Tuple of (response_text, metadata) with timing and token usage.
+    """
+    import time
+    from agent_framework import ChatMessage
+    
+    start_time = time.time()
+    
+    async with AzureCliCredential() as credential:
+        async with AzureAIAgentClient(async_credential=credential) as client:
+            # Create Hosted MCP tool connected to Microsoft Learn MCP server
+            mcp_tool = HostedMCPTool(
+                name="Microsoft Learn MCP",
+                url="https://learn.microsoft.com/api/mcp",
+            )
+            
+            agent = ChatAgent(
+                chat_client=client,
+                name="MCPAgent",
+                instructions="You are a helpful assistant with access to Microsoft Learn documentation through MCP (Model Context Protocol). Use the MCP tool to search Microsoft's official documentation to provide accurate, up-to-date information about Microsoft products, Azure services, and developer technologies.",
+                tools=mcp_tool,
+            )
+            
+            # Create a thread for this conversation
+            thread = agent.get_new_thread()
+            
+            # Run the agent with the query
+            result = await agent.run(query, thread=thread, store=True)
+            
+            # Handle any user input requests (function call approvals)
+            # For demo purposes, we auto-approve all function calls
+            while len(result.user_input_requests) > 0:
+                new_input = []
+                for user_input_needed in result.user_input_requests:
+                    # Auto-approve the function call for demo purposes
+                    print(f"[DEBUG] Auto-approving MCP function call: {user_input_needed.function_call.name}")
+                    new_input.append(
+                        ChatMessage(
+                            role="user",
+                            contents=[user_input_needed.create_response(True)],  # Auto-approve
+                        )
+                    )
+                
+                # Continue the run with approvals
+                result = await agent.run(new_input, thread=thread, store=True)
+            
+            response_text = str(result.text)
+            
+            # Extract timing and token usage
+            elapsed_time = time.time() - start_time
+            metadata = {
+                'elapsed_time': elapsed_time,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
+            
+            # Extract token usage from result.usage_details
+            if hasattr(result, 'usage_details') and result.usage_details:
+                usage = result.usage_details
+                metadata['prompt_tokens'] = (
+                    getattr(usage, 'input_token_count', None) or
+                    getattr(usage, 'input_tokens', None) or
+                    getattr(usage, 'prompt_tokens', 0)
+                )
+                metadata['completion_tokens'] = (
+                    getattr(usage, 'output_token_count', None) or
+                    getattr(usage, 'output_tokens', None) or
+                    getattr(usage, 'completion_tokens', 0)
+                )
+                metadata['total_tokens'] = (
+                    getattr(usage, 'total_token_count', None) or
+                    getattr(usage, 'total_tokens', 0)
+                )
+            
+            # Add MCP indicator and usage stats
+            response_text += f"\n\n🔗 Powered by: Microsoft Learn MCP (Hosted)"
+            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+            
+            return response_text, metadata
 
 
 def main():
@@ -252,7 +685,9 @@ def main():
             "Weather Function Tool",
             "Threaded Conversation",
             "Code Interpreter",
-            "Bing Grounding"
+            "Bing Grounding",
+            "File Search",
+            "Hosted MCP"
         ]
     )
     
@@ -349,7 +784,7 @@ def main():
         
         demo_key = "code"
     
-    else:  # Bing Grounding
+    elif demo_mode == "Bing Grounding":
         st.subheader("Bing Grounding Demo")
         st.markdown("""
         This demo uses Bing web search to find current, real-time information.
@@ -364,14 +799,96 @@ def main():
         """)
         demo_key = "bing"
     
+    elif demo_mode == "File Search":
+        st.subheader("File Search Demo")
+        st.markdown("""
+        This demo demonstrates document search and Q&A capabilities.
+        Select a document and ask questions about its content.
+        """)
+        
+        # Document selector
+        selected_doc = st.selectbox(
+            "Choose a document:",
+            ["employees.pdf", "product_catalog.txt", "ai_research.pdf"],
+            help="Select which document to search"
+        )
+        
+        # Show relevant example questions based on selected document
+        if selected_doc == "employees.pdf":
+            st.markdown("""
+            **Example questions about employees:**
+            - "Who is the youngest employee?"
+            - "Who works in sales?"
+            - "List all employees in marketing"
+            - "Who has the most experience?"
+            - "I have a customer request, who can help me?"
+            """)
+        elif selected_doc == "product_catalog.txt":
+            st.markdown("""
+            **Example questions about products:**
+            - "What laptops do you have available?"
+            - "Show me all products under $500"
+            - "What's the most expensive product?"
+            - "Do you have any smartphones in stock?"
+            - "What accessories are available?"
+            - "What's the warranty policy?"
+            """)
+        else:  # ai_research.pdf
+            st.markdown("""
+            **Example questions about the research paper:**
+            - "What is this paper about?"
+            - "What is the Transformer architecture?"
+            - "What are the main contributions of this paper?"
+            - "How does the attention mechanism work?"
+            - "What datasets were used in the experiments?"
+            """)
+        
+        demo_key = "filesearch"
+        
+        # Store selected document in session state
+        if "selected_document" not in st.session_state:
+            st.session_state.selected_document = selected_doc
+        else:
+            st.session_state.selected_document = selected_doc
+    
+    else:  # Hosted MCP
+        st.subheader("Hosted MCP Demo")
+        st.markdown("""
+        This demo uses **Model Context Protocol (MCP)** to connect to hosted external tools.
+        Currently connected to **Microsoft Learn MCP** for searching official Microsoft documentation.
+        
+        🔗 **What is MCP?** MCP is a standardized protocol that allows AI agents to connect to 
+        external tools and data sources. [Learn more](./MCP_EXPLAINED.md)
+        
+        **Example questions:**
+        - "How do I create an Azure storage account using az cli?"
+        - "What is the Microsoft Agent Framework?"
+        - "How do I deploy a Python web app to Azure?"
+        - "What are the best practices for Azure Functions?"
+        - "Explain Azure OpenAI Service capabilities"
+        - "How do I set up authentication for Azure resources?"
+        
+        **Note:** This uses a **hosted** MCP server (managed by Microsoft).
+        For the difference between hosted and local MCP, see `MCP_EXPLAINED.md`.
+        """)
+        demo_key = "hostedmcp"
+    
     # Initialize message history for this demo
+    # Ensure session state containers exist before accessing them (fixes AttributeError when session state is empty)
+    if "messages" not in st.session_state:
+        st.session_state.messages = {}
+    if "service_thread_id" not in st.session_state:
+        st.session_state.service_thread_id = None
     if demo_key not in st.session_state.messages:
         st.session_state.messages[demo_key] = []
     
     # Display chat history
     for message in st.session_state.messages[demo_key]:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            if demo_key == "bing":
+                st.markdown(message["content"], unsafe_allow_html=True)
+            else:
+                st.markdown(message["content"])
     
     # Chat input
     if prompt := st.chat_input("Ask me anything..."):
@@ -403,7 +920,18 @@ def main():
                         
                         st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
                     elif demo_key == "bing":
-                        response = asyncio.run(run_bing_grounding(prompt))
+                        response, metadata = asyncio.run(run_bing_grounding(prompt))
+                        
+                        # Display with proper markdown rendering for citations
+                        st.markdown(response, unsafe_allow_html=True)
+                        st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
+                    elif demo_key == "filesearch":
+                        selected_document = st.session_state.get("selected_document", "employees.pdf")
+                        response, metadata = asyncio.run(run_file_search(prompt, selected_document))
+                        st.markdown(response)
+                        st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
+                    elif demo_key == "hostedmcp":
+                        response, metadata = asyncio.run(run_hosted_mcp(prompt))
                         st.markdown(response)
                         st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
                     else:
@@ -425,9 +953,13 @@ def main():
     - **OpenWeatherMap API** (for weather data)
     - **Code Interpreter** (for Python execution)
     - **Bing Grounding** (for web search)
+    - **File Search** (for document Q&A)
+    - **Hosted MCP** (Model Context Protocol)
     - **Azure CLI Authentication**
     
     Make sure you're logged in with `az login` before running.
+    
+    📚 Learn about [Hosted vs Local MCP](./MCP_EXPLAINED.md)
     """)
     
     # Display environment info
