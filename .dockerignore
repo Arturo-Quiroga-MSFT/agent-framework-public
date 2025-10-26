@@ -1,0 +1,36 @@
+# Ignore everything by default
+**
+
+# Allow required files for the Streamlit UI app
+!AQ-CODE/
+
+# Inside AQ-CODE include only these
+AQ-CODE/*
+!AQ-CODE/streamlit_azure_ai_demo.py
+!AQ-CODE/requirements.txt
+!AQ-CODE/sample_documents/**
+!AQ-CODE/MCP_EXPLAINED.md
+!AQ-CODE/streamlit_azure_ai_demo_backup_20251025_1110.py
+
+# Exclude Python cache and virtualenvs
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Git and CI
+.git
+.gitignore
+.github/
+
+# Large folders not needed in image
+exports/
+docs/
+python/
+dotnet/
+nl2sql-pipeline/
+visualizations/
+workflow-samples/
+
+# Node artifacts
+node_modules/
