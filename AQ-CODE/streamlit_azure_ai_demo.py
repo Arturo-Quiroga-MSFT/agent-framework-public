@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentRunResponse, HostedMCPTool, ChatMessage
 from agent_framework.azure import AzureAIAgentClient
-from azure.identity.aio import AzureCliCredential
+from azure.identity.aio import DefaultAzureCredential
 from azure.ai.agents.models import FileInfo, VectorStore
 
 # Load environment variables - use absolute path
@@ -96,7 +96,7 @@ def get_weather(
 
 async def run_basic_chat(user_query: str, demo_type: str) -> str:
     """Run a basic chat interaction without persistent thread."""
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             if demo_type == "weather":
                 instructions = "You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Never apologize or say you can't access weather data - you have the get_weather function available."
@@ -115,7 +115,7 @@ async def run_basic_chat(user_query: str, demo_type: str) -> str:
 
 async def run_threaded_chat(user_query: str) -> str:
     """Run chat with persistent thread for conversation context."""
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             agent = ChatAgent(
                 chat_client=client,
@@ -140,7 +140,7 @@ async def run_threaded_chat(user_query: str) -> str:
 
 async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
     """Run agent with code interpreter capability. Returns (text_response, list_of_image_bytes)."""
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             agent = client.create_agent(
                 name="CodingAgent",
@@ -199,7 +199,7 @@ async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
     import time
     start_time = time.time()
     
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             bing_search_tool = HostedWebSearchTool(
                 name="Bing Grounding Search",
@@ -466,7 +466,7 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
     import time
     
     start_time = time.time()
-    client = AzureAIAgentClient(async_credential=AzureCliCredential())
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
     file: FileInfo | None = None
     vector_store: VectorStore | None = None
     
@@ -571,7 +571,7 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
         try:
             if vector_store or file:
                 # Refresh client since ChatAgent may have closed it
-                cleanup_client = AzureAIAgentClient(async_credential=AzureCliCredential())
+                cleanup_client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
                 try:
                     if vector_store:
                         await cleanup_client.project_client.agents.vector_stores.delete(vector_store.id)
@@ -600,7 +600,7 @@ async def run_azure_ai_search(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             # Create Azure AI Search tool
             azure_ai_search_tool = HostedFileSearchTool(
@@ -675,7 +675,7 @@ async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             # Create Firecrawl MCP tool
             # Firecrawl hosted MCP server format: https://mcp.firecrawl.dev/{API_KEY}/v2/mcp
@@ -764,7 +764,7 @@ async def run_hosted_mcp(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with AzureCliCredential() as credential:
+    async with DefaultAzureCredential() as credential:
         async with AzureAIAgentClient(async_credential=credential) as client:
             # Create Hosted MCP tool connected to Microsoft Learn MCP server
             mcp_tool = HostedMCPTool(
@@ -1136,7 +1136,20 @@ def main():
                             for img_data in images:
                                 try:
                                     image = Image.open(BytesIO(img_data))
-                                    st.image(image, caption="Generated Plot", width="stretch")
+                                    st.image(image, caption="Generated Plot", use_column_width=True)
+                                    # Provide an immediate download button for the generated plot (per-session)
+                                    try:
+                                        # Construct a friendly filename using timestamp
+                                        file_name = f"plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                                        st.download_button(
+                                            label="Download plot",
+                                            data=img_data,
+                                            file_name=file_name,
+                                            mime="image/png",
+                                        )
+                                    except Exception as e:
+                                        # If download button fails for any reason, show a small warning but continue
+                                        st.warning(f"Could not create download button: {e}")
                                 except Exception as e:
                                     st.warning(f"Could not display image: {e}")
                         

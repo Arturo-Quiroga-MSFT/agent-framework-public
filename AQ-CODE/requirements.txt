@@ -1,0 +1,9 @@
+# Minimal requirements for the Streamlit Azure AI demo
+streamlit
+python-dotenv
+pillow
+pydantic
+httpx
+agent-framework
+azure-identity
+azure-ai-agents
