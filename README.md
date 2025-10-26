@@ -159,7 +159,7 @@ Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Fram
 
 ## 🎨 Interactive Streamlit Demo
 
-Explore the Microsoft Agent Framework capabilities through our comprehensive **Streamlit Demo Application**. This interactive UI showcases 8 different agent scenarios with real-world examples.
+Explore the Microsoft Agent Framework capabilities through our comprehensive **Streamlit Demo Application**. This interactive UI showcases **9 different agent scenarios** with real-world examples.
 
 ### 🚀 Quick Start
 
@@ -276,7 +276,26 @@ The Streamlit app demonstrates the following capabilities:
 
 ---
 
-#### 7. **Hosted MCP - Microsoft Learn**
+#### 7. **Azure AI Search**
+<!-- ![Azure AI Search Demo](docs/assets/screenshots/azure-ai-search.png) -->
+*Screenshot: Hotel search with Azure AI Search*
+
+- Search through indexed data using Azure AI Search
+- Full-text and semantic search capabilities
+- Integration with hotels-sample-index
+- Accurate, grounded responses from indexed content
+
+**Try asking:**
+- "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
+- "Find luxury hotels with good ratings"
+- "What hotels are available near the beach?"
+- "Show me budget-friendly hotels"
+
+**Setup:** Requires Azure AI Search connection in your Azure AI project with `hotels-sample-index` deployed.
+
+---
+
+#### 8. **Hosted MCP - Microsoft Learn**
 <!-- ![Microsoft Learn MCP Demo](docs/assets/screenshots/mcp-mslearn.png) -->
 *Screenshot: Microsoft Learn documentation search via MCP*
 
@@ -293,6 +312,10 @@ The Streamlit app demonstrates the following capabilities:
 - "Show me Azure deployment best practices"
 
 **What is MCP?** See [MCP_EXPLAINED.md](./AQ-CODE/MCP_EXPLAINED.md) for detailed documentation on Hosted vs Local MCP.
+
+---
+
+#### 9. **Firecrawl MCP - Web Scraping**
 
 ---
 
@@ -351,11 +374,12 @@ AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4.1
 OPENWEATHER_API_KEY=your-key        # For weather demo
 BING_CONNECTION_ID=your-id          # For Bing search demo
 FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
+# Azure AI Search connection is configured in Azure AI project
 ```
 
 ### 📁 Demo Files
 
-- **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1100+ lines)
+- **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1200+ lines)
 - **MCP Documentation**: `AQ-CODE/MCP_EXPLAINED.md`
 - **Sample Documents**: `AQ-CODE/sample_documents/`
 - **Environment Config**: `python/samples/getting_started/.env`
@@ -363,7 +387,7 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
 ### 🎬 Getting Started Video
 
 <!-- Add video link when available -->
-*Coming soon: Watch a walkthrough of all 8 demo scenarios*
+*Coming soon: Watch a walkthrough of all 9 demo scenarios*
 
 ---
 
@@ -374,7 +398,7 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
 - [Getting Started with Agents](./python/samples/getting_started/agents): basic agent creation and tool usage
 - [Chat Client Examples](./python/samples/getting_started/chat_client): direct chat client usage patterns
 - [Getting Started with Workflows](./python/samples/getting_started/workflows): basic workflow creation and integration with agents
-- [**Interactive Streamlit Demo**](./AQ-CODE/streamlit_azure_ai_demo.py): comprehensive UI showcasing 8 agent scenarios
+- [**Interactive Streamlit Demo**](./AQ-CODE/streamlit_azure_ai_demo.py): comprehensive UI showcasing 9 agent scenarios
 
 ### .NET
 

@@ -586,6 +586,79 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
             pass
 
 
+async def run_azure_ai_search(query: str) -> tuple[str, dict]:
+    """
+    Run agent with Azure AI Search for searching indexed hotel data.
+    
+    Args:
+        query: User's search query
+    
+    Returns:
+        Tuple of (response_text, metadata) with timing and token usage.
+    """
+    import time
+    
+    start_time = time.time()
+    
+    async with AzureCliCredential() as credential:
+        async with AzureAIAgentClient(async_credential=credential) as client:
+            # Create Azure AI Search tool
+            azure_ai_search_tool = HostedFileSearchTool(
+                additional_properties={
+                    "index_name": "hotels-sample-index",  # Name of your search index
+                    "query_type": "simple",  # Use simple search
+                    "top_k": 10,  # Get more comprehensive results
+                },
+            )
+            
+            agent = ChatAgent(
+                chat_client=client,
+                name="HotelSearchAgent",
+                instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results.",
+                tools=azure_ai_search_tool,
+            )
+            
+            # Create a thread for this conversation
+            thread = agent.get_new_thread()
+            
+            # Run the agent with the query
+            result = await agent.run(query, thread=thread, store=True)
+            response_text = str(result.text)
+            
+            # Extract timing and token usage
+            elapsed_time = time.time() - start_time
+            metadata = {
+                'elapsed_time': elapsed_time,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'total_tokens': 0
+            }
+            
+            # Extract token usage from result.usage_details
+            if hasattr(result, 'usage_details') and result.usage_details:
+                usage = result.usage_details
+                metadata['prompt_tokens'] = (
+                    getattr(usage, 'input_token_count', None) or
+                    getattr(usage, 'input_tokens', None) or
+                    getattr(usage, 'prompt_tokens', 0)
+                )
+                metadata['completion_tokens'] = (
+                    getattr(usage, 'output_token_count', None) or
+                    getattr(usage, 'output_tokens', None) or
+                    getattr(usage, 'completion_tokens', 0)
+                )
+                metadata['total_tokens'] = (
+                    getattr(usage, 'total_token_count', None) or
+                    getattr(usage, 'total_tokens', 0)
+                )
+            
+            # Add search indicator and usage stats
+            response_text += f"\n\n🔍 Powered by: Azure AI Search (hotels-sample-index)"
+            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+            
+            return response_text, metadata
+
+
 async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
     """
     Run agent with Firecrawl MCP for web scraping and content extraction.
@@ -780,6 +853,7 @@ def main():
             "Code Interpreter",
             "Bing Grounding",
             "File Search",
+            "Azure AI Search",
             "Firecrawl MCP",
             "Hosted MCP"
         ]
@@ -945,6 +1019,27 @@ def main():
         else:
             st.session_state.selected_document = selected_doc
     
+    elif demo_mode == "Azure AI Search":
+        st.subheader("Azure AI Search Demo")
+        st.markdown("""
+        This demo uses **Azure AI Search** to search through indexed hotel data.
+        The agent can search and retrieve information from the hotels-sample-index.
+        
+        🔍 **What is Azure AI Search?** A powerful search service that enables full-text search,
+        semantic search, and vector search over your indexed content.
+        
+        **Example questions:**
+        - "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
+        - "Find luxury hotels with good ratings"
+        - "What hotels are available near the beach?"
+        - "Show me budget-friendly hotels"
+        - "Tell me about hotels with conference facilities"
+        
+        **Note:** Requires Azure AI Search connection configured in your Azure AI project
+        with the 'hotels-sample-index' deployed.
+        """)
+        demo_key = "azureaisearch"
+    
     elif demo_mode == "Firecrawl MCP":
         st.subheader("Firecrawl MCP Demo")
         st.markdown("""
@@ -1057,6 +1152,10 @@ def main():
                         response, metadata = asyncio.run(run_file_search(prompt, selected_document))
                         st.markdown(response)
                         st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
+                    elif demo_key == "azureaisearch":
+                        response, metadata = asyncio.run(run_azure_ai_search(prompt))
+                        st.markdown(response)
+                        st.session_state.messages[demo_key].append({"role": "assistant", "content": response})
                     elif demo_key == "firecrawl":
                         # Check if API key is loaded from environment
                         firecrawl_key = st.session_state.get("firecrawl_api_key", "")
@@ -1092,6 +1191,7 @@ def main():
     - **Code Interpreter** (for Python execution)
     - **Bing Grounding** (for web search)
     - **File Search** (for document Q&A)
+    - **Azure AI Search** (for hotel search)
     - **Firecrawl MCP** (web scraping)
     - **Hosted MCP** (Model Context Protocol)
     - **Azure CLI Authentication**
