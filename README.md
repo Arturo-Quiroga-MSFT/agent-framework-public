@@ -223,7 +223,8 @@ The Streamlit app demonstrates the following capabilities:
 ---
 
 #### 4. **Code Interpreter**
-<!-- ![Code Interpreter Demo](docs/assets/screenshots/code-interpreter.png) -->
+![Code Interpreter Demo](docs/assets/screenshots/code-interpreter.png)
+![Code Interpreter Demo 2](docs/assets/screenshots/code-interpreter2.png)
 *Screenshot: Python code execution and data visualization*
 
 - Execute Python code dynamically
