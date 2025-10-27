@@ -1,5 +1,7 @@
 # Agent Framework Quick Reference
 
+> **🆕 Latest Enhancements**: See [AQ-CODE/CHANGELOG.md](./AQ-CODE/CHANGELOG.md) for conversation memory, plot downloads, and automated Azure deployment features!
+
 ## 🎯 Essential Imports
 ```python
 # Core types
@@ -115,6 +117,10 @@ from agent_framework import ChatMessage
 
 | Item | Path |
 |------|------|
+| **Streamlit Demo** | `AQ-CODE/streamlit_azure_ai_demo.py` |
+| **Demo Changelog** | `AQ-CODE/CHANGELOG.md` |
+| **Docker Guide** | `AQ-CODE/DOCKER_README.md` |
+| **Deployment Script** | `AQ-CODE/deploy-to-azure.sh` |
 | Inventory script | `python/tools/inventory_agent_framework.py` |
 | Full inventory | `agent_framework_inventory.md` |
 | Complete guide | `AGENT_FRAMEWORK_PACKAGES_GUIDE.md` |
@@ -129,6 +135,12 @@ from agent_framework import ChatMessage
 # Test imports
 .venv/bin/python -c "from agent_framework import ChatMessage, Role, Executor; print('✅ OK')"
 
+# Run Streamlit demo
+cd AQ-CODE && streamlit run streamlit_azure_ai_demo.py
+
+# Deploy to Azure Container Apps
+cd AQ-CODE && bash deploy-to-azure.sh
+
 # Run example workflow
 .venv/bin/python AQ-CODE/orchestration/healthcare_product_launch_devui.py
 
@@ -139,6 +151,10 @@ from agent_framework import ChatMessage
 ## 📚 Resources
 
 - **Full Guide**: `AGENT_FRAMEWORK_PACKAGES_GUIDE.md`
+- **Demo Documentation**: `README.md` (see Interactive Streamlit Demo section)
+- **Changelog**: `AQ-CODE/CHANGELOG.md`
+- **Deployment Guide**: `AQ-CODE/DOCKER_README.md`
 - **Examples**: `AQ-CODE/` directory
 - **Source Code**: `python/packages/`
+- **Live Demo**: https://agent-framework-demo.livelyforest-d40d7875.eastus.azurecontainerapps.io
 - **Repository**: github.com/Arturo-Quiroga-MSFT/agent-framework-public
