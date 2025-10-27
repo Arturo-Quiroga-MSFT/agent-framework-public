@@ -5,6 +5,8 @@
 > **📌 Note**: This is a **modified version** of the official [Microsoft Agent Framework repository](https://github.com/microsoft/agent-framework) with tailored code examples and demonstrations created by **Arturo Quiroga**, Sr. Partner Solutions Architect at Microsoft (EPS - Americas).
 > 
 > This repository includes custom implementations, interactive demos, and extended samples designed to showcase real-world agent scenarios and best practices.
+>
+> **🆕 Latest Updates (Oct 26, 2025)**: Conversation memory added to 4 scenarios, plot download button, Managed Identity authentication, and automated Azure deployment! See [CHANGELOG](./AQ-CODE/CHANGELOG.md) for details.
 
 [![Microsoft Azure AI Foundry Discord](https://dcbadge.limes.pink/api/server/b5zjErwbQM?style=flat)](https://discord.gg/b5zjErwbQM)
 [![MS Learn Documentation](https://img.shields.io/badge/MS%20Learn-Documentation-blue)](https://learn.microsoft.com/en-us/agent-framework/)
@@ -522,8 +524,10 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
 - **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1273 lines)
 - **Deployment Script**: `AQ-CODE/deploy-to-azure.sh` (217 lines)
 - **Docker Configuration**: `AQ-CODE/Dockerfile` (multi-stage build)
-- **Docker Documentation**: `AQ-CODE/DOCKER_README.md`
-- **MCP Documentation**: `AQ-CODE/MCP_EXPLAINED.md`
+- **Documentation**:
+  - `AQ-CODE/CHANGELOG.md` - Complete version history and feature details
+  - `AQ-CODE/DOCKER_README.md` - Docker and Azure Container Apps deployment guide
+  - `AQ-CODE/MCP_EXPLAINED.md` - Model Context Protocol documentation
 - **Sample Documents**: `AQ-CODE/sample_documents/`
   - `employees.pdf` - Employee directory
   - `product_catalog.txt` - Product specifications
