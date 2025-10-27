@@ -50,6 +50,12 @@ if "messages" not in st.session_state:
     st.session_state.messages = {}
 if "service_thread_id" not in st.session_state:
     st.session_state.service_thread_id = None
+if "azureaisearch_thread_id" not in st.session_state:
+    st.session_state.azureaisearch_thread_id = None
+if "bing_thread_id" not in st.session_state:
+    st.session_state.bing_thread_id = None
+if "filesearch_thread_id" not in st.session_state:
+    st.session_state.filesearch_thread_id = None
 
 
 # Page config
@@ -209,12 +215,23 @@ async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
             agent = ChatAgent(
                 chat_client=client,
                 name="BingSearchAgent",
-                instructions="You are a helpful assistant that can search the web for current information. Use the Bing search tool to find up-to-date information and provide accurate, well-sourced answers. Always cite your sources when possible.",
+                instructions="You are a helpful assistant that can search the web for current information. Use the Bing search tool to find up-to-date information and provide accurate, well-sourced answers. Always cite your sources when possible. Remember previous searches and questions in this conversation.",
                 tools=bing_search_tool,
             )
             
-            result = await agent.run(user_query)
-                        # Get the response text
+            # Create or reuse thread for conversation memory
+            if st.session_state.bing_thread_id:
+                thread = agent.get_new_thread(service_thread_id=st.session_state.bing_thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
+            result = await agent.run(user_query, thread=thread, store=True)
+            
+            # Store thread ID for next message to maintain conversation history
+            if thread.service_thread_id:
+                st.session_state.bing_thread_id = thread.service_thread_id
+            
+            # Get the response text
             response_text = str(result.text)
             
             # Extract timing and token usage
@@ -511,11 +528,22 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
         async with ChatAgent(
             chat_client=client,
             name="FileSearchAgent",
-            instructions=instructions,
+            instructions=instructions + " Remember previous questions and answers in this conversation to provide contextual responses.",
             tools=file_search_tool,
         ) as agent:
+            # Create or reuse thread for conversation memory
+            if st.session_state.filesearch_thread_id:
+                thread = agent.get_new_thread(service_thread_id=st.session_state.filesearch_thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
             print(f"[DEBUG] Running query against {document_name}...")
-            result: AgentRunResponse = await agent.run(query)
+            result: AgentRunResponse = await agent.run(query, thread=thread, store=True)
+            
+            # Store thread ID for next message to maintain conversation history
+            if thread.service_thread_id:
+                st.session_state.filesearch_thread_id = thread.service_thread_id
+            
             response_text = str(result.text)
             print(f"[DEBUG] Got response, length: {len(response_text)} chars")
             
@@ -614,16 +642,23 @@ async def run_azure_ai_search(query: str) -> tuple[str, dict]:
             agent = ChatAgent(
                 chat_client=client,
                 name="HotelSearchAgent",
-                instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results.",
+                instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results. Remember previous searches and questions in this conversation.",
                 tools=azure_ai_search_tool,
             )
             
-            # Create a thread for this conversation
-            thread = agent.get_new_thread()
+            # Create or reuse thread for conversation memory
+            if st.session_state.azureaisearch_thread_id:
+                thread = agent.get_new_thread(service_thread_id=st.session_state.azureaisearch_thread_id)
+            else:
+                thread = agent.get_new_thread()
             
             # Run the agent with the query
             result = await agent.run(query, thread=thread, store=True)
             response_text = str(result.text)
+            
+            # Store thread ID for next message to maintain conversation history
+            if thread.service_thread_id:
+                st.session_state.azureaisearch_thread_id = thread.service_thread_id
             
             # Extract timing and token usage
             elapsed_time = time.time() - start_time
@@ -958,20 +993,32 @@ def main():
         This demo uses Bing web search to find current, real-time information.
         The agent can search the web and provide up-to-date answers with sources.
         
+        💬 **Conversation Memory:** This scenario maintains conversation history, so you can ask
+        follow-up questions and the agent will remember previous searches and context.
+        
         **Example:** 
         - "What are the latest developments in AI?"
         - "Who won the most recent Nobel Prize in Physics?"
         - "What's the current weather forecast for next week?"
+        - **Follow-up:** "Tell me more about that" (references previous search)
         
         **Note:** Requires Bing Grounding connection configured in Azure AI Foundry.
         """)
         demo_key = "bing"
+        
+        # Add clear memory button
+        if st.button("🔄 Clear Conversation Memory", key="clear_bing_memory"):
+            st.session_state.bing_thread_id = None
+            st.success("✅ Conversation memory cleared! Starting fresh.")
     
     elif demo_mode == "File Search":
         st.subheader("File Search Demo")
         st.markdown("""
         This demo demonstrates document search and Q&A capabilities.
         Select a document and ask questions about its content.
+        
+        💬 **Conversation Memory:** This scenario maintains conversation history, so you can ask
+        follow-up questions that reference previous answers from the same document.
         """)
         
         # Document selector
@@ -980,6 +1027,11 @@ def main():
             ["employees.pdf", "product_catalog.txt", "ai_research.pdf"],
             help="Select which document to search"
         )
+        
+        # Add clear memory button
+        if st.button("🔄 Clear Conversation Memory", key="clear_filesearch_memory"):
+            st.session_state.filesearch_thread_id = None
+            st.success("✅ Conversation memory cleared! Starting fresh.")
         
         # Show relevant example questions based on selected document
         if selected_doc == "employees.pdf":
@@ -1028,17 +1080,26 @@ def main():
         🔍 **What is Azure AI Search?** A powerful search service that enables full-text search,
         semantic search, and vector search over your indexed content.
         
+        💬 **Conversation Memory:** This scenario maintains conversation history, so you can ask
+        follow-up questions and the agent will remember previous searches and context.
+        
         **Example questions:**
         - "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
         - "Find luxury hotels with good ratings"
         - "What hotels are available near the beach?"
         - "Show me budget-friendly hotels"
         - "Tell me about hotels with conference facilities"
+        - **Follow-up:** "Which of those has the best rating?" (references previous results)
         
         **Note:** Requires Azure AI Search connection configured in your Azure AI project
         with the 'hotels-sample-index' deployed.
         """)
         demo_key = "azureaisearch"
+        
+        # Add clear memory button
+        if st.button("🔄 Clear Conversation Memory", key="clear_azureaisearch_memory"):
+            st.session_state.azureaisearch_thread_id = None
+            st.success("✅ Conversation memory cleared! Starting fresh.")
     
     elif demo_mode == "Firecrawl MCP":
         st.subheader("Firecrawl MCP Demo")
