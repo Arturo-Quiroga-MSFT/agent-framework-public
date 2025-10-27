@@ -161,14 +161,35 @@ Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Fram
 
 Explore the Microsoft Agent Framework capabilities through our comprehensive **Streamlit Demo Application**. This interactive UI showcases **9 different agent scenarios** with real-world examples.
 
-### 🚀 Quick Start
+### 🚀 Quick Start Options
 
+**Local Development:**
 ```bash
 cd AQ-CODE
 streamlit run streamlit_azure_ai_demo.py
 ```
+The demo will open at `http://localhost:8501`
 
-The demo will open at `http://localhost:8501` and provides an intuitive interface to explore various agent capabilities.
+**Docker Container:**
+```bash
+docker build -t agent-framework-demo -f AQ-CODE/Dockerfile .
+docker run -p 8501:8501 \
+  -e AZURE_AI_PROJECT_ENDPOINT=your-endpoint \
+  -e AZURE_AI_MODEL_DEPLOYMENT_NAME=your-model \
+  agent-framework-demo
+```
+Access at `http://localhost:8501`
+
+**Azure Container Apps (Production):**
+```bash
+cd AQ-CODE
+bash deploy-to-azure.sh
+```
+Automatically builds in ACR, deploys with Managed Identity authentication, and provides HTTPS endpoint.
+
+> **🌐 Live Demo**: [https://agent-framework-demo.livelyforest-d40d7875.eastus.azurecontainerapps.io](https://agent-framework-demo.livelyforest-d40d7875.eastus.azurecontainerapps.io)
+> 
+> Deployed with DefaultAzureCredential + Managed Identity (no API keys in code!)
 
 ### ✨ Demo Features
 
@@ -214,11 +235,14 @@ The Streamlit app demonstrates the following capabilities:
 - Context maintenance across multiple interactions
 - Thread lifecycle management
 - Demonstrates stateful agent conversations
+- **Built-in memory** that persists throughout the session
 
 **Try asking:**
 - "My name is Alex" (then later) "What's my name?"
 - "Remember that I like Python" (then later) "What programming language do I like?"
 - Multi-turn contextual conversations
+
+**💬 Conversation Memory Feature:** Thread Management has built-in conversation persistence as part of the core framework functionality.
 
 ---
 
@@ -231,12 +255,18 @@ The Streamlit app demonstrates the following capabilities:
 - Generate data visualizations (charts, plots, graphs)
 - Mathematical computations and data analysis
 - Automatic image generation and display
+- **📥 Download Button**: Instantly download generated plots (PNG format)
+  - Works locally and in Azure Container Apps
+  - No external storage needed - direct in-browser downloads
+  - Click "Download Plot" button after generation
 
 **Try asking:**
 - "Create a bar chart showing sales data for Q1-Q4"
 - "Calculate the fibonacci sequence and plot it"
 - "Generate a scatter plot with random data"
 - "Analyze this dataset: [1,2,3,4,5] and show statistics"
+
+**Tip:** After generating a plot, use the download button to save it to your device!
 
 ---
 
@@ -248,11 +278,21 @@ The Streamlit app demonstrates the following capabilities:
 - Grounded responses with source citations
 - Integration with Bing Search API
 - Numbered reference system for sources
+- **💬 Conversation Memory**: Remembers previous searches and questions
+  - Ask follow-up questions that reference earlier searches
+  - "Tell me more about that" references previous results
+  - Clear memory button to start fresh
 
 **Try asking:**
 - "What are the latest news about AI?"
 - "Tell me about recent developments in quantum computing"
+- Then: "Tell me more about that" ← references previous search
 - "What happened in the tech industry this week?"
+
+**Memory Example:**
+1. "What are quantum computers?"
+2. "Tell me more about that" ← maintains context
+3. "Which companies are leading in this field?" ← continues thread
 
 ---
 
@@ -267,12 +307,22 @@ The Streamlit app demonstrates the following capabilities:
   - **ai_research.pdf**: SigLIP research paper (2.1MB)
 - Vector store creation and management
 - Accurate document-grounded responses
+- **💬 Conversation Memory**: Maintains context across questions about the same document
+  - Ask follow-up questions without repeating document context
+  - Continues understanding from previous answers
+  - Clear memory button to reset conversation
 
 **Try asking:**
 - "Who is the CEO?" (employees.pdf)
+- Then: "What's their experience level?" ← references previous answer
 - "What products do we have?" (product_catalog.txt)
 - "What is SigLIP?" (ai_research.pdf)
-- "Summarize the research paper" (ai_research.pdf)
+- Then: "Explain the methodology in more detail" ← maintains document context
+
+**Memory Example (with employees.pdf):**
+1. "Who works in sales?"
+2. "What's the experience level of those employees?" ← remembers previous answer
+3. "Who is the most senior?" ← continues context
 
 ---
 
@@ -284,12 +334,22 @@ The Streamlit app demonstrates the following capabilities:
 - Full-text and semantic search capabilities
 - Integration with hotels-sample-index
 - Accurate, grounded responses from indexed content
+- **💬 Conversation Memory**: Remembers previous searches and context
+  - Follow-up questions reference earlier results
+  - Compare hotels across multiple queries
+  - Clear memory button to start fresh
 
 **Try asking:**
 - "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
+- Then: "Tell me more about its amenities" ← references previous hotel
 - "Find luxury hotels with good ratings"
+- Then: "Which one is the cheapest?" ← compares previous results
 - "What hotels are available near the beach?"
-- "Show me budget-friendly hotels"
+
+**Memory Example:**
+1. "Find hotels in downtown"
+2. "Which of those has a pool?" ← filters previous results
+3. "What's the price for the first one?" ← references specific hotel from context
 
 **Setup:** Requires Azure AI Search connection in your Azure AI project with `hotels-sample-index` deployed.
 
@@ -351,6 +411,72 @@ Every demo mode includes:
 - 📱 **Responsive Design**: Clean, modern UI built with Streamlit
 - 🛡️ **Error Handling**: Graceful error messages and recovery
 
+### 🆕 **Latest Enhancements**
+
+#### **Conversation Memory (Thread Persistence)**
+Implemented across multiple scenarios for contextual, multi-turn conversations:
+
+- ✅ **Thread Management**: Built-in framework feature
+- ✅ **Azure AI Search**: Search context maintained across questions
+- ✅ **Bing Grounding**: Previous searches inform follow-up questions
+- ✅ **File Search (RAG)**: Document context preserved throughout conversation
+
+**How it works:**
+- Each scenario tracks a `thread_id` in session state
+- Threads are reused across messages for context continuity
+- "Clear Conversation Memory" buttons reset threads
+- Memory persists until explicitly cleared or session ends
+
+**Example workflow:**
+```
+1. User: "What are quantum computers?" → Creates thread, stores context
+2. User: "Tell me more about that" → Reuses thread, maintains context
+3. User clicks "Clear Memory" → Resets thread, starts fresh
+```
+
+#### **Plot Download Button (Code Interpreter)**
+Instant download capability for generated visualizations:
+
+- 📥 One-click download of generated plots
+- 🖼️ PNG format with proper naming
+- ⚡ Works in both local and Azure Container Apps deployments
+- 💾 No external storage needed - direct browser downloads
+- 🎯 Automatic detection of latest plot
+
+**How it works:**
+- Code Interpreter saves plots to `/app/generated_plots/`
+- App scans directory for latest PNG file
+- Streamlit `download_button` provides instant download
+- Works seamlessly with non-root Docker user permissions
+
+#### **Azure Container Apps Deployment**
+Production-ready containerized deployment with enterprise security:
+
+- 🐳 **Multi-stage Docker build**: Optimized image size (~1.5GB)
+- 🔐 **Managed Identity**: DefaultAzureCredential authentication (no API keys!)
+- 🏗️ **Azure Container Registry**: Automated builds with timestamp tags
+- 🚀 **One-command deployment**: `bash deploy-to-azure.sh`
+- 🔒 **Security hardened**: Non-root user, minimal attack surface
+- 📊 **Auto-scaling**: 1-3 replicas based on load
+- 🌐 **HTTPS ingress**: Automatic SSL/TLS termination
+- 📝 **Structured logging**: Full observability with Azure Monitor
+
+**Deployment workflow:**
+```bash
+cd AQ-CODE
+bash deploy-to-azure.sh
+# → Builds in ACR with timestamp tag
+# → Updates Container App with new image
+# → App restarts with Managed Identity auth
+# → Returns HTTPS URL in ~2 minutes
+```
+
+**Security benefits:**
+- No API keys in environment variables or code
+- Managed Identity assigned "Cognitive Services User" role
+- Automatic credential rotation via Azure AD
+- Compliant with enterprise security policies
+
 ### 🎯 Use Cases
 
 This demo is perfect for:
@@ -363,8 +489,7 @@ This demo is perfect for:
 
 ### 🔧 Configuration
 
-The demo uses environment variables from `.env` files:
-
+**Local Development (.env file):**
 ```bash
 # Required
 AZURE_AI_PROJECT_ENDPOINT=your-endpoint
@@ -377,11 +502,32 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
 # Azure AI Search connection is configured in Azure AI project
 ```
 
+**Azure Container Apps (Managed Identity):**
+```bash
+# No API keys needed! Uses DefaultAzureCredential
+# Managed Identity automatically authenticates with:
+# - Azure AI Foundry
+# - Azure OpenAI
+# - Azure AI Search
+# - Other Azure services
+
+# Setup:
+# 1. Enable Managed Identity on Container App
+# 2. Assign "Cognitive Services User" role
+# 3. App authenticates automatically
+```
+
 ### 📁 Demo Files
 
-- **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1200+ lines)
+- **Main Application**: `AQ-CODE/streamlit_azure_ai_demo.py` (1273 lines)
+- **Deployment Script**: `AQ-CODE/deploy-to-azure.sh` (217 lines)
+- **Docker Configuration**: `AQ-CODE/Dockerfile` (multi-stage build)
+- **Docker Documentation**: `AQ-CODE/DOCKER_README.md`
 - **MCP Documentation**: `AQ-CODE/MCP_EXPLAINED.md`
 - **Sample Documents**: `AQ-CODE/sample_documents/`
+  - `employees.pdf` - Employee directory
+  - `product_catalog.txt` - Product specifications
+  - `ai_research.pdf` - SigLIP research paper (2.1MB)
 - **Environment Config**: `python/samples/getting_started/.env`
 
 ### 🎬 Getting Started Video
