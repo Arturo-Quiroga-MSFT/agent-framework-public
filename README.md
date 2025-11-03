@@ -525,7 +525,9 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
 - **Deployment Script**: `AQ-CODE/deploy-to-azure.sh` (217 lines)
 - **Docker Configuration**: `AQ-CODE/Dockerfile` (multi-stage build)
 - **Documentation**:
+  - `AQ-CODE/DOCUMENTATION_INDEX.md` - 📚 **START HERE** - Complete documentation map
   - `AQ-CODE/CHANGELOG.md` - Complete version history and feature details
+  - `AQ-CODE/ENHANCEMENTS_SUMMARY.md` - Comprehensive overview of v1.2.0 features
   - `AQ-CODE/DOCKER_README.md` - Docker and Azure Container Apps deployment guide
   - `AQ-CODE/MCP_EXPLAINED.md` - Model Context Protocol documentation
 - **Sample Documents**: `AQ-CODE/sample_documents/`
@@ -533,6 +535,8 @@ FIRECRAWL_API_KEY=your-key          # For Firecrawl MCP demo
   - `product_catalog.txt` - Product specifications
   - `ai_research.pdf` - SigLIP research paper (2.1MB)
 - **Environment Config**: `python/samples/getting_started/.env`
+
+> 💡 **New to the demo?** Start with the [Documentation Index](./AQ-CODE/DOCUMENTATION_INDEX.md) for a guided tour of all features and documentation.
 
 ### 🎬 Getting Started Video
 
