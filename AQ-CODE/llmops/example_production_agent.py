@@ -17,12 +17,14 @@ import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 
-from agent_framework import ChatMessage, Role
-from agent_framework.azure import AzureAIAgentClient, HostedWebSearchTool
+from agent_framework import ChatMessage, Role, HostedWebSearchTool
+from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
 
 # Import LLMOps components
-from llmops import MAFObservability, CostTracker, TokenBudgetManager, AgentEvaluator
+from observability import MAFObservability
+from cost_tracker import CostTracker, TokenBudgetManager
+from evaluator import AgentEvaluator
 
 # Load environment
 load_dotenv(Path(__file__).parent.parent / "orchestration" / ".env")
