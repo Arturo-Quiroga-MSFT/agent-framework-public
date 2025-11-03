@@ -2,7 +2,9 @@
 
 **Version:** 1.0  
 **Last Updated:** November 3, 2025  
-**Author:** Technical Documentation Team
+**Author:** Arturo Quiroga, Senior Azure AI Services PSA  
+**Organization:** Enterprise Partner Solutions (EPS) Americas  
+**Contributors:** GitHub Copilot (Agent Mode) & Claude Sonnet 4.5
 
 ---
 
