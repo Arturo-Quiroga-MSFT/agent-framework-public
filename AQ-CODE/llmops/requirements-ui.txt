@@ -1,0 +1,14 @@
+# Streamlit UI Requirements for LLMOps Production Agent
+
+# Core Streamlit
+streamlit>=1.28.0
+
+# Data visualization
+plotly>=5.17.0
+pandas>=2.0.0
+
+# Already included in main requirements
+# agent-framework
+# azure-ai-agents
+# azure-identity
+# python-dotenv
