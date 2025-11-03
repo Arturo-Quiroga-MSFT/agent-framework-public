@@ -54,14 +54,15 @@ class ProductionAgent:
         # Agent client (initialized lazily)
         self._client = None
         self._agent = None
+        self._credential = None
     
     async def initialize(self):
         """Initialize Azure AI client and agent."""
         if self._agent is not None:
             return
         
-        credential = await DefaultAzureCredential().__aenter__()
-        self._client = await AzureAIAgentClient(async_credential=credential).__aenter__()
+        self._credential = await DefaultAzureCredential().__aenter__()
+        self._client = await AzureAIAgentClient(async_credential=self._credential).__aenter__()
         
         # Create tools if enabled
         tools = None
@@ -79,6 +80,18 @@ class ProductionAgent:
         )
         
         print(f"✅ Agent '{self.agent_name}' initialized")
+    
+    async def cleanup(self):
+        """Cleanup Azure resources."""
+        if self._client is not None:
+            await self._client.__aexit__(None, None, None)
+            self._client = None
+        
+        if self._credential is not None:
+            await self._credential.__aexit__(None, None, None)
+            self._credential = None
+        
+        self._agent = None
     
     async def run(self, query: str, expected_topics: list = None):
         """Run agent with full LLMOps pipeline.
@@ -255,6 +268,10 @@ async def main():
         print(f"   Total Tokens: {sum(tokens_by_agent.values()):,}")
         print(f"   Budget Used: {budget_stats['percentage_used']:.1f}% ({budget_stats['total_tokens']:,} / {budget_stats['budget']:,})")
         print(f"   Remaining: {budget_stats['remaining_tokens']:,} tokens")
+    
+    # Cleanup resources
+    print(f"\n🧹 Cleaning up resources...")
+    await market_analyst.cleanup()
     
     print(f"\n\n{'='*80}")
     print("✅ Demo Complete!")
