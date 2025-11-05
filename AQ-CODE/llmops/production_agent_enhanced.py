@@ -172,10 +172,8 @@ class ProductionAgent:
         self.budget_manager = TokenBudgetManager()
         self.evaluator = AgentEvaluator()
         
-        # Agent client (initialized lazily)
-        self._client = None
-        self._agent = None
-        self._credential = None
+        # Store thread ID for conversation continuity (string, not object)
+        self._thread_id = None
         
         # Session management
         self.chat_history: List[Dict[str, str]] = []
@@ -186,49 +184,6 @@ class ProductionAgent:
         if self.progress_callback:
             update = ProgressUpdate(status=status, message=message, data=data)
             self.progress_callback(update)
-    
-    async def initialize(self):
-        """Initialize Azure AI client and agent."""
-        if self._agent is not None:
-            return
-        
-        self._emit_progress(AgentStatus.INITIALIZING, "Initializing Azure AI client...")
-        
-        self._credential = await DefaultAzureCredential().__aenter__()
-        self._client = await AzureAIAgentClient(async_credential=self._credential).__aenter__()
-        
-        # Create tools if enabled
-        tools = None
-        if self.enable_web_search:
-            tools = HostedWebSearchTool(
-                name="Web Search",
-                description="Search the web for current information"
-            )
-        
-        # Create agent
-        self._agent = self._client.create_agent(
-            instructions=self.instructions,
-            name=self.agent_name,
-            tools=tools
-        )
-        
-        self._emit_progress(
-            AgentStatus.INITIALIZING,
-            f"Agent '{self.agent_name}' initialized successfully",
-            {"agent_name": self.agent_name, "web_search_enabled": self.enable_web_search}
-        )
-    
-    async def cleanup(self):
-        """Cleanup Azure resources."""
-        if self._client is not None:
-            await self._client.__aexit__(None, None, None)
-            self._client = None
-        
-        if self._credential is not None:
-            await self._credential.__aexit__(None, None, None)
-            self._credential = None
-        
-        self._agent = None
     
     def add_to_history(self, role: str, content: str):
         """Add message to chat history."""
@@ -243,8 +198,10 @@ class ProductionAgent:
         return self.chat_history.copy()
     
     def clear_history(self):
-        """Clear chat history."""
+        """Clear chat history and reset thread."""
         self.chat_history.clear()
+        # Reset thread ID so a new thread is created on next query
+        self._thread_id = None
     
     async def run(
         self,
@@ -307,8 +264,40 @@ class ProductionAgent:
                 f"agent.{self.agent_name}.execute",
                 attributes={"query_length": len(query), "user_id": user_id or "anonymous"}
             ):
-                response = await self._agent.run(query)
-                response_text = response.messages[-1].text if response.messages else ""
+                # Create agent inside async context managers (working demo pattern)
+                async with DefaultAzureCredential() as credential:
+                    async with AzureAIAgentClient(async_credential=credential) as client:
+                        # Create tools if enabled
+                        tools = None
+                        if self.enable_web_search:
+                            tools = HostedWebSearchTool(
+                                name="Web Search",
+                                description="Search the web for current information"
+                            )
+                        
+                        # Create agent
+                        from agent_framework import ChatAgent
+                        agent = ChatAgent(
+                            chat_client=client,
+                            instructions=self.instructions,
+                            name=self.agent_name,
+                            tools=tools if tools else None,
+                        )
+                        
+                        # Create or reuse thread (using stored ID)
+                        if self._thread_id:
+                            thread = agent.get_new_thread(service_thread_id=self._thread_id)
+                        else:
+                            thread = agent.get_new_thread()
+                        
+                        # Run agent with thread for conversation continuity
+                        result = await agent.run(query, thread=thread, store=True)
+                        
+                        # Store thread ID for next query
+                        if thread.service_thread_id:
+                            self._thread_id = thread.service_thread_id
+                        
+                        response_text = str(result.text)
             
             # Add to history
             self.add_to_history("assistant", response_text)

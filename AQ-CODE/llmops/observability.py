@@ -13,21 +13,26 @@ from opentelemetry import trace, metrics
 class MAFObservability:
     """Observability setup for MAF agents with Application Insights integration."""
     
+    _observability_initialized = False  # Class-level flag to prevent re-initialization
+    
     def __init__(self):
         self.connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
         self.enable_tracing = os.getenv("ENABLE_TRACING", "true").lower() == "true"
         
         if self.enable_tracing:
-            # Setup MAF observability
-            if self.connection_string:
-                setup_observability(
-                    enable_sensitive_data=True,
-                    applicationinsights_connection_string=self.connection_string
-                )
-            else:
-                setup_observability(enable_sensitive_data=True)
+            # Setup MAF observability only once
+            if not MAFObservability._observability_initialized:
+                if self.connection_string:
+                    setup_observability(
+                        enable_sensitive_data=True,
+                        applicationinsights_connection_string=self.connection_string
+                    )
+                else:
+                    setup_observability(enable_sensitive_data=True)
+                
+                MAFObservability._observability_initialized = True
             
-            # Get tracers and meters
+            # Always get tracers and meters (safe to call multiple times)
             self.tracer = trace.get_tracer(__name__)
             self.meter = metrics.get_meter(__name__)
             
