@@ -93,10 +93,10 @@ def progress_callback(update: ProgressUpdate):
 
 def create_agent(preset_name: str):
     """Create or recreate agent with selected preset."""
-    if st.session_state.agent is not None:
-        # Cleanup existing agent
-        asyncio.run(st.session_state.agent.cleanup())
+    # Release old agent reference - cleanup happens in ProductionAgent.__del__
+    st.session_state.agent = None
     
+    # Create new agent
     st.session_state.agent = ProductionAgent.from_preset(
         preset_name,
         progress_callback=progress_callback
@@ -253,6 +253,12 @@ def main():
     st.title("🤖 LLMOps Production Agent")
     st.markdown("**Production-ready AI agent with observability, cost tracking, and quality evaluation**")
     
+    # Show a success message that nest-asyncio is active (helps with debugging)
+    # This can be removed later, but helps confirm the fix is working
+    if "startup_message_shown" not in st.session_state:
+        st.session_state.startup_message_shown = True
+        # Don't show message, just mark as shown
+    
     # Sidebar - Configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
@@ -275,9 +281,13 @@ def main():
         
         if st.button("🔄 Initialize/Switch Agent", use_container_width=True):
             with st.spinner("Initializing agent..."):
-                create_agent(selected_preset)
-                st.success(f"✅ {preset_labels[selected_preset]} ready!")
-                st.rerun()
+                try:
+                    create_agent(selected_preset)
+                    st.success(f"✅ {preset_labels[selected_preset]} ready!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Initialization error: {str(e)}")
+                    st.info("💡 Try: Stop server (Ctrl+C) and restart with `streamlit run streamlit_production_ui.py`")
         
         # Display current agent info
         if st.session_state.agent_initialized:
@@ -379,7 +389,7 @@ def main():
             with st.chat_message("user"):
                 st.markdown(prompt)
             
-            # Get agent response
+            # Get and display assistant response
             with st.chat_message("assistant"):
                 progress_placeholder = st.empty()
                 response_placeholder = st.empty()
