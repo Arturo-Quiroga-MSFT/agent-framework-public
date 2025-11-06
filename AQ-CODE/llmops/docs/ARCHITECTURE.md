@@ -206,14 +206,86 @@ st.download_button()
 User Downloads File
 ```
 
+## 🆕 Agent Lifecycle Management Architecture
+
+### Overview
+```
+┌───────────────────────────────────────────────────────────┐
+│              Production Application                        │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  ProductionAgent Instances (Multiple Sessions)      │  │
+│  │  - agent1 (session_1) ──┐                           │  │
+│  │  - agent2 (session_2) ──┼─► Same agent config      │  │
+│  │  - agent3 (session_3) ──┘                           │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                       ↓ ↓ ↓                                │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  ProductionAgentManager (Centralized Registry)      │  │
+│  │  ┌───────────────────────────────────────────────┐  │  │
+│  │  │ In-Memory Registry                            │  │  │
+│  │  │  {                                            │  │  │
+│  │  │    "market_analyst": (agent, cred, client)   │  │  │
+│  │  │    "tech_advisor": (agent, cred, client)     │  │  │
+│  │  │  }                                            │  │  │
+│  │  └───────────────────────────────────────────────┘  │  │
+│  │  ┌───────────────────────────────────────────────┐  │  │
+│  │  │ Metadata & Usage Tracking                     │  │  │
+│  │  │  - Creation timestamps                        │  │  │
+│  │  │  - Usage counts per agent                     │  │  │
+│  │  │  - Session tracking                           │  │  │
+│  │  └───────────────────────────────────────────────┘  │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                       ↓                                    │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  Azure AI Foundry                                   │  │
+│  │  - market_analyst (created ONCE)                    │  │
+│  │  - tech_advisor (created ONCE)                      │  │
+│  └─────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Key Benefits
+- **Before**: N instances → N agents in Foundry (resource proliferation)
+- **After**: N instances → 1 agent in Foundry (agent reuse)
+- **Result**: ~90% reduction in Foundry resources
+
+### Lifecycle Flow
+```
+1. First ProductionAgent instantiation
+   ├─► Check registry: agent NOT found
+   ├─► Create new agent in Foundry
+   ├─► Store in registry
+   └─► Return agent reference
+
+2. Subsequent ProductionAgent instantiations (same config)
+   ├─► Check registry: agent FOUND
+   ├─► Update usage metadata
+   └─► Return existing agent reference
+
+3. Application shutdown
+   ├─► ProductionAgentManager.cleanup_all()
+   ├─► Release all Azure resources
+   └─► Clear registry
+```
+
+---
+
 ## Component Responsibilities
 
+### ProductionAgentManager 🆕
+- **Registry**: Maintain map of agent_name → (agent, credential, client)
+- **Reuse**: Get existing agent or create new one
+- **Thread Safety**: Lock-protected concurrent access
+- **Tracking**: Usage statistics and session metadata
+- **Cleanup**: Release Azure resources on shutdown
+
 ### ProductionAgent
-- **Initialize**: Azure client, credentials, tools
+- **Initialize**: Azure client, credentials, tools (via manager if reuse enabled)
 - **Execute**: Run queries, manage threads
 - **Track**: Chat history, session state
 - **Callback**: Emit progress updates
 - **Export**: Serialize session data
+- **Lifecycle**: Use ProductionAgentManager for agent reuse
 
 ### LLMOps Components
 

@@ -84,7 +84,9 @@ Opens at: `http://localhost:8501`
 
 ---
 
-## 💻 Usage Example
+## 💻 Usage Examples
+
+### Basic Usage
 
 ```python
 from production_agent_enhanced import ProductionAgent
@@ -104,6 +106,70 @@ if response.success:
     print(f"Cost: ${response.metrics['tokens']['estimated_cost_usd']:.4f}")
     print(f"Quality: {response.metrics['quality_label']}")
 ```
+
+### 🆕 Agent Lifecycle Management (Recommended)
+
+**Prevent creating duplicate agents in Azure AI Foundry!**
+
+```python
+from production_agent_with_lifecycle import ProductionAgent
+
+# First instance creates agent in Foundry
+agent1 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True  # Enable agent reuse (default)
+)
+result1 = await agent1.run("What's NVIDIA's P/E ratio?")
+print(f"Agent reused: {result1.agent_reused}")  # False (newly created)
+
+# Second instance REUSES same agent (not created again!)
+agent2 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True
+)
+result2 = await agent2.run("What about Microsoft?")
+print(f"Agent reused: {result2.agent_reused}")  # True (reused!)
+
+# Monitor usage
+from agent_lifecycle_manager import ProductionAgentManager
+stats = ProductionAgentManager.get_agent_stats()
+print(f"Total agents: {stats['total_agents']}")  # Only 1!
+```
+
+### Application-Level Management
+
+```python
+from agent_lifecycle_manager import ProductionAgentManager
+
+# Application startup: Pre-warm agents
+async def startup():
+    await ProductionAgentManager.get_or_create_agent(
+        "market_analyst",
+        instructions="You are a market analyst...",
+        enable_web_search=True
+    )
+    print("✅ Agents pre-warmed")
+
+# Application shutdown: Cleanup
+async def shutdown():
+    await ProductionAgentManager.cleanup_all()
+    print("✅ All agents cleaned up")
+
+# In your app
+await startup()
+# ... use agents ...
+await shutdown()
+```
+
+**Benefits:**
+- 🎯 One agent per configuration (not one per instance)
+- 💰 Reduced costs from duplicate agent elimination
+- 📊 Usage tracking across sessions
+- 🧹 Centralized cleanup
 
 ---
 

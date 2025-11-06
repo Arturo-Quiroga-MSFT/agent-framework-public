@@ -26,9 +26,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 # Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from production_agent_enhanced import (
+from examples.production_agent_enhanced import (
     ProductionAgent,
     AgentPreset,
     AgentStatus,
