@@ -364,6 +364,31 @@ streamlit run ui/streamlit_production_ui.py
 - ✅ Budget warnings
 - ✅ Session download button
 - ✅ Agent preset switching
+- ✅ **Smart follow-up questions** 🆕 - AI-generated contextual suggestions after each response
+
+### Smart Follow-Up Questions 🆕
+
+After each agent response, the system automatically generates 3 contextual follow-up questions to help users:
+- Dive deeper into topics
+- Explore related areas
+- Continue the conversation naturally
+
+**How it works:**
+1. Agent processes your query and generates response
+2. System analyzes conversation context
+3. Generates 3 relevant follow-up questions
+4. Click any question to use it as your next prompt
+
+**Example:**
+```
+User: "What is NVIDIA's P/E ratio?"
+Agent: [Provides detailed analysis with numbers and sources]
+
+💡 Suggested follow-up questions:
+1. How does NVIDIA's P/E ratio compare to AMD and Intel?
+2. What factors are driving NVIDIA's current valuation?
+3. Is NVIDIA's stock price justified by its fundamentals?
+```
 
 See **[docs/UI_README.md](docs/UI_README.md)** for complete UI documentation.
 

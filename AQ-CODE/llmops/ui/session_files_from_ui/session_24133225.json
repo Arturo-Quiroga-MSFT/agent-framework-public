@@ -1,0 +1,41 @@
+{
+  "session_id": "24133225-2b31-4703-bb03-a3fd2ace195a",
+  "agent_name": "research_assistant",
+  "timestamp": "2025-11-06T16:14:27.346641",
+  "chat_history": [
+    {
+      "role": "user",
+      "content": "lets research the new Microsoft Agent frmework and compare it agains the previous Microsoft Semantic Kernel",
+      "timestamp": "2025-11-06T16:13:02.253253"
+    },
+    {
+      "role": "assistant",
+      "content": "Here\u2019s a comprehensive comparison between the new Microsoft Agent Framework and the previous Microsoft Semantic Kernel, based on current documentation and community discussions:\n\n### Core Purpose and Positioning\n\n- **Microsoft Agent Framework** is the successor to Semantic Kernel, providing a unified, enterprise-grade platform for developing, deploying, and managing AI agents. It builds on lessons from both Semantic Kernel and AutoGen, aiming to be the main entry point for AI agent development in the Microsoft and Azure ecosystem\u30103:1\u2020source\u3011.\n\n- **Semantic Kernel (SK)** was designed as a library/framework for orchestrating AI skills and plugins using LLMs, with extensibility and integration at its core. It is now considered a precursor or \u201cv1.x\u201d to Agent Framework.\n\n### Key Differences\n\n| Aspect                        | Semantic Kernel                                      | Microsoft Agent Framework                                     |\n|-------------------------------|-----------------------------------------------------|---------------------------------------------------------------|\n| **Namespace/Architecture**    | `Microsoft.SemanticKernel`                           | Uses `Microsoft.Agents.AI` and `Microsoft.Extensions.AI`      |\n| **Agent Creation**            | Relies on `Kernel` objects and agents as wrappers    | Simplified agent creation, extensible across all providers    |\n| **Thread Management**         | The caller creates threads for agent conversation    | The agent itself manages thread creation (`GetNewThread()`)   |\n| **Integration**               | Integrates with various AI providers, Azure support  | Deep integration with Azure and broader Microsoft ecosystem   |\n| **Performance**               | -                                                   | Improved performance and reduced boilerplate                  |\n| **API Simplification**        | More setup and code required                         | More streamlined and discoverable APIs                        |\n| **Migration**                 | Manual migration needed                              | Guides and tools provided for migration from SK to Agent FW   |\n| **Support**                   | Supported, but new features go to Agent Framework    | Future-facing, with long-term support plan                    |\n\n### Migration & Transition\n\n- Agent Framework is effectively \u201cSemantic Kernel 2.0\u201d\u2014the same team builds it, and Microsoft encourages moving to the new framework, although SK v1.x will continue to receive essential updates and bug fixes until at least a year after Agent Framework\u2019s General Availability\u30103:1\u2020source\u3011\u30103:4\u2020source\u3011.\n- There are official migration guides and sample code to help developers port Semantic Kernel projects to Agent Framework\u30103:0\u2020source\u3011\u30103:2\u2020source\u3011.\n\n### Developer Experience\n\n- **Semantic Kernel**: Requires more setup, agents depend heavily on the `Kernel` object, which can introduce complexity.\n- **Agent Framework**: Streamlined setup\u2014agents can be directly created via provider extensions (e.g., OpenAI, Azure), and thread management is encapsulated within the agent abstraction.\n\n### Performance & Scalability\n\n- Agent Framework introduces optimizations in object creation, memory usage, and provides more scalable components suitable for enterprise environments.\n\n### Community and Future Roadmap\n\n- The latest and most innovative features from Microsoft for AI agents will appear first in Agent Framework.\n- Semantic Kernel will remain maintained, but only for essential issues and not for new feature development\u30103:1\u2020source\u3011\u30103:4\u2020source\u3011.\n\n### Summary\n\n- **Microsoft Agent Framework is recommended for all new projects** requiring AI agent capabilities within Microsoft\u2019s ecosystem, offering a more robust, scalable, and user-friendly experience.\n- **Semantic Kernel** remains suitable for existing projects, with clear pathways for upgrading/migrating in the future.\n\nFor more technical details and migration samples, consult the official [migration guide](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-semantic-kernel/) and sample repository.\n\n**Citations:**\n- Microsoft migration guide\u30103:0\u2020source\u3011\n- Microsoft Dev Blog discussion on the transition and support policies\u30103:1\u2020source\u3011\n- Github discussion clarifying support and strategy\u30103:4\u2020source\u3011\n- Migration code samples\u30103:2\u2020source\u3011",
+      "timestamp": "2025-11-06T16:13:24.643646"
+    }
+  ],
+  "statistics": {
+    "total_cost_usd": 0.04734,
+    "total_tokens": 801,
+    "budget_stats": {
+      "date": "2025-11-06",
+      "total_tokens": 801,
+      "budget": 1000000,
+      "percentage_used": 0.08009999999999999,
+      "requests_count": 1,
+      "remaining_tokens": 999199
+    },
+    "cost_by_agent": {
+      "research_assistant": 0.04734
+    },
+    "tokens_by_agent": {
+      "research_assistant": 801
+    },
+    "session_id": "24133225-2b31-4703-bb03-a3fd2ace195a",
+    "chat_history_length": 2
+  },
+  "configuration": {
+    "instructions": "You're a thorough research assistant that helps users find accurate information. Always cite your sources and provide detailed, well-structured responses. Use web search when you need current information.",
+    "web_search_enabled": true
+  }
+}
