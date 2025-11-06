@@ -74,6 +74,7 @@ class AgentResponse:
     error: Optional[str] = None
     budget_exceeded: bool = False
     metrics: Optional[Dict[str, Any]] = None
+    follow_up_questions: Optional[List[str]] = None
     timestamp: str = None
     
     def __post_init__(self):
@@ -182,10 +183,78 @@ class ProductionAgent:
         self.session_id = str(uuid.uuid4())
     
     def _emit_progress(self, status: AgentStatus, message: str, data: Optional[Dict] = None):
-        """Emit progress update if callback is set."""
+        """Emit progress update via callback if configured."""
         if self.progress_callback:
             update = ProgressUpdate(status=status, message=message, data=data)
             self.progress_callback(update)
+    
+    async def _generate_follow_up_questions(
+        self,
+        query: str,
+        response: str,
+        agent_name: str
+    ) -> List[str]:
+        """Generate contextual follow-up questions based on the conversation.
+        
+        Args:
+            query: Original user query
+            response: Agent's response
+            agent_name: Name of the agent for context
+            
+        Returns:
+            List of 3 follow-up question suggestions
+        """
+        try:
+            # Create a prompt for generating follow-up questions
+            prompt = f"""Based on this conversation, suggest 3 relevant follow-up questions the user might want to ask.
+
+User asked: {query}
+
+Assistant responded: {response[:500]}...
+
+Generate 3 specific, relevant follow-up questions that would help the user dive deeper or explore related topics.
+Format: Return ONLY the questions, one per line, numbered 1-3."""
+            
+            async with DefaultAzureCredential() as credential:
+                async with AzureAIAgentClient(async_credential=credential) as client:
+                    from agent_framework import ChatAgent
+                    
+                    # Create a lightweight agent for question generation
+                    agent = ChatAgent(
+                        chat_client=client,
+                        instructions="You generate relevant follow-up questions based on conversations. Be specific and insightful.",
+                        name="follow_up_generator"
+                    )
+                    
+                    thread = agent.get_new_thread()
+                    result = await agent.run(prompt, thread=thread)
+                    
+                    # Parse the response into a list of questions
+                    questions_text = str(result.text)
+                    questions = []
+                    for line in questions_text.split('\n'):
+                        line = line.strip()
+                        # Remove numbering (1., 2., 3. or 1) 2) 3))
+                        if line and any(line.startswith(f"{i}") for i in range(1, 4)):
+                            # Remove leading numbers and punctuation
+                            question = line.lstrip('0123456789.)- ').strip()
+                            if question:
+                                questions.append(question)
+                    
+                    # Return up to 3 questions
+                    return questions[:3] if questions else [
+                        "Can you elaborate on that?",
+                        "What are the implications of this?",
+                        "How does this compare to alternatives?"
+                    ]
+                    
+        except Exception as e:
+            # Return default questions if generation fails
+            return [
+                "Can you provide more details?",
+                "What are the key considerations here?",
+                "How can I apply this information?"
+            ]
     
     def add_to_history(self, role: str, content: str):
         """Add message to chat history."""
@@ -205,6 +274,163 @@ class ProductionAgent:
         # Reset thread ID so a new thread is created on next query
         self._thread_id = None
     
+    async def run_stream(
+        self,
+        query: str,
+        expected_topics: Optional[List[str]] = None,
+        user_id: Optional[str] = None
+    ):
+        """Run agent with streaming responses.
+        
+        Args:
+            query: User query
+            expected_topics: Expected topics for evaluation
+            user_id: Optional user identifier for tracking
+            
+        Yields:
+            Dict with type ('token', 'progress', 'complete', 'error') and data
+        """
+        request_id = str(uuid.uuid4())
+        start_time = time.time()
+        
+        # Add to history
+        self.add_to_history("user", query)
+        
+        try:
+            # Step 1: Budget Check
+            yield {"type": "progress", "status": "checking_budget", "message": "Checking token budget..."}
+            
+            estimated_tokens = len(query.split()) * 1.5 + 500
+            allowed, message = self.budget_manager.check_budget(int(estimated_tokens))
+            
+            if not allowed:
+                yield {
+                    "type": "error",
+                    "error": message,
+                    "budget_exceeded": True
+                }
+                return
+            
+            yield {"type": "progress", "status": "budget_ok", "message": f"Budget check passed"}
+            
+            # Step 2: Run Agent with Streaming
+            yield {"type": "progress", "status": "running", "message": "Agent is processing..."}
+            
+            response_text = ""
+            
+            async with DefaultAzureCredential() as credential:
+                async with AzureAIAgentClient(async_credential=credential) as client:
+                    # Create tools if enabled
+                    tools = None
+                    if self.enable_web_search:
+                        tools = HostedWebSearchTool(
+                            name="Web Search",
+                            description="Search the web for current information"
+                        )
+                    
+                    # Create agent
+                    from agent_framework import ChatAgent
+                    agent = ChatAgent(
+                        chat_client=client,
+                        instructions=self.instructions,
+                        name=self.agent_name,
+                        tools=tools if tools else None,
+                    )
+                    
+                    # Create or reuse thread
+                    if self._thread_id:
+                        thread = agent.get_new_thread(service_thread_id=self._thread_id)
+                    else:
+                        thread = agent.get_new_thread()
+                    
+                    # Run agent with streaming
+                    async for chunk in agent.run_stream(query, thread=thread, store=True):
+                        if hasattr(chunk, 'text') and chunk.text:
+                            token = str(chunk.text)
+                            response_text += token
+                            yield {"type": "token", "token": token}
+                    
+                    # Store thread ID
+                    if thread.service_thread_id:
+                        self._thread_id = thread.service_thread_id
+            
+            # Add to history
+            self.add_to_history("assistant", response_text)
+            
+            # Step 3: Post-processing (cost, evaluation, follow-ups)
+            yield {"type": "progress", "status": "evaluating", "message": "Evaluating response..."}
+            
+            # Track Costs
+            prompt_tokens = int(len(query.split()) * 1.5)
+            completion_tokens = int(len(response_text.split()) * 1.5)
+            total_tokens = prompt_tokens + completion_tokens
+            
+            model = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4.1")
+            self.cost_tracker.record_cost(
+                model=model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                agent_name=self.agent_name
+            )
+            self.budget_manager.record_usage(request_id, total_tokens)
+            
+            cost_data = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "estimated_cost_usd": self.cost_tracker.get_total_cost()
+            }
+            
+            # Evaluation
+            eval_metrics = self.evaluator.evaluate_response(
+                response=response_text,
+                expected_topics=expected_topics or []
+            )
+            quality_label = self.evaluator.get_quality_label(eval_metrics['overall_score'])
+            
+            # Generate follow-up questions
+            yield {"type": "progress", "status": "follow_ups", "message": "Generating follow-up questions..."}
+            follow_up_questions = await self._generate_follow_up_questions(
+                query=query,
+                response=response_text,
+                agent_name=self.agent_name
+            )
+            
+            # Success tracking
+            duration_ms = (time.time() - start_time) * 1000
+            self.observability.track_agent_call(
+                agent_name=self.agent_name,
+                duration_ms=duration_ms,
+                tokens=total_tokens,
+                success=True
+            )
+            
+            # Send completion data
+            yield {
+                "type": "complete",
+                "success": True,
+                "response": response_text,
+                "request_id": request_id,
+                "agent_name": self.agent_name,
+                "query": query,
+                "follow_up_questions": follow_up_questions,
+                "metrics": {
+                    "duration_ms": duration_ms,
+                    "tokens": cost_data,
+                    "evaluation": eval_metrics,
+                    "quality_label": quality_label,
+                    "session_id": self.session_id,
+                    "user_id": user_id
+                }
+            }
+            
+        except Exception as e:
+            yield {
+                "type": "error",
+                "error": str(e),
+                "request_id": request_id
+            }
+    
     async def run(
         self,
         query: str,
@@ -221,8 +447,6 @@ class ProductionAgent:
         Returns:
             AgentResponse with structured data
         """
-        await self.initialize()
-        
         request_id = str(uuid.uuid4())
         start_time = time.time()
         
@@ -348,6 +572,14 @@ class ProductionAgent:
                 {"evaluation": eval_metrics, "quality_label": quality_label}
             )
             
+            # Step 5: Generate Follow-up Questions
+            self._emit_progress(AgentStatus.RUNNING, "Generating follow-up questions...")
+            follow_up_questions = await self._generate_follow_up_questions(
+                query=query,
+                response=response_text,
+                agent_name=self.agent_name
+            )
+            
             # Success tracking
             duration_ms = (time.time() - start_time) * 1000
             self.observability.track_agent_call(
@@ -364,6 +596,7 @@ class ProductionAgent:
                 request_id=request_id,
                 agent_name=self.agent_name,
                 query=query,
+                follow_up_questions=follow_up_questions,
                 metrics={
                     "duration_ms": duration_ms,
                     "tokens": cost_data,

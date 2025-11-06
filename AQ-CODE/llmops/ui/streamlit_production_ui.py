@@ -84,6 +84,8 @@ if "selected_preset" not in st.session_state:
     st.session_state.selected_preset = "market_analyst"
 if "agent_initialized" not in st.session_state:
     st.session_state.agent_initialized = False
+if "next_prompt" not in st.session_state:
+    st.session_state.next_prompt = None
 
 
 def progress_callback(update: ProgressUpdate):
@@ -380,8 +382,31 @@ def main():
                             with col3:
                                 st.metric("💰 Cost", f"${metadata.get('cost', 0):.4f}")
         
-        # Chat input
-        if prompt := st.chat_input("Ask me anything..."):
+        # Display follow-up questions for the last assistant message
+        if st.session_state.chat_history:
+            last_msg = st.session_state.chat_history[-1]
+            if last_msg["role"] == "assistant" and "follow_up_questions" in last_msg:
+                follow_ups = last_msg["follow_up_questions"]
+                if follow_ups:
+                    st.markdown("---")
+                    st.markdown("**💡 Suggested follow-up questions:**")
+                    cols = st.columns(len(follow_ups))
+                    for i, (col, question) in enumerate(zip(cols, follow_ups), 1):
+                        with col:
+                            if st.button(f"{i}. {question}", key=f"followup_{len(st.session_state.chat_history)}_{i}", use_container_width=True):
+                                # Use the question as the next prompt
+                                st.session_state.next_prompt = question
+                                st.rerun()
+        
+        # Chat input (check for pre-filled prompt from follow-up question)
+        default_prompt = st.session_state.next_prompt
+        if default_prompt:
+            st.session_state.next_prompt = None
+            prompt = default_prompt
+        else:
+            prompt = st.chat_input("Ask me anything...")
+        
+        if prompt:
             # Add user message to history
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             
@@ -389,7 +414,7 @@ def main():
             with st.chat_message("user"):
                 st.markdown(prompt)
             
-            # Get and display assistant response
+            # Get and display assistant response with streaming
             with st.chat_message("assistant"):
                 progress_placeholder = st.empty()
                 response_placeholder = st.empty()
@@ -397,42 +422,80 @@ def main():
                 # Clear previous progress updates
                 st.session_state.progress_updates = []
                 
-                # Run agent
-                with st.spinner("🤖 Agent is thinking..."):
-                    response = asyncio.run(
-                        st.session_state.agent.run(
-                            query=prompt,
-                            expected_topics=AgentPreset.get_preset(st.session_state.selected_preset)["expected_topics"]
-                        )
-                    )
+                # Variables for streaming
+                full_response = ""
+                response_data = None
+                has_error = False
+                
+                # Run agent with streaming
+                async def stream_response():
+                    nonlocal full_response, response_data, has_error
                     
-                    st.session_state.responses.append(response)
+                    async for chunk in st.session_state.agent.run_stream(
+                        query=prompt,
+                        expected_topics=AgentPreset.get_preset(st.session_state.selected_preset)["expected_topics"]
+                    ):
+                        chunk_type = chunk.get("type")
+                        
+                        if chunk_type == "progress":
+                            progress_placeholder.info(f"⏳ {chunk.get('message', '')}")
+                        
+                        elif chunk_type == "token":
+                            # Accumulate and display tokens in real-time
+                            full_response += chunk.get("token", "")
+                            response_placeholder.markdown(full_response + "▌")
+                        
+                        elif chunk_type == "complete":
+                            # Final response
+                            response_data = chunk
+                            response_placeholder.markdown(full_response)
+                            progress_placeholder.empty()
+                        
+                        elif chunk_type == "error":
+                            has_error = True
+                            error_msg = f"❌ Error: {chunk.get('error', 'Unknown error')}"
+                            response_placeholder.error(error_msg)
+                            progress_placeholder.empty()
+                            return error_msg
                     
-                    if response.success:
-                        response_placeholder.markdown(response.response)
-                        
-                        # Add to chat history with metadata
-                        st.session_state.chat_history.append({
-                            "role": "assistant",
-                            "content": response.response,
-                            "metadata": {
-                                "duration_ms": response.metrics['duration_ms'],
-                                "total_tokens": response.metrics['tokens']['total_tokens'],
-                                "cost": response.metrics['tokens']['estimated_cost_usd'],
-                                "quality_label": response.metrics['quality_label']
-                            }
-                        })
-                        
-                        # Display evaluation
-                        with st.expander("📊 Quality Evaluation", expanded=True):
-                            display_evaluation_card(response.metrics)
-                    else:
-                        error_msg = f"❌ Error: {response.error}"
-                        response_placeholder.error(error_msg)
-                        st.session_state.chat_history.append({
-                            "role": "assistant",
-                            "content": error_msg
-                        })
+                    return response_data
+                
+                # Execute streaming
+                result = asyncio.run(stream_response())
+                
+                if has_error:
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": result
+                    })
+                elif response_data:
+                    # Store response for analytics
+                    st.session_state.responses.append(AgentResponse(
+                        success=True,
+                        response=response_data["response"],
+                        request_id=response_data["request_id"],
+                        agent_name=response_data["agent_name"],
+                        query=response_data["query"],
+                        follow_up_questions=response_data["follow_up_questions"],
+                        metrics=response_data["metrics"]
+                    ))
+                    
+                    # Add to chat history with metadata
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": response_data["response"],
+                        "metadata": {
+                            "duration_ms": response_data["metrics"]['duration_ms'],
+                            "total_tokens": response_data["metrics"]['tokens']['total_tokens'],
+                            "cost": response_data["metrics"]['tokens']['estimated_cost_usd'],
+                            "quality_label": response_data["metrics"]['quality_label']
+                        },
+                        "follow_up_questions": response_data["follow_up_questions"]
+                    })
+                    
+                    # Display evaluation
+                    with st.expander("📊 Quality Evaluation", expanded=True):
+                        display_evaluation_card(response_data["metrics"])
             
             st.rerun()
         
