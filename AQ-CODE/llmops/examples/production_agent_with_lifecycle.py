@@ -30,15 +30,17 @@ from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
 
 # Import LLMOps components
-from observability import MAFObservability
-from cost_tracker import CostTracker, TokenBudgetManager
-from evaluator import AgentEvaluator
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.observability import MAFObservability
+from core.cost_tracker import CostTracker, TokenBudgetManager
+from core.evaluator import AgentEvaluator
 
 # Import lifecycle manager
-from agent_lifecycle_manager import ProductionAgentManager
+from core.agent_lifecycle_manager import ProductionAgentManager
 
 # Load environment
-load_dotenv(Path(__file__).parent.parent / "orchestration" / ".env")
+load_dotenv(Path(__file__).parent.parent.parent / "orchestration" / ".env")
 
 
 class AgentStatus(Enum):

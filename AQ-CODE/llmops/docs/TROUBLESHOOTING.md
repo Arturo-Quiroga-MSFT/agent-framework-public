@@ -385,6 +385,192 @@ with st.expander("🐛 Debug Info"):
 
 ---
 
+## 🆕 Agent Lifecycle Issues
+
+### Issue: Too many agents created in Azure AI Foundry
+
+**Symptom:**
+- Multiple agents with same name in Foundry
+- Increased costs from duplicate agents
+- Resource proliferation
+
+**Cause:**
+Using `production_agent_enhanced.py` creates a new agent on every instantiation.
+
+**Solution:** ✅ **Upgrade to lifecycle management**
+
+```python
+# BEFORE: Creates new agent every time
+from production_agent_enhanced import ProductionAgent
+agent1 = ProductionAgent("analyst", ...)  # Creates agent
+agent2 = ProductionAgent("analyst", ...)  # Creates ANOTHER agent ❌
+
+# AFTER: Reuses existing agent
+from production_agent_with_lifecycle import ProductionAgent
+agent1 = ProductionAgent("analyst", ..., reuse_agent=True)  # Creates agent
+agent2 = ProductionAgent("analyst", ..., reuse_agent=True)  # Reuses ✅
+```
+
+**Migration:**
+1. Replace import: `production_agent_enhanced` → `production_agent_with_lifecycle`
+2. Usage is identical, just add `reuse_agent=True` (default)
+3. Monitor with `ProductionAgentManager.get_agent_stats()`
+
+**Documentation:**
+- See `AGENT_LIFECYCLE_MANAGEMENT.md` for complete guide
+- See `LIFECYCLE_SUMMARY.md` for quick overview
+
+---
+
+### Issue: Agent not being reused despite using lifecycle version
+
+**Symptom:**
+- Multiple agents still created
+- `result.agent_reused` is always `False`
+- Statistics show more agents than expected
+
+**Causes & Solutions:**
+
+**A. Different agent configurations**
+```python
+# These create DIFFERENT agents (different names)
+agent1 = ProductionAgent("analyst_v1", ...)  # Creates agent
+agent2 = ProductionAgent("analyst_v2", ...)  # Creates DIFFERENT agent
+
+# These REUSE the same agent (same name)
+agent1 = ProductionAgent("analyst", ...)  # Creates agent
+agent2 = ProductionAgent("analyst", ...)  # Reuses agent ✅
+```
+
+**B. `reuse_agent=False` flag**
+```python
+# This disables reuse (creates new agent)
+agent = ProductionAgent("analyst", ..., reuse_agent=False)
+
+# Use default (True) for reuse
+agent = ProductionAgent("analyst", ...)  # reuse_agent=True by default
+```
+
+**C. Different instructions or tools**
+Agents are matched by name only, but ideally should have same configuration:
+```python
+# Good: Same configuration
+agent1 = ProductionAgent("analyst", "Instructions...", enable_web_search=True)
+agent2 = ProductionAgent("analyst", "Instructions...", enable_web_search=True)
+
+# Potential issue: Different configuration, same name
+agent1 = ProductionAgent("analyst", "Old instructions", enable_web_search=True)
+agent2 = ProductionAgent("analyst", "New instructions", enable_web_search=False)
+# This will reuse agent but with OLD configuration!
+```
+
+**Best Practice:** Use consistent agent names and configurations
+
+---
+
+### Issue: Agent registry not clearing between runs
+
+**Symptom:**
+- Previous session's agents still in registry
+- Usage counts persist across restarts
+- Can't start fresh
+
+**Cause:**
+In-memory registry persists for lifetime of Python process.
+
+**Solution:**
+
+**Option A: Cleanup all agents**
+```python
+from agent_lifecycle_manager import ProductionAgentManager
+await ProductionAgentManager.cleanup_all()
+```
+
+**Option B: Cleanup specific agent**
+```python
+await ProductionAgentManager.cleanup_agent("market_analyst")
+```
+
+**Option C: Restart Python process**
+```bash
+# Stop with Ctrl+C, then restart
+python production_agent_with_lifecycle.py
+```
+
+**For production:** Add cleanup to application shutdown:
+```python
+import atexit
+atexit.register(lambda: asyncio.run(ProductionAgentManager.cleanup_all()))
+```
+
+---
+
+### Issue: Memory leak with many agent instances
+
+**Symptom:**
+- Memory usage grows over time
+- Application slows down
+- Many agent instances created
+
+**Diagnosis:**
+```python
+# Check how many agents are registered
+stats = ProductionAgentManager.get_agent_stats()
+print(f"Total agents: {stats['total_agents']}")
+print(f"Agents: {ProductionAgentManager.list_agents()}")
+```
+
+**Expected:** 1-5 agents typically
+**Problem:** 50+ agents indicates an issue
+
+**Causes:**
+
+**A. Not using lifecycle management**
+- Each instance creates new agent
+- Switch to `production_agent_with_lifecycle.py`
+
+**B. Creating agents with unique names**
+```python
+# BAD: Unique name per session
+for i in range(100):
+    agent = ProductionAgent(f"analyst_{i}", ...)  # Creates 100 agents!
+
+# GOOD: Reuse same name
+for i in range(100):
+    agent = ProductionAgent("analyst", ...)  # Reuses 1 agent ✅
+```
+
+**C. Not cleaning up unused agents**
+```python
+# Cleanup agents you no longer need
+await ProductionAgentManager.cleanup_agent("old_analyst")
+```
+
+---
+
+### Issue: "Agent not found" after cleanup
+
+**Symptom:**
+```
+KeyError: 'market_analyst' not found in registry
+```
+
+**Cause:**
+Agent was cleaned up but code tries to reference it.
+
+**Solution:**
+Agent will be recreated automatically on next use:
+```python
+# Cleanup agent
+await ProductionAgentManager.cleanup_agent("analyst")
+
+# Next call recreates it
+agent = ProductionAgent("analyst", ..., reuse_agent=True)
+# This checks registry, doesn't find it, creates new one
+```
+
+---
+
 ## Known Limitations
 
 1. **No streaming responses** - Complete response only
@@ -392,6 +578,7 @@ with st.expander("🐛 Debug Info"):
 3. **Estimated costs** - Not exact billing amounts
 4. **Single session** - No multi-user support
 5. **Client-side only** - No server-side session management
+6. **Agent registry not persistent** 🆕 - Registry cleared on process restart (agents remain in Foundry)
 
 ---
 

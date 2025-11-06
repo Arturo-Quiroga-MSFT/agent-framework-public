@@ -2,32 +2,58 @@
 
 This directory contains LLMOps utilities and best practices for production-ready MAF agents.
 
-## 📋 Contents
+## 📁 Directory Structure
 
-### Documentation
-- **[MAF_LLMOPS_BEST_PRACTICES.md](MAF_LLMOPS_BEST_PRACTICES.md)** - Comprehensive guide (60+ pages) covering:
-  - Development best practices
-  - Testing & evaluation strategies
-  - Deployment & CI/CD
-  - Monitoring & observability
-  - Governance & compliance
-  - Cost management
-  - Real-world implementation examples
+```
+llmops/
+├── core/                           # Core LLMOps modules
+│   ├── observability.py           # Application Insights integration
+│   ├── cost_tracker.py            # Cost tracking & budget management
+│   ├── evaluator.py               # Response quality evaluation
+│   └── agent_lifecycle_manager.py # Agent lifecycle management
+├── examples/                       # Example implementations
+│   ├── example_production_agent.py           # Basic production agent
+│   ├── production_agent_enhanced.py          # Enhanced with UI support
+│   ├── production_agent_with_lifecycle.py    # With lifecycle management
+│   └── test_streaming.py                     # Streaming tests
+├── ui/                             # Streamlit UI components
+│   ├── streamlit_production_ui.py  # Full-featured UI
+│   ├── streamlit_simple_ui.py      # Simplified UI
+│   └── requirements-ui.txt         # UI dependencies
+├── docs/                           # Documentation
+│   ├── QUICKSTART.md              # Getting started guide
+│   ├── ARCHITECTURE.md            # System architecture
+│   ├── TROUBLESHOOTING.md         # Common issues & solutions
+│   ├── AGENT_LIFECYCLE_MANAGEMENT.md  # Lifecycle guide
+│   ├── LIFECYCLE_SUMMARY.md       # Team overview
+│   └── LIFECYCLE_QUICK_REFERENCE.md   # Quick reference
+├── README.md                       # This file
+├── quickstart.sh                   # Interactive setup script
+└── __init__.py                     # Package exports
+```
 
-- **[AGENT_LIFECYCLE_MANAGEMENT.md](AGENT_LIFECYCLE_MANAGEMENT.md)** - Agent lifecycle management guide:
-  - Problem: Agent proliferation in Azure AI Foundry
-  - Solution: Centralized agent registry with reuse
-  - Implementation strategy and migration path
-  - Best practices for production deployments
-  
-- **[LIFECYCLE_SUMMARY.md](LIFECYCLE_SUMMARY.md)** - Quick summary for team:
-  - Problem statement and root cause
-  - Solution overview with code examples
-  - Migration strategy and testing instructions
+## 📋 Documentation
+
+### Getting Started
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Quick start guide with examples
+- **[quickstart.sh](quickstart.sh)** - Interactive setup script
+
+### Core Concepts
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
+- **[docs/AGENT_LIFECYCLE_MANAGEMENT.md](docs/AGENT_LIFECYCLE_MANAGEMENT.md)** - Agent lifecycle best practices
+
+### Best Practices
+- **[../LLMOPS/MAF_LLMOPS_BEST_PRACTICES.md](../LLMOPS/MAF_LLMOPS_BEST_PRACTICES.md)** - Comprehensive guide (60+ pages)
+
+### Help & Support
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[docs/LIFECYCLE_QUICK_REFERENCE.md](docs/LIFECYCLE_QUICK_REFERENCE.md)** - Quick reference guide
 
 ### LLMOps Modules
 
-#### `agent_lifecycle_manager.py` 🆕
+All core modules are in the `core/` directory:
+
+#### `core/agent_lifecycle_manager.py` 🆕
 Centralized agent lifecycle management to prevent resource proliferation:
 - Agent registry with reuse capability
 - Thread-safe operations with asyncio.Lock
@@ -36,7 +62,7 @@ Centralized agent lifecycle management to prevent resource proliferation:
 - Optional persistent registry
 
 ```python
-from llmops import ProductionAgentManager
+from llmops.core.agent_lifecycle_manager import ProductionAgentManager
 
 # Get or create agent (reuses if exists)
 agent, cred, client = await ProductionAgentManager.get_or_create_agent(
@@ -55,14 +81,14 @@ await ProductionAgentManager.cleanup_agent("market_analyst")
 await ProductionAgentManager.cleanup_all()
 ```
 
-#### `observability.py`
+#### `core/observability.py`
 Application Insights integration for MAF agents:
 - Distributed tracing with OpenTelemetry
 - Custom metrics (agent calls, latency, token usage)
 - Span creation for detailed tracking
 
 ```python
-from llmops import MAFObservability
+from llmops.core.observability import MAFObservability
 
 observability = MAFObservability()
 observability.track_agent_call(
@@ -73,7 +99,7 @@ observability.track_agent_call(
 )
 ```
 
-#### `cost_tracker.py`
+#### `core/cost_tracker.py`
 Cost tracking and budget management:
 - Real-time cost calculation based on model pricing
 - Token usage tracking per agent
@@ -81,7 +107,7 @@ Cost tracking and budget management:
 - Per-request token limits
 
 ```python
-from llmops import CostTracker, TokenBudgetManager
+from llmops.core.cost_tracker import CostTracker, TokenBudgetManager
 
 # Track costs
 cost_tracker = CostTracker()
@@ -101,7 +127,7 @@ if allowed:
     budget_manager.record_usage(request_id, actual_tokens)
 ```
 
-#### `evaluator.py`
+#### `core/evaluator.py`
 Response quality evaluation:
 - Topic coverage analysis
 - Citation detection
@@ -111,7 +137,7 @@ Response quality evaluation:
 - Overall quality scoring
 
 ```python
-from llmops import AgentEvaluator
+from llmops.core.evaluator import AgentEvaluator
 
 evaluator = AgentEvaluator()
 metrics = evaluator.evaluate_response(
@@ -124,7 +150,9 @@ print(f"Quality Label: {evaluator.get_quality_label(metrics['overall_score'])}")
 
 ### Examples
 
-#### `production_agent_with_lifecycle.py` 🆕
+All examples are in the `examples/` directory:
+
+#### `examples/production_agent_with_lifecycle.py` 🆕
 Enhanced production agent with lifecycle management:
 - Agent reuse to prevent Foundry resource proliferation
 - All LLMOps integrations maintained
@@ -134,12 +162,13 @@ Enhanced production agent with lifecycle management:
 
 **Run the example:**
 ```bash
-python AQ-CODE/llmops/production_agent_with_lifecycle.py
+cd AQ-CODE/llmops
+python examples/production_agent_with_lifecycle.py
 ```
 
 **Key features:**
 ```python
-from production_agent_with_lifecycle import ProductionAgent
+from llmops.examples.production_agent_with_lifecycle import ProductionAgent
 
 # First instance creates agent in Foundry
 agent1 = ProductionAgent(
@@ -163,13 +192,14 @@ await agent2.run("What about Microsoft?")  # Reuses agent
 print(f"Agent reused: {result.agent_reused}")
 ```
 
-#### `agent_lifecycle_manager.py`
+#### `examples/agent_lifecycle_manager.py`
 Standalone demo of agent lifecycle management:
 ```bash
-python AQ-CODE/llmops/agent_lifecycle_manager.py
+cd AQ-CODE/llmops
+python core/agent_lifecycle_manager.py
 ```
 
-#### `example_production_agent.py`
+#### `examples/example_production_agent.py`
 Complete working example demonstrating:
 - Agent initialization with LLMOps integration
 - Budget checking before requests
@@ -180,7 +210,8 @@ Complete working example demonstrating:
 
 **Run the example:**
 ```bash
-python AQ-CODE/llmops/example_production_agent.py
+cd AQ-CODE/llmops
+python examples/example_production_agent.py
 ```
 
 **Example output:**
@@ -223,6 +254,37 @@ of 28.5. This premium valuation reflects investor confidence in NVIDIA's
 AI chip dominance...
 --------------------------------------------------------------------------------
 ```
+
+## 🚀 Quick Start
+
+### 1️⃣ Test CLI (30 seconds)
+
+```bash
+cd AQ-CODE/llmops
+python examples/production_agent_with_lifecycle.py
+```
+
+### 2️⃣ Launch UI (2 minutes)
+
+```bash
+# Install UI dependencies
+pip install -r ui/requirements-ui.txt
+
+# Launch
+cd AQ-CODE/llmops
+streamlit run ui/streamlit_production_ui.py
+```
+
+Opens at: `http://localhost:8501`
+
+### 3️⃣ Interactive Script
+
+```bash
+cd AQ-CODE/llmops
+./quickstart.sh
+```
+
+---
 
 ## 🚀 Quick Start
 
@@ -284,6 +346,26 @@ async def run_agent_with_llmops(agent, query: str):
     
     return {"response": response, "metrics": metrics}
 ```
+
+## 🚀 Streamlit UI
+
+### Launch the UI
+
+```bash
+cd AQ-CODE/llmops
+streamlit run ui/streamlit_production_ui.py
+```
+
+### Features
+- ✅ 3-tab interface (Chat, Analytics, History)
+- ✅ Real-time cost tracking
+- ✅ Interactive charts (Plotly)
+- ✅ Quality score gauges
+- ✅ Budget warnings
+- ✅ Session download button
+- ✅ Agent preset switching
+
+See **[docs/UI_README.md](docs/UI_README.md)** for complete UI documentation.
 
 ## 📊 Monitoring
 
@@ -352,16 +434,83 @@ When adding new LLMOps capabilities:
 4. Create example usage
 5. Add tests (future)
 
+## 🔄 Agent Lifecycle Management
+
+**NEW**: Prevent agent proliferation in Azure AI Foundry!
+
+### The Problem
+Every time `ProductionAgent` was instantiated, a **new agent was created in Foundry**, leading to resource proliferation and unnecessary costs.
+
+### The Solution
+`ProductionAgentManager` provides centralized agent lifecycle management:
+- ✅ Agent registry with reuse capability
+- ✅ Prevents duplicate agents in Foundry
+- ✅ Thread-safe operations
+- ✅ Usage tracking and statistics
+- ✅ Proper cleanup on shutdown
+
+### Quick Example
+```python
+from production_agent_with_lifecycle import ProductionAgent
+
+# First instance creates agent in Foundry
+agent1 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True  # Enable agent reuse (default)
+)
+await agent1.run("What's NVIDIA's P/E ratio?")
+
+# Second instance REUSES the same agent (not created again!)
+agent2 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True
+)
+await agent2.run("What about Microsoft?")  # Reuses agent
+```
+
+### Documentation
+- **[AGENT_LIFECYCLE_MANAGEMENT.md](AGENT_LIFECYCLE_MANAGEMENT.md)** - Complete technical guide
+- **[LIFECYCLE_SUMMARY.md](LIFECYCLE_SUMMARY.md)** - Team overview and migration strategy
+- **[LIFECYCLE_QUICK_REFERENCE.md](LIFECYCLE_QUICK_REFERENCE.md)** - Quick reference guide
+
+### Test It
+```bash
+cd AQ-CODE/llmops
+
+# Demo 1: Lifecycle manager standalone
+python core/agent_lifecycle_manager.py
+
+# Demo 2: Production agent with lifecycle
+python examples/production_agent_with_lifecycle.py
+```
+
+### Key Benefits
+- 🎯 **90% reduction** in Foundry agent resources
+- 💰 **Cost savings** from eliminating duplicate agents
+- 📊 **Usage tracking** per agent
+- 🔄 **Agent reuse** across sessions
+- 🧹 **Proper cleanup** with centralized management
+
+---
+
 ## 💡 Next Steps
 
-1. **Run the example**: `python AQ-CODE/llmops/example_production_agent.py`
-2. **Review best practices**: Read `MAF_LLMOPS_BEST_PRACTICES.md`
-3. **Integrate into your agents**: Use the modules in your workflows
+1. **Run the examples**: 
+   - `python examples/example_production_agent.py`
+   - `python examples/production_agent_with_lifecycle.py`
+2. **Review documentation**: 
+   - Read **[docs/QUICKSTART.md](docs/QUICKSTART.md)** for quick start
+   - Read **[docs/AGENT_LIFECYCLE_MANAGEMENT.md](docs/AGENT_LIFECYCLE_MANAGEMENT.md)** for lifecycle management
+3. **Integrate into your agents**: Import from `llmops.core` modules
 4. **Set up monitoring**: Configure Application Insights dashboards
 5. **Implement CI/CD**: Follow deployment best practices from docs
 
 ---
 
-**Version:** 1.0  
-**Last Updated:** November 3, 2025  
+**Version:** 2.0  
+**Last Updated:** November 6, 2025  
 **Maintained by:** AI Solutions Architecture Team
