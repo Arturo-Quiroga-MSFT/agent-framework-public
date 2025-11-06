@@ -14,7 +14,46 @@ This directory contains LLMOps utilities and best practices for production-ready
   - Cost management
   - Real-world implementation examples
 
+- **[AGENT_LIFECYCLE_MANAGEMENT.md](AGENT_LIFECYCLE_MANAGEMENT.md)** - Agent lifecycle management guide:
+  - Problem: Agent proliferation in Azure AI Foundry
+  - Solution: Centralized agent registry with reuse
+  - Implementation strategy and migration path
+  - Best practices for production deployments
+  
+- **[LIFECYCLE_SUMMARY.md](LIFECYCLE_SUMMARY.md)** - Quick summary for team:
+  - Problem statement and root cause
+  - Solution overview with code examples
+  - Migration strategy and testing instructions
+
 ### LLMOps Modules
+
+#### `agent_lifecycle_manager.py` 🆕
+Centralized agent lifecycle management to prevent resource proliferation:
+- Agent registry with reuse capability
+- Thread-safe operations with asyncio.Lock
+- Usage statistics and monitoring
+- Proper cleanup on shutdown
+- Optional persistent registry
+
+```python
+from llmops import ProductionAgentManager
+
+# Get or create agent (reuses if exists)
+agent, cred, client = await ProductionAgentManager.get_or_create_agent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    session_id="session_123"
+)
+
+# Get usage statistics
+stats = ProductionAgentManager.get_agent_stats()
+print(f"Total agents: {stats['total_agents']}")
+
+# Cleanup
+await ProductionAgentManager.cleanup_agent("market_analyst")
+await ProductionAgentManager.cleanup_all()
+```
 
 #### `observability.py`
 Application Insights integration for MAF agents:
@@ -84,6 +123,51 @@ print(f"Quality Label: {evaluator.get_quality_label(metrics['overall_score'])}")
 ```
 
 ### Examples
+
+#### `production_agent_with_lifecycle.py` 🆕
+Enhanced production agent with lifecycle management:
+- Agent reuse to prevent Foundry resource proliferation
+- All LLMOps integrations maintained
+- Thread management for conversation continuity
+- Progress callbacks for UI integration
+- Backward compatible with optional `reuse_agent` flag
+
+**Run the example:**
+```bash
+python AQ-CODE/llmops/production_agent_with_lifecycle.py
+```
+
+**Key features:**
+```python
+from production_agent_with_lifecycle import ProductionAgent
+
+# First instance creates agent in Foundry
+agent1 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True  # Enable agent reuse
+)
+await agent1.run("What's NVIDIA's P/E ratio?")
+
+# Second instance reuses same agent (not created again!)
+agent2 = ProductionAgent(
+    agent_name="market_analyst",
+    instructions="You are a market analyst...",
+    enable_web_search=True,
+    reuse_agent=True
+)
+await agent2.run("What about Microsoft?")  # Reuses agent
+
+# Check if agent was reused
+print(f"Agent reused: {result.agent_reused}")
+```
+
+#### `agent_lifecycle_manager.py`
+Standalone demo of agent lifecycle management:
+```bash
+python AQ-CODE/llmops/agent_lifecycle_manager.py
+```
 
 #### `example_production_agent.py`
 Complete working example demonstrating:
