@@ -185,63 +185,78 @@ def replace_fake_weather_function(file_path: Path) -> bool:
     except Exception as e:
         return f"Error: {str(e)}"'''
     
-    # Pattern to match the fake weather function (more robust regex)
-    fake_weather_pattern = r'def get_weather\([^)]+\)\s*->\s*str:\s*"""[^"]*"""\s*conditions\s*=\s*\[[^\]]+\]\s*return\s+f"[^"]*\{[^}]*randint[^"]*"'
+    # Find and replace the fake weather function using line-by-line parsing
+    lines = content.split('\n')
+    new_lines = []
+    i = 0
+    replaced = False
     
-    # Try to find and replace the fake function
-    new_content = re.sub(fake_weather_pattern, real_weather_function, content, flags=re.DOTALL)
-    
-    if new_content == content:
-        # Pattern didn't match, try a simpler approach by finding the function definition
-        lines = content.split('\n')
-        new_lines = []
-        i = 0
-        replaced = False
+    while i < len(lines):
+        line = lines[i]
         
-        while i < len(lines):
-            line = lines[i]
+        # Check if this is the start of the get_weather function
+        if 'def get_weather(' in line and not replaced:
+            # Found the function, now find where it ends
+            function_start = i
+            function_end = i + 1
+            indent_level = len(line) - len(line.lstrip())
             
-            # Check if this is the start of the fake weather function
-            if 'def get_weather(' in line and not replaced:
-                # Found the function, now find where it ends
-                # Look for the next function definition or class, or async def
-                function_start = i
-                function_end = i + 1
-                indent_level = len(line) - len(line.lstrip())
-                
-                # Find the end of this function
-                while function_end < len(lines):
-                    next_line = lines[function_end]
-                    # Check if we've hit another top-level definition
-                    if next_line.strip() and not next_line.startswith(' ') and not next_line.startswith('\t'):
-                        break
-                    # Check if we've hit another function at the same indent level
-                    if next_line.strip().startswith('def ') or next_line.strip().startswith('async def '):
-                        next_indent = len(next_line) - len(next_line.lstrip())
-                        if next_indent == indent_level:
-                            break
+            # First, skip past the function signature (which may span multiple lines)
+            # Keep going until we find a line ending with ':' 
+            while function_end < len(lines):
+                if lines[function_end].rstrip().endswith(':'):
                     function_end += 1
-                
-                # Check if this is the fake weather function
-                function_body = '\n'.join(lines[function_start:function_end])
-                if 'randint' in function_body and 'conditions = [' in function_body:
-                    # Replace with real function
-                    new_lines.append(real_weather_function)
-                    replaced = True
-                    i = function_end
-                    print(f"    ✓ Replaced fake weather function with real API implementation")
-                    continue
+                    break
+                function_end += 1
             
-            new_lines.append(line)
-            i += 1
+            # Now find the end of the function body
+            in_function = True
+            while function_end < len(lines) and in_function:
+                next_line = lines[function_end]
+                
+                # Empty lines are part of the function
+                if not next_line.strip():
+                    function_end += 1
+                    continue
+                
+                # Check indentation
+                next_indent = len(next_line) - len(next_line.lstrip())
+                
+                # If we're back at or less than the function definition indent, we've left the function
+                if next_indent <= indent_level:
+                    in_function = False
+                    break
+                
+                function_end += 1
+            
+            # Check if this is the fake weather function
+            function_body = '\n'.join(lines[function_start:function_end])
+            if 'randint' in function_body and 'conditions' in function_body:
+                # Replace with real function
+                new_lines.append(real_weather_function)
+                replaced = True
+                i = function_end
+                print(f"    ✓ Replaced fake weather function with real API implementation")
+                continue
         
-        if not replaced:
-            print(f"    ✗ Could not find or replace fake weather function")
-            return False
-        
-        new_content = '\n'.join(new_lines)
-    else:
-        print(f"    ✓ Replaced fake weather function with real API implementation")
+        new_lines.append(line)
+        i += 1
+    
+    if not replaced:
+        print(f"    ✗ Could not find or replace fake weather function")
+        return False
+    
+    new_content = '\n'.join(new_lines)
+    
+    # Remove the randint import since we're replacing the fake weather function
+    lines = new_content.split('\n')
+    new_lines = []
+    for line in lines:
+        # Skip the randint import line
+        if line.strip() == 'from random import randint':
+            continue
+        new_lines.append(line)
+    new_content = '\n'.join(new_lines)
     
     # Ensure httpx is imported
     if 'import httpx' not in new_content:
@@ -252,25 +267,24 @@ def replace_fake_weather_function(file_path: Path) -> bool:
         
         for i, line in enumerate(lines):
             new_lines.append(line)
-            # Add after the os import if it exists, or after other standard imports
-            if not httpx_added and ('import os' in line or 'from typing import' in line):
-                # Check if next line is not already an import
-                if i + 1 < len(lines) and not lines[i + 1].strip().startswith('import ') and not lines[i + 1].strip().startswith('from '):
-                    new_lines.append('import httpx')
-                    httpx_added = True
+            # Add after asyncio or after the first standard import
+            if not httpx_added and ('import asyncio' in line):
+                new_lines.append('import httpx')
+                httpx_added = True
         
         if not httpx_added:
-            # If we couldn't find a good spot, add it after the first import block
-            new_lines = []
-            for i, line in enumerate(lines):
-                new_lines.append(line)
-                if line.startswith('import ') or line.startswith('from '):
-                    # Look ahead to see if more imports follow
-                    if i + 1 < len(lines) and not (lines[i + 1].startswith('import ') or lines[i + 1].startswith('from ')):
-                        if not httpx_added:
-                            new_lines.insert(-1, 'import httpx')
+            # If we couldn't find asyncio, add after first import
+            new_lines_temp = []
+            for i, line in enumerate(new_lines):
+                new_lines_temp.append(line)
+                if not httpx_added and (line.startswith('import ') or line.startswith('from ')):
+                    # Check if next line is not an import
+                    if i + 1 < len(new_lines):
+                        next_line = new_lines[i + 1].strip()
+                        if not next_line.startswith('import ') and not next_line.startswith('from '):
+                            new_lines_temp.append('import httpx')
                             httpx_added = True
-                            break
+            new_lines = new_lines_temp
         
         new_content = '\n'.join(new_lines)
     
@@ -278,19 +292,27 @@ def replace_fake_weather_function(file_path: Path) -> bool:
     if 'import os' not in new_content:
         lines = new_content.split('\n')
         new_lines = []
+        os_added = False
         
         for i, line in enumerate(lines):
             new_lines.append(line)
-            # Add after asyncio import or after copyright
-            if 'import asyncio' in line:
+            # Add after asyncio import
+            if not os_added and 'import asyncio' in line:
                 new_lines.append('import os')
-                break
-        else:
+                os_added = True
+        
+        if not os_added:
             # If no asyncio, add after first import
+            new_lines_temp = []
             for i, line in enumerate(new_lines):
-                if line.startswith('import ') or line.startswith('from '):
-                    new_lines.insert(i + 1, 'import os')
-                    break
+                new_lines_temp.append(line)
+                if not os_added and (line.startswith('import ') or line.startswith('from ')):
+                    if i + 1 < len(new_lines):
+                        next_line = new_lines[i + 1].strip()
+                        if not next_line.startswith('import ') and not next_line.startswith('from '):
+                            new_lines_temp.append('import os')
+                            os_added = True
+            new_lines = new_lines_temp
         
         new_content = '\n'.join(new_lines)
     
