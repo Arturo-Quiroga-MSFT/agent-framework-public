@@ -3,12 +3,6 @@
 import asyncio
 import os
 import tempfile
-from pathlib import Path
-from dotenv import load_dotenv
-
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
 
 from agent_framework import ChatAgent, HostedCodeInterpreterTool
 from agent_framework.azure import AzureOpenAIResponsesClient
