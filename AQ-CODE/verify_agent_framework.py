@@ -44,18 +44,24 @@ def main() -> int:
         # Core types
         ("agent_framework", ["ChatMessage", "Role"]),
         ("agent_framework", ["AgentThread", "AgentRunResponse"]),
+        ("agent_framework", ["BaseAgent", "ChatAgent"]),
         
         # Workflow components
         ("agent_framework", ["Executor", "WorkflowBuilder", "WorkflowContext", "handler"]),
+        ("agent_framework", ["Workflow", "WorkflowAgent", "WorkflowExecutor"]),
         
         # Tools
-        ("agent_framework", ["ai_function"]),
+        ("agent_framework", ["ai_function", "AIFunction"]),
         
         # Observability
         ("agent_framework.observability", ["setup_observability", "get_tracer"]),
         
-        # Azure integration (optional)
+        # Azure OpenAI integration (optional)
         ("agent_framework.azure", ["AzureOpenAIChatClient"]),
+        ("agent_framework.azure", ["AzureOpenAIAssistantsClient", "AzureOpenAIResponsesClient"]),
+        
+        # Azure AI integration (optional)
+        ("agent_framework.azure", ["AzureAIAgentClient", "AzureAISettings"]),
         
         # DevUI (optional)
         ("agent_framework.devui", ["serve"]),
@@ -90,11 +96,12 @@ def main() -> int:
             print("Core components work, but some optional integrations failed.")
             print("This is OK if you're not using those integrations.")
         else:
-            print("Core components failed to import. Please fix the installation:")
+            print("Core components failed to import. Please check the installation:")
             print()
-            print("  .venv/bin/pip install -e python/packages/core --no-deps --force-reinstall")
+            print("  pip install -e python/packages/core")
             print()
-            print("For more help, see: AGENT_FRAMEWORK_PACKAGES_GUIDE.md")
+            print("Or for full installation:")
+            print("  pip install -e python")
         return 1
 
 
