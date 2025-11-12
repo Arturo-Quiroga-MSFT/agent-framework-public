@@ -10,7 +10,7 @@ Here's a concise overview of our proposed **Microsoft Agent Framework Workshop**
 
 ## Workshop Overview
 **Duration:** 2 hours  
-**Format:** Lecture + Live Demonstrations (or Hands-On Labs - we have both options available)  
+**Format:** Lecture + Live Demonstrations  
 **Target Audience:** Technical Solution Architects
 
 ---
@@ -87,16 +87,6 @@ Here's a concise overview of our proposed **Microsoft Agent Framework Workshop**
 
 ---
 
-## Workshop Formats Available
-
-We have prepared **two formats** for your team to choose from:
-
-1. **Demo-Driven:** Instructor-led demonstrations, no participant setup required
-2. **Hands-On Labs:** Interactive exercises with 3 labs (requires Azure setup)
-
-Both formats cover the same content with the same learning outcomes.
-
----
 
 ## What You'll Learn
 
@@ -115,9 +105,4 @@ Please let me know:
 3. Approximately how many participants?
 4. Any specific topics you'd like us to emphasize?
 
-I can provide more detailed information for any module if needed.
 
-Looking forward to your feedback!
-
-Best regards,  
-[Your Name]
