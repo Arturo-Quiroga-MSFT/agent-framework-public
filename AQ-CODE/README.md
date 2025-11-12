@@ -11,6 +11,7 @@ Workshop materials and agendas for Microsoft Agent Framework training sessions.
 - `WORKSHOP_AGENDA_EMAIL_SUMMARY.md` - Detailed email summary (hands-on format)
 - `WORKSHOP_AGENDA_EMAIL_SUMMARY_DEMO_DRIVEN.md` - Detailed email summary (demo format)
 - `WORKSHOP_MINI_SUMMARY.md` - Concise workshop overview for partners
+- `OBSERVABILITY_QUICK_REFERENCE.md` - Quick reference for observability demos
 
 ### 📁 **docs/**
 Documentation and explanatory materials.
@@ -43,6 +44,12 @@ Multi-agent orchestration examples and interactive systems.
 - `concurrent_agents_interactive_devui.py` - 5-agent DevUI backend (port 8092)
 - `multi_agent_dashboard.py` - Simple Streamlit dashboard
 - `multi_agent_dashboard_concurrent.py` - Concurrent multi-agent dashboard (port 8095)
+
+### 📁 **observability/**
+Observability and telemetry demonstration samples (Workshop Module 4).
+- `observability_azure_ai_agent.py` - Azure AI agent with Application Insights
+- `observability_workflow.py` - Customer feedback analysis workflow with telemetry
+- `OBSERVABILITY_SAMPLES.md` - Comprehensive observability documentation
 
 ### 📁 **azure_ai/**
 Azure AI agent samples and implementations.
