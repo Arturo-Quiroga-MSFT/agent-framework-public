@@ -35,35 +35,35 @@ from datetime import datetime
 DEVUI_BASE_URL = "http://localhost:8092"
 DEVUI_API_BASE = f"{DEVUI_BASE_URL}/v1"
 
-# Agent Configuration
-AGENTS = [
+# Agent Configuration - Will be populated from backend
+AGENT_NAMES = [
     {
-        "id": "Market_Researcher",
-        "name": "🔬 Market Researcher",
+        "name": "Market_Researcher",
+        "display_name": "🔬 Market Researcher",
         "description": "Market analysis & insights",
         "color": "#1E90FF"  # Dodger Blue
     },
     {
-        "id": "Marketing_Strategist", 
-        "name": "📢 Marketing Strategist",
+        "name": "Marketing_Strategist", 
+        "display_name": "📢 Marketing Strategist",
         "description": "Strategy & positioning",
         "color": "#FF6347"  # Tomato
     },
     {
-        "id": "Legal_Compliance_Advisor",
-        "name": "⚖️ Legal Advisor",
+        "name": "Legal_Compliance_Advisor",
+        "display_name": "⚖️ Legal Advisor",
         "description": "Compliance & risk",
         "color": "#32CD32"  # Lime Green
     },
     {
-        "id": "Financial_Analyst",
-        "name": "💰 Financial Analyst",
+        "name": "Financial_Analyst",
+        "display_name": "💰 Financial Analyst",
         "description": "Revenue & ROI analysis",
         "color": "#FFD700"  # Gold
     },
     {
-        "id": "Technical_Architect",
-        "name": "🏗️ Technical Architect",
+        "name": "Technical_Architect",
+        "display_name": "🏗️ Technical Architect",
         "description": "Architecture & tech stack",
         "color": "#9370DB"  # Medium Purple
     }
@@ -75,24 +75,25 @@ class DevUIClient:
     
     def __init__(self, base_url: str):
         self.base_url = base_url
-        self.client = httpx.Client(timeout=30.0)
+        self.client = httpx.Client(timeout=120.0)  # 2 minutes for LLM responses
         
-    def get_agents(self) -> List[Dict]:
-        """Fetch available agents from DevUI."""
+    def get_entities(self) -> List[Dict]:
+        """Fetch available entities from DevUI."""
         try:
-            response = self.client.get(f"{self.base_url}/agents")
+            response = self.client.get(f"{self.base_url}/entities")
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return data.get("entities", [])
         except Exception as e:
-            st.error(f"Failed to fetch agents: {e}")
+            st.error(f"Failed to fetch entities: {e}")
             return []
     
     def create_conversation(self, agent_id: str) -> Optional[str]:
         """Create a new conversation for an agent."""
         try:
             response = self.client.post(
-                f"{self.base_url}/agents/{agent_id}/conversations",
-                json={}
+                f"{self.base_url}/conversations",
+                json={"metadata": {"agent_id": agent_id}}
             )
             response.raise_for_status()
             data = response.json()
@@ -101,46 +102,67 @@ class DevUIClient:
             st.error(f"Failed to create conversation for {agent_id}: {e}")
             return None
     
-    def get_conversation_messages(self, agent_id: str, conversation_id: str) -> List[Dict]:
+    def get_conversation_messages(self, conversation_id: str) -> List[Dict]:
         """Get messages from a conversation."""
         try:
             response = self.client.get(
-                f"{self.base_url}/agents/{agent_id}/conversations/{conversation_id}/items"
+                f"{self.base_url}/conversations/{conversation_id}/items"
             )
             response.raise_for_status()
-            return response.json()
+            items = response.json()
+            return items if isinstance(items, list) else []
         except Exception as e:
             # 404 is expected for new conversations
             if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 404:
                 return []
-            st.error(f"Failed to fetch messages: {e}")
             return []
     
     def send_message(self, agent_id: str, conversation_id: str, message: str) -> Optional[str]:
         """Send a message and return the assistant's response."""
         try:
-            # Send message via chat completions endpoint
+            # Send message via DevUI responses endpoint
             response = self.client.post(
-                f"{self.base_url}/chat/completions",
+                f"{self.base_url}/responses",
                 json={
-                    "model": agent_id,
-                    "messages": [{"role": "user", "content": message}],
+                    "input": message,
                     "stream": False,
                     "metadata": {
+                        "entity_id": agent_id,
                         "conversation_id": conversation_id
                     }
-                }
+                },
+                timeout=120.0  # 2 minutes for LLM responses
             )
             response.raise_for_status()
             data = response.json()
             
-            # Extract assistant message
-            if "choices" in data and len(data["choices"]) > 0:
-                return data["choices"][0]["message"]["content"]
-            return None
+            # Extract assistant message from response
+            # DevUI returns: {"output": [{"content": [{"text": "...", "type": "output_text"}], "role": "assistant"}]}
+            if "output" in data and isinstance(data["output"], list) and len(data["output"]) > 0:
+                first_output = data["output"][0]
+                if "content" in first_output and isinstance(first_output["content"], list):
+                    for content_item in first_output["content"]:
+                        if content_item.get("type") == "output_text" and "text" in content_item:
+                            return content_item["text"]
             
+            # Fallback for other formats
+            if "message" in data:
+                return data["message"]
+            elif "choices" in data and len(data["choices"]) > 0:
+                return data["choices"][0].get("message", {}).get("content")
+            
+            # Log the response structure for debugging
+            st.warning(f"Unexpected response format: {list(data.keys())}")
+            return str(data)
+            
+        except httpx.TimeoutException as e:
+            st.error(f"⏱️ Request timed out. The agent may be processing a complex request.")
+            return None
+        except httpx.HTTPStatusError as e:
+            st.error(f"❌ HTTP error {e.response.status_code}: {e.response.text}")
+            return None
         except Exception as e:
-            st.error(f"Failed to send message to {agent_id}: {e}")
+            st.error(f"❌ Failed to send message: {type(e).__name__}: {e}")
             return None
 
 
@@ -149,18 +171,48 @@ def init_session_state():
     if "client" not in st.session_state:
         st.session_state.client = DevUIClient(DEVUI_API_BASE)
     
+    if "agents" not in st.session_state:
+        st.session_state.agents = []
+    
     if "conversations" not in st.session_state:
-        # Store conversation IDs and message history per agent
-        st.session_state.conversations = {
-            agent["id"]: {
-                "conversation_id": None,
-                "messages": []  # List of {"role": "user"|"assistant", "content": str, "timestamp": str}
-            }
-            for agent in AGENTS
-        }
+        st.session_state.conversations = {}
     
     if "backend_connected" not in st.session_state:
         st.session_state.backend_connected = False
+
+
+def load_agents():
+    """Load agents from DevUI backend and match with display config."""
+    entities = st.session_state.client.get_entities()
+    agents = []
+    
+    # Filter to only agents (not workflows) and match with our config
+    for entity in entities:
+        if entity.get("type") == "agent":
+            entity_name = entity.get("name")
+            entity_id = entity.get("id")
+            
+            # Find matching config
+            config = next((a for a in AGENT_NAMES if a["name"] == entity_name), None)
+            if config:
+                agents.append({
+                    "id": entity_id,  # Use the full UUID from backend
+                    "name": config["display_name"],
+                    "description": config["description"],
+                    "color": config["color"]
+                })
+    
+    st.session_state.agents = agents
+    
+    # Initialize conversations for all agents
+    if not st.session_state.conversations:
+        st.session_state.conversations = {
+            agent["id"]: {
+                "conversation_id": None,
+                "messages": []
+            }
+            for agent in agents
+        }
 
 
 def check_backend_connection() -> bool:
@@ -318,7 +370,15 @@ def main():
                 st.rerun()
             return
     
-    st.success("✅ Connected to DevUI backend")
+    # Load agents from backend
+    if not st.session_state.agents:
+        load_agents()
+        
+        if not st.session_state.agents:
+            st.error("⚠️ No agents found in DevUI backend")
+            return
+    
+    st.success(f"✅ Connected to DevUI backend - {len(st.session_state.agents)} agents available")
     
     # Control buttons
     col1, col2, col3 = st.columns([1, 1, 8])
@@ -333,7 +393,7 @@ def main():
                     "conversation_id": None,
                     "messages": []
                 }
-                for agent in AGENTS
+                for agent in st.session_state.agents
             }
             st.rerun()
     
@@ -343,7 +403,7 @@ def main():
     cols = st.columns(5)
     
     # Render each agent in its column
-    for i, agent in enumerate(AGENTS):
+    for i, agent in enumerate(st.session_state.agents):
         render_agent_column(agent, cols[i])
 
 
