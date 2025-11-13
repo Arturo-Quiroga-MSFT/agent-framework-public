@@ -432,6 +432,14 @@ Solution: Set message limits
 pip install agent-framework-redis
 ```
 
+### Environment Variables
+Required in `.env` file:
+```bash
+# Azure OpenAI Configuration
+AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
+```
+
 ### Documentation
 - **Redis Package README**: `python/packages/redis/README.md`
 - **Sample Files**: `python/samples/getting_started/context_providers/redis/`

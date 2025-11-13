@@ -32,10 +32,11 @@ import asyncio
 import os
 from pathlib import Path
 
-from agent_framework import AgentThread, ChatAgent
-from agent_framework.devui import start_devui
-from agent_framework.openai import OpenAIChatClient
-from agent_framework.redis import RedisChatMessageStore
+from agent_framework import ChatAgent
+from agent_framework.devui import serve
+from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework_redis._chat_message_store import RedisChatMessageStore
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -60,10 +61,13 @@ async def create_support_agent() -> tuple[ChatAgent, AgentThread]:
     thread = AgentThread(message_store=store)
     
     # Create support agent
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    model_id = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     
-    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    client = AzureOpenAIChatClient(
+        azure_endpoint=azure_endpoint,
+        model_id=model_id,
+    )
     agent = client.create_agent(
         name="SupportBot",
         instructions=(
@@ -87,9 +91,9 @@ async def main() -> None:
     print("using RedisChatMessageStore.\n")
     
     # Check environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ ERROR: OPENAI_API_KEY not found in .env file")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    if not azure_endpoint:
+        print("❌ ERROR: AZURE_OPENAI_ENDPOINT not found in .env file")
         return
     
     # Check Redis connection
@@ -179,9 +183,18 @@ async def main() -> None:
     print("=" * 70)
     print()
     
-    # Start DevUI server with the thread
-    await start_devui(agent, thread=thread, port=8001)
+    # Note: DevUI serve() doesn't directly support passing threads,
+    # so we'll attach the thread to the agent for the demo
+    # In production, you'd use the factory pattern with chat_message_store_factory
+    agent._thread = thread  # type: ignore
+    
+    return agent
 
 
 if __name__ == "__main__":
+    # Create agent asynchronously
+    agent = asyncio.run(main())
+    
+    # Start DevUI server synchronously
+    serve(entities=[agent], port=8001, auto_open=True)
     asyncio.run(main())

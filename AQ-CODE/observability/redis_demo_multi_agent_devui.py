@@ -33,9 +33,10 @@ import os
 from pathlib import Path
 
 from agent_framework import ChatAgent
-from agent_framework.devui import start_devui
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.devui import serve
+from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework_redis._provider import RedisProvider
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -58,10 +59,14 @@ async def create_personal_agent() -> ChatAgent:
         overwrite_index=True,  # Fresh start
     )
     
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    model_id = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     
-    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    client = AzureOpenAIChatClient(
+        endpoint=azure_endpoint,
+        deployment_name=model_id,
+        credential=DefaultAzureCredential(),
+    )
     agent = client.create_agent(
         name="PersonalAssistant",
         instructions=(
@@ -89,10 +94,14 @@ async def create_work_agent() -> ChatAgent:
         user_id=USER_ID,  # Same user
     )
     
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    model_id = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     
-    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    client = AzureOpenAIChatClient(
+        endpoint=azure_endpoint,
+        deployment_name=model_id,
+        credential=DefaultAzureCredential(),
+    )
     agent = client.create_agent(
         name="WorkAssistant",
         instructions=(
@@ -108,18 +117,6 @@ async def create_work_agent() -> ChatAgent:
     return agent
 
 
-async def start_personal_assistant(agent: ChatAgent) -> None:
-    """Start Personal Assistant on port 8002."""
-    print("\n🏠 Starting Personal Assistant on port 8002...")
-    await start_devui(agent, port=8002)
-
-
-async def start_work_assistant(agent: ChatAgent) -> None:
-    """Start Work Assistant on port 8003."""
-    print("💼 Starting Work Assistant on port 8003...")
-    await start_devui(agent, port=8003)
-
-
 async def main() -> None:
     """Launch both DevUI servers for multi-agent isolation demo."""
     
@@ -130,9 +127,9 @@ async def main() -> None:
     print("Same user, different contexts - complete memory isolation!\n")
     
     # Check environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ ERROR: OPENAI_API_KEY not found in .env file")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    if not azure_endpoint:
+        print("❌ ERROR: AZURE_OPENAI_ENDPOINT not found in .env file")
         return
     
     # Check Redis connection
@@ -219,20 +216,44 @@ async def main() -> None:
     print("  └────────────────────────────────────────┘")
     
     print("\n" + "=" * 70)
-    print("🎯 Press Ctrl+C to stop both servers")
+    print("USAGE INSTRUCTIONS")
+    print("=" * 70)
+    print("\n🚀 You need to run TWO separate terminal windows:")
+    print("\n   Terminal 1 (Personal Assistant):")
+    print("   python redis_demo_multi_agent_devui.py --agent personal")
+    print("   Opens: http://localhost:8002")
+    print("\n   Terminal 2 (Work Assistant):")
+    print("   python redis_demo_multi_agent_devui.py --agent work")
+    print("   Opens: http://localhost:8003")
+    
+    print("\n💡 Note: DevUI serve() runs synchronously, so we can't run")
+    print("   both servers in one process.")
+    
+    print("\n" + "=" * 70)
+    print("🎯 Press Ctrl+C to stop the server")
     print("=" * 70)
     print()
     
-    # Start both servers concurrently
-    try:
-        await asyncio.gather(
-            start_personal_assistant(personal_agent),
-            start_work_assistant(work_agent),
-        )
-    except KeyboardInterrupt:
-        print("\n\n👋 Shutting down both servers...")
-        print("✓ Demo complete!")
+    return personal_agent, work_agent
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Create agents asynchronously
+    personal_agent, work_agent = asyncio.run(main())
+    
+    # Determine which agent to start based on command line argument
+    import sys
+    agent_choice = "personal"  # default
+    
+    if "--agent" in sys.argv:
+        idx = sys.argv.index("--agent")
+        if idx + 1 < len(sys.argv):
+            agent_choice = sys.argv[idx + 1].lower()
+    
+    # Start appropriate DevUI server synchronously
+    if agent_choice == "work":
+        print("💼 Starting Work Assistant on port 8003...\n")
+        serve(entities=[work_agent], port=8003, auto_open=True)
+    else:
+        print("🏠 Starting Personal Assistant on port 8002...\n")
+        serve(entities=[personal_agent], port=8002, auto_open=True)

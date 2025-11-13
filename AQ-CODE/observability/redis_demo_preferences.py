@@ -28,8 +28,10 @@ import asyncio
 import os
 from pathlib import Path
 
-from agent_framework.openai import OpenAIChatClient
+from agent_framework import ChatMessage, Role
+from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework_redis._provider import RedisProvider
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -69,14 +71,14 @@ async def main() -> None:
     print("across multiple sessions using RedisProvider.\n")
 
     # Check environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    model_id = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
 
-    if not api_key:
-        print("❌ ERROR: OPENAI_API_KEY not found in .env file")
+    if not azure_endpoint:
+        print("❌ ERROR: AZURE_OPENAI_ENDPOINT not found in .env file")
         return
 
-    print(f"✓ Using OpenAI model: {model_id}")
+    print(f"✓ Using Azure OpenAI model: {model_id}")
 
     # Check Redis connection
     try:
@@ -113,7 +115,11 @@ async def main() -> None:
     print(f"  - Agent: personal_assistant\n")
 
     # Create agent with RedisProvider
-    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    client = AzureOpenAIChatClient(
+        endpoint=azure_endpoint,
+        deployment_name=model_id,
+        credential=DefaultAzureCredential(),
+    )
     agent = client.create_agent(
         name="PreferenceAssistant",
         instructions=(

@@ -59,6 +59,9 @@ python redis_demo_multi_agent_devui.py      # http://localhost:8002 & 8003
 AZURE_AI_PROJECT_ENDPOINT="https://your-project.services.ai.azure.com/..."
 AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
 
+# Required for Azure OpenAI (Redis demos)
+AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+
 # Required for observability_azure_ai_agent.py
 OPENWEATHER_API_KEY="your-key-here"  # Get free key at openweathermap.org/api
 
