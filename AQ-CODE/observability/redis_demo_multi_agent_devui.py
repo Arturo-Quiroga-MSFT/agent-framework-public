@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""
+Redis Demo 3: Multi-Agent Isolation (DevUI Interactive)
+
+DevUI-enabled interactive demo showing how multiple agents maintain separate
+memory scopes using RedisProvider with different agent_id values.
+
+This demo runs TWO DevUI servers simultaneously:
+- Port 8002: Personal Assistant (agent_personal)
+- Port 8003: Work Assistant (agent_work)
+
+Features:
+- Side-by-side agent comparison
+- Same user, different memory scopes
+- Visual demonstration of memory isolation
+- Enterprise multi-tenant pattern
+
+Prerequisites:
+- Redis running on localhost:6379 (docker run -p 6379:6379 -d redis:8.0.3)
+- Environment variables in .env file (OPENAI_API_KEY, OPENAI_CHAT_MODEL_ID)
+- pip install agent-framework-redis agent-framework-devui
+
+Usage:
+    python redis_demo_multi_agent_devui.py
+    
+Then open:
+    Personal Assistant: http://localhost:8002
+    Work Assistant:     http://localhost:8003
+"""
+
+import asyncio
+import os
+from pathlib import Path
+
+from agent_framework import ChatAgent
+from agent_framework.devui import start_devui
+from agent_framework.openai import OpenAIChatClient
+from agent_framework_redis._provider import RedisProvider
+from dotenv import load_dotenv
+
+# Load environment variables
+env_path = Path(__file__).parent / ".env"
+load_dotenv(env_path)
+
+USER_ID = "alice_123"
+
+
+async def create_personal_agent() -> ChatAgent:
+    """Create personal assistant with isolated memory."""
+    
+    provider = RedisProvider(
+        redis_url="redis://localhost:6379",
+        index_name="multi_agent_devui_demo",
+        prefix="multi_devui",
+        application_id="devui_workshop",
+        agent_id="agent_personal",  # Unique scope
+        user_id=USER_ID,
+        overwrite_index=True,  # Fresh start
+    )
+    
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    
+    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    agent = client.create_agent(
+        name="PersonalAssistant",
+        instructions=(
+            "You are a personal assistant helping with personal life tasks. "
+            "Remember personal preferences, hobbies, health info, and lifestyle choices. "
+            "Use stored context to provide personalized recommendations. "
+            "Be warm and friendly. ONLY know about personal life - you have NO access "
+            "to work-related information."
+        ),
+        context_providers=provider,
+    )
+    
+    return agent
+
+
+async def create_work_agent() -> ChatAgent:
+    """Create work assistant with isolated memory."""
+    
+    provider = RedisProvider(
+        redis_url="redis://localhost:6379",
+        index_name="multi_agent_devui_demo",  # Same index
+        prefix="multi_devui",
+        application_id="devui_workshop",
+        agent_id="agent_work",  # Different scope!
+        user_id=USER_ID,  # Same user
+    )
+    
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    
+    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    agent = client.create_agent(
+        name="WorkAssistant",
+        instructions=(
+            "You are a work assistant helping with professional tasks. "
+            "Remember work projects, meeting schedules, team info, and professional goals. "
+            "Use stored context to provide work-focused recommendations. "
+            "Be professional and efficient. ONLY know about work - you have NO access "
+            "to personal life information."
+        ),
+        context_providers=provider,
+    )
+    
+    return agent
+
+
+async def start_personal_assistant(agent: ChatAgent) -> None:
+    """Start Personal Assistant on port 8002."""
+    print("\n🏠 Starting Personal Assistant on port 8002...")
+    await start_devui(agent, port=8002)
+
+
+async def start_work_assistant(agent: ChatAgent) -> None:
+    """Start Work Assistant on port 8003."""
+    print("💼 Starting Work Assistant on port 8003...")
+    await start_devui(agent, port=8003)
+
+
+async def main() -> None:
+    """Launch both DevUI servers for multi-agent isolation demo."""
+    
+    print("=" * 70)
+    print("REDIS DEMO 3: MULTI-AGENT ISOLATION (DevUI Interactive)")
+    print("=" * 70)
+    print("\nThis demo runs TWO agents simultaneously with separate memory.")
+    print("Same user, different contexts - complete memory isolation!\n")
+    
+    # Check environment variables
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("❌ ERROR: OPENAI_API_KEY not found in .env file")
+        return
+    
+    # Check Redis connection
+    try:
+        test_provider = RedisProvider(
+            redis_url="redis://localhost:6379",
+            index_name="test_connection",
+            agent_id="test",
+            user_id="test",
+        )
+        await test_provider.redis_index.create(overwrite=True)
+        await test_provider.redis_index.delete()
+        print("✓ Redis connection successful")
+    except Exception as e:
+        print(f"❌ ERROR: Cannot connect to Redis: {e}")
+        print("Please ensure Redis is running: docker run -p 6379:6379 -d redis:8.0.3")
+        return
+    
+    print("✓ Environment configured")
+    
+    print("\n" + "=" * 70)
+    print("CREATING AGENTS WITH ISOLATED MEMORY")
+    print("=" * 70)
+    
+    print(f"\nUser ID: {USER_ID}")
+    print("\n1️⃣  Personal Assistant:")
+    print("    • Agent ID: agent_personal")
+    print("    • Scope: Personal life, hobbies, health")
+    print("    • Port: 8002")
+    
+    print("\n2️⃣  Work Assistant:")
+    print("    • Agent ID: agent_work")
+    print("    • Scope: Professional tasks, projects")
+    print("    • Port: 8003")
+    
+    print("\n✓ Both agents use the same Redis index but maintain separate memory!")
+    
+    # Create both agents
+    print("\nCreating agents...")
+    personal_agent = await create_personal_agent()
+    print("✓ Personal Assistant created")
+    
+    work_agent = await create_work_agent()
+    print("✓ Work Assistant created")
+    
+    print("\n" + "=" * 70)
+    print("STARTING DEVUI SERVERS")
+    print("=" * 70)
+    print("\n🚀 Opening TWO browser tabs:")
+    print("    • Personal Assistant: http://localhost:8002")
+    print("    • Work Assistant:     http://localhost:8003")
+    
+    print("\n📝 Try this conversation flow:")
+    
+    print("\n🏠 In Personal Assistant (port 8002):")
+    print("  1. Hi! I love hiking and spend weekends in the Cascades.")
+    print("  2. I'm vegetarian and prefer organic food.")
+    print("  3. I practice yoga every morning at 6 AM.")
+    print("  4. What do you know about my hobbies?")
+    print("  5. Do you know anything about my work projects? (should say NO)")
+    
+    print("\n💼 In Work Assistant (port 8003):")
+    print("  1. Hi! I'm working on an ML project for customer segmentation.")
+    print("  2. I have team meetings every Tuesday at 2 PM.")
+    print("  3. My tech stack is Python, TensorFlow, and Azure ML.")
+    print("  4. What projects am I working on?")
+    print("  5. Do you know about my exercise routine? (should say NO)")
+    
+    print("\n💡 Key Features:")
+    print("  • Personal Assistant ONLY knows personal information")
+    print("  • Work Assistant ONLY knows work information")
+    print("  • Complete memory isolation despite same user")
+    print("  • Same Redis index, different logical partitions")
+    
+    print("\n🎯 Architecture:")
+    print("  ┌────────────────────────────────────────┐")
+    print(f"  │          User: {USER_ID}           │")
+    print("  ├────────────────┬───────────────────────┤")
+    print("  │ Personal Agent │ Work Agent            │")
+    print("  │ agent_personal │ agent_work            │")
+    print("  │ Port: 8002     │ Port: 8003            │")
+    print("  ├────────────────┴───────────────────────┤")
+    print("  │     Same Redis Index, Isolated Scopes  │")
+    print("  └────────────────────────────────────────┘")
+    
+    print("\n" + "=" * 70)
+    print("🎯 Press Ctrl+C to stop both servers")
+    print("=" * 70)
+    print()
+    
+    # Start both servers concurrently
+    try:
+        await asyncio.gather(
+            start_personal_assistant(personal_agent),
+            start_work_assistant(work_agent),
+        )
+    except KeyboardInterrupt:
+        print("\n\n👋 Shutting down both servers...")
+        print("✓ Demo complete!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -26,6 +26,38 @@ Are the behaviors exactly the same?
 
 Both approaches create the **exact same agent** with **identical behavior**. Approach 1 (`create_agent()`) is a convenience method that internally calls Approach 2 (`ChatAgent()`).
 
+## Architecture Overview
+
+### Multi-Agent System Example
+
+Below is an example of a complex multi-agent system architecture showing how agents interact through an orchestrator. This demonstrates the type of sophisticated systems you can build using Microsoft Agent Framework, regardless of whether you use `ChatAgent()` or `create_agent()` - both approaches support the same capabilities.
+
+![Multi-Agent System Architecture](./multi_agent_architecture_diagram.png)
+
+*This diagram shows a production multi-agent system with specialized agents (Calendar, Timesheet, Suggestion, Approval, Revenue) coordinated by an orchestrator, with conversation threading, data persistence, and audit logging.*
+
+### Agent Creation Flow
+
+```mermaid
+graph TB
+    subgraph "Approach 1: create_agent() - Convenience Method"
+        A1[Client.create_agent<br/>instructions, name, tools] --> B1[Internally calls ChatAgent constructor]
+        B1 --> C1[ChatAgent Instance]
+    end
+    
+    subgraph "Approach 2: ChatAgent() - Direct Construction"
+        A2[ChatAgent<br/>chat_client, instructions, name, tools] --> C2[ChatAgent Instance]
+    end
+    
+    C1 -.Identical Result.-> C2
+    
+    style C1 fill:#90EE90
+    style C2 fill:#90EE90
+    style B1 fill:#FFE4B5
+```
+
+**Key Point**: `create_agent()` is syntactic sugar that constructs `ChatAgent` internally. Both produce identical `ChatAgent` instances with the same capabilities.
+
 ## Technical Details
 
 ### What `create_agent()` Does
