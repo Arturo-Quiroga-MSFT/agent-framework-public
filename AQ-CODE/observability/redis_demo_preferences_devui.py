@@ -27,9 +27,10 @@ import os
 from pathlib import Path
 
 from agent_framework import ChatAgent
-from agent_framework.devui import start_devui
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.devui import serve
+from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework_redis._provider import RedisProvider
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -52,10 +53,14 @@ async def create_preference_agent(user_id: str = "alice_123") -> ChatAgent:
     )
 
     # Create agent with RedisProvider
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    model_id = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     
-    client = OpenAIChatClient(model_id=model_id, api_key=api_key)
+    client = AzureOpenAIChatClient(
+        endpoint=azure_endpoint,
+        deployment_name=model_id,
+        credential=DefaultAzureCredential(),
+    )
     agent = client.create_agent(
         name="PreferenceAssistant",
         instructions=(
@@ -81,9 +86,9 @@ async def main() -> None:
     print("with persistent preference memory.\n")
     
     # Check environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ ERROR: OPENAI_API_KEY not found in .env file")
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    if not azure_endpoint:
+        print("❌ ERROR: AZURE_OPENAI_ENDPOINT not found in .env file")
         return
     
     # Check Redis connection
@@ -149,9 +154,12 @@ async def main() -> None:
     print("=" * 70)
     print()
     
-    # Start DevUI server
-    await start_devui(agent, port=8000)
+    return agent
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Create agent asynchronously
+    agent = asyncio.run(main())
+    
+    # Start DevUI server synchronously
+    serve(entities=[agent], port=8000, auto_open=True)

@@ -30,7 +30,7 @@ source .venv/bin/activate
 cd AQ-CODE/observability
 
 # 4. Verify .env file has required variables
-cat .env | grep -E "OPENAI_API_KEY|OPENAI_CHAT_MODEL_ID"
+cat .env | grep -E "AZURE_OPENAI_ENDPOINT|AZURE_AI_MODEL_DEPLOYMENT_NAME"
 ```
 
 ---
@@ -136,13 +136,24 @@ User: Can you summarize everything we've discussed?
 **Duration**: 10 minutes
 
 ### Launch
+
+**Important**: Run TWO separate terminal windows
+
+**Terminal 1 - Personal Assistant:**
 ```bash
-python redis_demo_multi_agent_devui.py
+python redis_demo_multi_agent_devui.py --agent personal
+```
+
+**Terminal 2 - Work Assistant:**
+```bash
+python redis_demo_multi_agent_devui.py --agent work
 ```
 
 Open TWO tabs:
 - Personal Assistant: http://localhost:8002
 - Work Assistant: http://localhost:8003
+
+**Note**: DevUI's `serve()` function runs synchronously, so we can't run both servers in one process.
 
 ### Demo Script
 
@@ -213,8 +224,8 @@ kill -9 <PID>
 cat AQ-CODE/observability/.env
 
 # Should contain:
-# OPENAI_API_KEY=sk-...
-# OPENAI_CHAT_MODEL_ID=gpt-4o-mini
+# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+# AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 ```
 
 ### Clear Redis Data (Start Fresh)
@@ -259,10 +270,13 @@ docker run --name redis -p 6379:6379 -d redis:8.0.3
 source .venv/bin/activate
 cd AQ-CODE/observability
 
-# Run demos (in separate terminals)
-python redis_demo_preferences_devui.py    # Terminal 1
-python redis_demo_persistence_devui.py    # Terminal 2
-python redis_demo_multi_agent_devui.py    # Terminal 3
+# Run demos (in separate terminals as needed)
+python redis_demo_preferences_devui.py         # Terminal 1 - port 8000
+python redis_demo_persistence_devui.py         # Terminal 2 - port 8001
+
+# Multi-agent demo requires TWO terminals
+python redis_demo_multi_agent_devui.py --agent personal  # Terminal 3 - port 8002
+python redis_demo_multi_agent_devui.py --agent work      # Terminal 4 - port 8003
 
 # Stop servers
 # Ctrl+C in each terminal
