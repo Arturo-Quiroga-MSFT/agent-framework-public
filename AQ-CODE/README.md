@@ -17,6 +17,7 @@ Workshop materials and agendas for Microsoft Agent Framework training sessions.
 Documentation and explanatory materials.
 - `AZURE_AI_SAMPLES_UPDATE.md` - Azure AI samples update notes
 - `CHANGELOG.md` - Change history and version notes
+- `CHATAGENT_VS_CREATE_AGENT.md` - Technical comparison: ChatAgent() vs create_agent()
 - `DOCUMENTATION_INDEX.md` - Index of all documentation
 - `ENHANCEMENTS_SUMMARY.md` - Summary of enhancements made
 - `MCP_EXPLAINED.md` - Model Context Protocol explanation
