@@ -48,12 +48,27 @@ Then open http://localhost:8100 in your browser. All agents will appear in the d
 
 ### DevUI Agent Setup Notes
 
+#### Quick Setup for File Search
+Run the included setup script to automatically create a vector store:
+```bash
+cd AQ-CODE/azure_ai
+python setup_file_search.py
+```
+This will upload the sample employee PDF and give you the vector store ID to add to `.env`.
+
 #### File Search Agent
-Requires a pre-created vector store:
-1. Go to [Azure AI Foundry](https://ai.azure.com)
-2. Upload documents to create a vector store
-3. Add `FILE_SEARCH_VECTOR_STORE_ID` to your `.env` file
-4. Restart DevUI
+Uses vector search on employee documents (employees.pdf):
+- **Auto-setup**: Run `python setup_file_search.py` (recommended)
+- **Manual setup**:
+  1. Go to [Azure AI Foundry](https://ai.azure.com)
+  2. Upload documents to create a vector store
+  3. Add `FILE_SEARCH_VECTOR_STORE_ID` to your `.env` file
+  4. Restart DevUI
+
+**Try these queries:**
+- "Who works in the Engineering department?"
+- "List all managers"
+- "What is the contact info for [name]?"
 
 #### Azure Search Agent
 Requires Azure AI Search connection:
@@ -114,6 +129,9 @@ export BING_CONNECTION_ID="your-bing-connection-id"  # Optional, only needed for
 - `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI project endpoint (required for all examples)
 - `AZURE_AI_MODEL_DEPLOYMENT_NAME`: The name of your model deployment (required for all examples)
 
-### Optional Variables
+### Optional Variables (for specific examples)
 
-- `BING_CONNECTION_ID`: Your Bing connection ID (required for `azure_ai_with_bing_grounding.py` and `azure_ai_with_multiple_tools.py`)
+- `BING_CONNECTION_ID`: Your Bing connection ID (required for Bing grounding examples)
+- `OPENWEATHER_API_KEY`: OpenWeatherMap API key (required for weather examples)
+- `FILE_SEARCH_VECTOR_STORE_ID`: Vector store ID for file search RAG examples
+- `AZURE_SEARCH_INDEX_NAME`: Search index name (default: hotels-sample-index) for Azure AI Search examples
