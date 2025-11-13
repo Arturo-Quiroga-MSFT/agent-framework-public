@@ -20,6 +20,57 @@ This folder contains examples demonstrating different ways to create and use age
 | [`azure_ai_with_openapi_tools.py`](azure_ai_with_openapi_tools.py) | Demonstrates how to use OpenAPI tools with Azure AI agents to integrate external REST APIs. Shows OpenAPI specification loading, anonymous authentication, thread context management, and coordinated multi-API conversations using weather and countries APIs. |
 | [`azure_ai_with_thread.py`](azure_ai_with_thread.py) | Demonstrates thread management with Azure AI agents, including automatic thread creation for stateless conversations and explicit thread management for maintaining conversation context across multiple interactions. |
 
+## DevUI Gallery (azure_agents/)
+
+A collection of ready-to-use Azure AI agents for interactive testing via DevUI. These agents showcase various Azure AI capabilities in a user-friendly interface.
+
+### Available Agents
+
+| Agent | Description | Key Features |
+|-------|-------------|--------------|
+| **weather_agent_basic** | Real-time weather queries using OpenWeatherMap API | Function tools, external API integration |
+| **weather_agent_functions** | Multi-tool weather and time information | Multiple function tools, coordinated queries |
+| **bing_grounding_agent** | Web search with real-time information | HostedWebSearchTool, source citations |
+| **code_interpreter_agent** | Python code execution for data analysis | HostedCodeInterpreterTool, computational tasks |
+| **code_interpreter_agent_with_images** | Enhanced code execution with automatic plot extraction | Image handling, file saving to generated_plots/ |
+| **file_search_agent** | Document search and RAG capabilities | HostedFileSearchTool, vector search, document Q&A |
+| **azure_search_agent** | Enterprise search using Azure AI Search | Vector and hybrid search, indexed data queries |
+| **openapi_tools_agent** | External REST API integration | OpenAPI spec integration, multi-API orchestration |
+
+### Running the DevUI Gallery
+
+```bash
+# From the azure_ai directory
+devui azure_agents --port 8100
+```
+
+Then open http://localhost:8100 in your browser. All agents will appear in the dropdown menu.
+
+### DevUI Agent Setup Notes
+
+#### File Search Agent
+Requires a pre-created vector store:
+1. Go to [Azure AI Foundry](https://ai.azure.com)
+2. Upload documents to create a vector store
+3. Add `FILE_SEARCH_VECTOR_STORE_ID` to your `.env` file
+4. Restart DevUI
+
+#### Azure Search Agent
+Requires Azure AI Search connection:
+1. Create an Azure AI Search service
+2. Connect it to your Azure AI project
+3. Create and populate a search index
+4. Add `AZURE_SEARCH_INDEX_NAME` to `.env` (default: hotels-sample-index)
+
+#### Code Interpreter with Images
+Automatically saves generated plots to `generated_plots/` directory. File paths are provided in responses.
+
+#### Weather Agents
+Require `OPENWEATHER_API_KEY` in `.env` for real weather data.
+
+#### Bing Grounding Agent
+Requires `BING_CONNECTION_ID` in `.env` for web search capabilities.
+
 ## Environment Variables
 
 Before running the examples, you need to set up your environment variables. You can do this in one of two ways:
