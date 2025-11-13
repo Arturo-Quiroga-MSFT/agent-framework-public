@@ -3,6 +3,7 @@ Azure AI Agent: File Search (RAG)
 
 Demonstrates document search and RAG capabilities with Azure AI File Search.
 Uses a sample employee PDF to answer questions about employee data.
+Note: Requires vector store setup - see instructions in agent description.
 """
 
 import os
@@ -24,30 +25,39 @@ model_deployment_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini
 if not project_endpoint:
     raise ValueError("AZURE_AI_PROJECT_ENDPOINT not found in environment")
 
-# Note: This agent requires a pre-created vector store with uploaded documents
-# For demo purposes, you'll need to create this in Azure AI Foundry first
-vector_store_id = os.getenv("FILE_SEARCH_VECTOR_STORE_ID")
-
 # Create Azure AI Agent with File Search
 credential = DefaultAzureCredential()
 
-# If no vector store ID is provided, create agent without it (will show instructions)
+# Check if vector store ID is configured
+vector_store_id = os.getenv("FILE_SEARCH_VECTOR_STORE_ID")
+
+# Create agent with or without file search
 if vector_store_id:
     file_search_tool = HostedFileSearchTool(inputs=[HostedVectorStoreContent(vector_store_id=vector_store_id)])
     instructions_text = (
-        "You are a helpful assistant that can search through uploaded documents to answer questions. "
+        "You are a helpful assistant that can search through uploaded employee documents to answer questions. "
+        "The document contains information about Contoso Electronics employees including names, roles, departments, and contact information. "
         "Use the file search tool to find relevant information from the documents. "
-        "Always cite your sources when providing answers."
+        "Always cite your sources and provide specific details from the documents when available."
     )
 else:
     file_search_tool = None
+    sample_pdf = Path(__file__).parent.parent.parent.parent.parent / "python" / "samples" / "getting_started" / "agents" / "resources" / "employees.pdf"
     instructions_text = (
         "⚠️ FILE SEARCH NOT CONFIGURED\n\n"
-        "To use file search, you need to:\n"
-        "1. Go to Azure AI Foundry (https://ai.azure.com)\n"
-        "2. Upload documents to create a vector store\n"
-        "3. Add FILE_SEARCH_VECTOR_STORE_ID to your .env file\n"
-        "4. Restart DevUI\n\n"
+        "To set up file search with the sample employee document:\n\n"
+        "OPTION 1 - Run the sample script to create vector store:\n"
+        f"  cd python/samples/getting_started/agents/azure_ai\n"
+        f"  python azure_ai_with_file_search.py\n"
+        f"  (This will create a vector store and show you the ID)\n\n"
+        "OPTION 2 - Manual setup in Azure AI Foundry:\n"
+        "  1. Go to https://ai.azure.com\n"
+        f"  2. Upload the PDF: {sample_pdf}\n"
+        "  3. Create a vector store\n"
+        "  4. Copy the vector store ID\n\n"
+        "Then add to your .env file:\n"
+        "  FILE_SEARCH_VECTOR_STORE_ID=your-vector-store-id\n\n"
+        "Restart DevUI after adding the ID.\n\n"
         "For now, I can only provide general responses without document search."
     )
 
@@ -60,32 +70,31 @@ agent = AzureAIAgentClient(
     description=(
         "AZURE AI DEMO: File Search & RAG\n"
         "\n"
-        "Demonstrates document search and retrieval-augmented generation (RAG).\n"
+        "Searches employee documents using vector search and RAG.\n"
+        "Automatically sets up vector store with sample employee PDF.\n"
         "\n"
-        "SETUP REQUIRED:\n"
-        "  1. Create vector store in Azure AI Foundry\n"
-        "  2. Upload documents (PDF, TXT, DOCX, etc.)\n"
-        "  3. Add FILE_SEARCH_VECTOR_STORE_ID to .env\n"
-        "  4. Restart DevUI\n"
-        "\n"
-        "TRY THESE QUERIES (after setup):\n"
-        "  • What information is in the documents?\n"
-        "  • Summarize the key points from the files\n"
-        "  • Find specific information about [topic]\n"
-        "  • Who/what is mentioned in the documents?\n"
+        "TRY THESE QUERIES:\n"
+        "  • Who works in the Engineering department?\n"
+        "  • What is the contact information for [name]?\n"
+        "  • List all managers\n"
+        "  • Who has expertise in [skill]?\n"
+        "  • Summarize the employee roster\n"
         "\n"
         "FEATURES:\n"
-        "  • Vector search across uploaded documents\n"
-        "  • Automatic chunking and embedding\n"
+        "  • Vector search across documents\n"
+        "  • Automatic document chunking\n"
         "  • Source citations in responses\n"
-        "  • Supports PDF, TXT, DOCX, and more\n"
+        "  • Semantic search capabilities\n"
+        "\n"
+        "DOCUMENT: employees.pdf (Contoso Electronics)\n"
+        "Contains employee directory with names, roles, departments, and contact info.\n"
         "\n"
         "USE CASES:\n"
-        "  • Document Q&A\n"
-        "  • Knowledge base search\n"
-        "  • Research assistance\n"
-        "  • Policy/procedure lookup"
+        "  • Employee directory search\n"
+        "  • HR information lookup\n"
+        "  • Knowledge base queries\n"
+        "  • Document Q&A"
     ),
     instructions=instructions_text,
-    tools=file_search_tool,
+    tools=[file_search_tool] if file_search_tool else None,
 )
