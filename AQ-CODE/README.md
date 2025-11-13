@@ -47,10 +47,25 @@ Multi-agent orchestration examples and interactive systems.
 - `multi_agent_dashboard_concurrent.py` - Concurrent multi-agent dashboard (port 8095)
 
 ### 📁 **observability/**
-Observability and telemetry demonstration samples (Workshop Module 4).
+Observability and Redis persistence demonstration samples (Workshop Modules 4 & 5).
+
+**Observability (Module 4):**
 - `observability_azure_ai_agent.py` - Azure AI agent with Application Insights
 - `observability_workflow.py` - Customer feedback analysis workflow with telemetry
-- `OBSERVABILITY_SAMPLES.md` - Comprehensive observability documentation
+
+**Redis Persistence - Console Demos (Module 5):**
+- `redis_demo_preferences.py` - RedisProvider for smart preference memory
+- `redis_demo_persistence.py` - RedisChatMessageStore for conversation persistence
+- `redis_demo_multi_agent.py` - Multi-agent isolation with separate memory scopes
+
+**Redis Persistence - DevUI Demos (Module 5 - Interactive):**
+- `redis_demo_preferences_devui.py` - Interactive preference learning (port 8000)
+- `redis_demo_persistence_devui.py` - Interactive conversation persistence (port 8001)
+- `redis_demo_multi_agent_devui.py` - Side-by-side agents (ports 8002 & 8003)
+
+**Documentation:**
+- `OBSERVABILITY_SAMPLES.md` - Comprehensive observability documentation (Module 4)
+- `REDIS_PERSISTENCE_SAMPLES.md` - Redis persistence workshop documentation (Module 5)
 
 ### 📁 **azure_ai/**
 Azure AI agent samples and implementations.
