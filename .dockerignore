@@ -1,36 +1,128 @@
-# Ignore everything by default
-**
+# ============================================
+# .dockerignore for Agent Framework DevUI Deployments
+# ============================================
+# This file optimizes Docker build context by excluding
+# unnecessary files while including required components
 
-# Allow required files for the Streamlit UI app
-!AQ-CODE/
-
-# Inside AQ-CODE include only these
-AQ-CODE/*
-!AQ-CODE/streamlit_azure_ai_demo.py
-!AQ-CODE/requirements.txt
-!AQ-CODE/sample_documents/**
-!AQ-CODE/MCP_EXPLAINED.md
-!AQ-CODE/streamlit_azure_ai_demo_backup_20251025_1110.py
-
-# Exclude Python cache and virtualenvs
-__pycache__/
-*.pyc
-.venv/
-.env
-
-# Git and CI
+# ============================================
+# Exclude: Development and Git artifacts
+# ============================================
 .git
 .gitignore
+.gitattributes
 .github/
+.vscode/
+.DS_Store
+.cache/
+.pytest_cache/
+.work-folder-info
 
-# Large folders not needed in image
-exports/
+# ============================================
+# Exclude: Python cache and virtual environments
+# ============================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+ENV/
+
+# ============================================
+# Exclude: Environment and secrets
+# ============================================
+.env
+.env.*
+!.env.example
+
+# ============================================
+# Exclude: Large documentation and analysis directories
+# ============================================
 docs/
-python/
-dotnet/
-nl2sql-pipeline/
+LLMOPS/
+MCP/
+MISC/
+migration_research/
+XLS-ANALYSIS/
+
+# ============================================
+# Exclude: Data exports and generated files
+# ============================================
+exports/
 visualizations/
 workflow-samples/
+AQ-CODE/generated_plots/
+*.csv
+*.xlsx
+*.xls
 
-# Node artifacts
+# ============================================
+# Exclude: .NET development files (not needed for Python deployments)
+# ============================================
+dotnet/
+*.sln
+*.slnx
+*.csproj
+*.cs
+
+# ============================================
+# Exclude: Other large directories not needed
+# ============================================
+nl2sql-pipeline/
+MssqlMcp/
 node_modules/
+image.png
+list.txt
+update_from_upstream.sh
+
+# ============================================
+# Exclude: Test files
+# ============================================
+requirements-test.txt
+python/tests/
+python/**/tests/
+**/test_*.py
+**/*_test.py
+
+# ============================================
+# Exclude: Notebook checkpoints
+# ============================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ============================================
+# Exclude: Streamlit artifacts (not needed for DevUI)
+# ============================================
+AQ-CODE/streamlit_*.py
+AQ-CODE/DOCKER_README.md
+AQ-CODE/Dockerfile
+AQ-CODE/deploy-to-azure.sh
+
+# ============================================
+# Exclude: Specific AQ-CODE subdirectories not needed
+# ============================================
+AQ-CODE/_start-here/
+AQ-CODE/llmops/
+AQ-CODE/notebooks/
+AQ-CODE/orchestration/
+AQ-CODE/parallelism/
+
+# ============================================
+# Include: Only what's needed for DevUI deployments
+# ============================================
+# The following are automatically included:
+# - python/packages/core/
+# - python/packages/azure-ai/
+# - python/packages/devui/
+# - python/samples/getting_started/agents/resources/
+# - AQ-CODE/azure_ai/azure_agents/
+# - AQ-CODE/azure_ai/redis_agents/
+# - AQ-CODE/azure_ai/requirements.txt
+# - AQ-CODE/deployment/devui-*/Dockerfile
