@@ -16,7 +16,7 @@ def create_bing_search_agent(chat_client: ChatClientProtocol) -> AgentFrameworkA
     )
     
     base_agent = ChatAgent(
-        name="bing_search_agent",
+        name="bing-search-agent",
         instructions="""You are a helpful web search assistant with access to Bing search.
 
 Your capabilities:

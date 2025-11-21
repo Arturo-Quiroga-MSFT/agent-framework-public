@@ -10,9 +10,9 @@ from pathlib import Path
 
 import uvicorn
 from agent_framework._clients import ChatClientProtocol
-from agent_framework.azure import AzureAIAgentClient
+from agent_framework.azure import AzureAIClient  # V2 API
 from agent_framework.openai import OpenAIChatClient
-from azure.identity import DefaultAzureCredential
+from azure.identity.aio import DefaultAzureCredential
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,12 +36,9 @@ def _build_chat_client() -> ChatClientProtocol:
     """Build chat client from environment variables."""
     try:
         if bool(os.getenv("AZURE_OPENAI_ENDPOINT")):
-            # Azure OpenAI setup
-            deployment_name = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-4o")
-            return AzureAIAgentClient(
+            # Azure OpenAI setup with V2 API
+            return AzureAIClient(
                 async_credential=DefaultAzureCredential(),
-                deployment_name=deployment_name,
-                endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             )
         
         if bool(os.getenv("OPENAI_API_KEY")):

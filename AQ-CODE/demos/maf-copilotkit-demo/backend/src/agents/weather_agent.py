@@ -63,7 +63,7 @@ def create_weather_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAgent
     """Create weather agent with real-time weather API integration."""
     
     base_agent = ChatAgent(
-        name="weather_agent",
+        name="weather-agent",
         instructions="""You are a helpful weather assistant with access to real-time weather data.
 
 When asked about weather:

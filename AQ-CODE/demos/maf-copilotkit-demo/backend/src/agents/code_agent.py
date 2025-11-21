@@ -11,7 +11,7 @@ def create_code_interpreter_agent(chat_client: ChatClientProtocol) -> AgentFrame
     """Create code interpreter agent with execution approval workflow."""
     
     base_agent = ChatAgent(
-        name="code_interpreter_agent",
+        name="code-interpreter-agent",
         instructions="""You are an expert Python programmer with code execution capabilities.
 
 Your capabilities:

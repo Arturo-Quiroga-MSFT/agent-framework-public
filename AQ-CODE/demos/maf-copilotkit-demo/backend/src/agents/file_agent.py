@@ -48,7 +48,7 @@ async def create_file_search_agent(
         doc_context = "document files to answer questions"
     
     base_agent = ChatAgent(
-        name="file_search_agent",
+        name="file-search-agent",
         instructions=f"""You are a helpful assistant that can search through {doc_context}.
 
 Your capabilities:

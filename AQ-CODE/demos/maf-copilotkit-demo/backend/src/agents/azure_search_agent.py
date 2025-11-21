@@ -20,7 +20,7 @@ def create_azure_ai_search_agent(chat_client: ChatClientProtocol) -> AgentFramew
     )
     
     base_agent = ChatAgent(
-        name="azure_ai_search_agent",
+        name="azure-ai-search-agent",
         instructions="""You are a helpful travel assistant with access to a hotel database.
 
 Your capabilities:

@@ -24,7 +24,7 @@ def create_firecrawl_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAge
     )
     
     base_agent = ChatAgent(
-        name="firecrawl_agent",
+        name="firecrawl-agent",
         instructions="""You are a helpful web research assistant with advanced web scraping capabilities.
 
 Your capabilities:
@@ -74,7 +74,7 @@ def create_hosted_mcp_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAg
     )
     
     base_agent = ChatAgent(
-        name="hosted_mcp_agent",
+        name="hosted-mcp-agent",
         instructions="""You are a helpful assistant with access to Microsoft Learn documentation.
 
 Your capabilities:
