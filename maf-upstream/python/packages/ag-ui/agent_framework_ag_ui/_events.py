@@ -134,14 +134,16 @@ class AgentFrameworkEventBridge:
                     logger.info(f"  EMITTING TextMessageStartEvent with message_id={self.current_message_id}")
                     events.append(start_event)
 
-                event = TextMessageContentEvent(
-                    message_id=self.current_message_id,
-                    delta=content.text,
-                )
-                # Accumulate text content for final MessagesSnapshotEvent
-                self.accumulated_text_content += content.text
-                logger.info(f"  EMITTING TextMessageContentEvent with delta: '{content.text}'")
-                events.append(event)
+                # Only emit TextMessageContentEvent if delta is non-empty
+                if content.text:
+                    event = TextMessageContentEvent(
+                        message_id=self.current_message_id,
+                        delta=content.text,
+                    )
+                    # Accumulate text content for final MessagesSnapshotEvent
+                    self.accumulated_text_content += content.text
+                    logger.info(f"  EMITTING TextMessageContentEvent with delta: '{content.text}'")
+                    events.append(event)
 
             elif isinstance(content, FunctionCallContent):
                 # Log tool calls for debugging
