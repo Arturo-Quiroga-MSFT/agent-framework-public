@@ -521,6 +521,13 @@ class AzureAIAgentClient(BaseChatClient):
                                             response_id=response_id,
                                         )
                             case AgentStreamEvent.THREAD_RUN_FAILED:
+                                error_details = {
+                                    "message": event_data.last_error.message if event_data.last_error else "Unknown error",
+                                    "code": getattr(event_data.last_error, 'code', None) if event_data.last_error else None,
+                                    "type": type(event_data.last_error).__name__ if event_data.last_error else None,
+                                    "full_error": str(event_data.last_error) if event_data.last_error else None,
+                                }
+                                logger.error(f"Thread run failed with details: {error_details}")
                                 raise ServiceResponseException(event_data.last_error.message)
                             case _:
                                 yield ChatResponseUpdate(

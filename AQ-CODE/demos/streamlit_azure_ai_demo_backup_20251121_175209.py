@@ -29,11 +29,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentRunResponse, HostedMCPTool, ChatMessage
 from agent_framework.azure import AzureAIAgentClient
-from azure.identity.aio import DefaultAzureCredential, AzureCliCredential
+from azure.identity.aio import DefaultAzureCredential
 from azure.ai.agents.models import FileInfo, VectorStore
 
 # Load environment variables - use absolute path
-env_path = Path(__file__).resolve().parent.parent / ".env"
+env_path = Path(__file__).resolve().parent.parent / "python" / "samples" / "getting_started" / ".env"
 print(f"[DEBUG] Loading .env from: {env_path}")
 print(f"[DEBUG] .env exists: {env_path.exists()}")
 load_dotenv(dotenv_path=env_path)
@@ -146,9 +146,9 @@ async def run_threaded_chat(user_query: str) -> str:
 
 async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
     """Run agent with code interpreter capability. Returns (text_response, list_of_image_bytes)."""
-    async with AzureCliCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as chat_client:
-            agent = chat_client.create_agent(
+    async with DefaultAzureCredential() as credential:
+        async with AzureAIAgentClient(async_credential=credential) as client:
+            agent = client.create_agent(
                 name="CodingAgent",
                 instructions="You are a helpful assistant that can write and execute Python code to solve problems. When asked to perform calculations or data analysis, write Python code and execute it using the code interpreter. Always describe what the code does and show the results.",
                 tools=HostedCodeInterpreterTool(),
@@ -163,7 +163,7 @@ async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
             
             # Get messages from the thread to check for image outputs
             try:
-                messages_iterator = chat_client.project_client.agents.messages.list(thread_id=thread.service_thread_id)
+                messages_iterator = client.project_client.agents.messages.list(thread_id=thread.service_thread_id)
                 
                 async for message in messages_iterator:
                     for content_item in message.content:
@@ -171,7 +171,7 @@ async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
                             file_id = content_item.image_file.file_id
                             
                             try:
-                                file_content_stream = await chat_client.project_client.agents.files.get_content(file_id)
+                                file_content_stream = await client.project_client.agents.files.get_content(file_id)
                                 chunks = []
                                 async for chunk in file_content_stream:
                                     chunks.append(chunk)
@@ -900,13 +900,9 @@ def main():
         st.markdown("""
         This demo shows a simple chat interaction with an Azure AI agent.
         Each query is independent (no conversation history).
+        
+        **Example:** Try asking "Tell me a fun fact about artificial intelligence"
         """)
-        
-        st.markdown("**Example:**")
-        if st.button("💬 Tell me a fun fact about artificial intelligence", key="basic_ex1"):
-            st.session_state.current_prompt = "Tell me a fun fact about artificial intelligence"
-            st.rerun()
-        
         demo_key = "basic"
         
     elif demo_mode == "Weather Function Tool":
@@ -914,13 +910,9 @@ def main():
         st.markdown("""
         This demo showcases function calling with a real weather API.
         The agent can fetch live weather data using the OpenWeatherMap API.
+        
+        **Example:** Try "What's the weather like in Toronto?"
         """)
-        
-        st.markdown("**Example:**")
-        if st.button("🌤️ What's the weather like in Toronto?", key="weather_ex1"):
-            st.session_state.current_prompt = "What's the weather like in Toronto?"
-            st.rerun()
-        
         demo_key = "weather"
         
     elif demo_mode == "Threaded Conversation":
@@ -928,23 +920,12 @@ def main():
         st.markdown("""
         This demo maintains conversation context across multiple queries.
         The agent remembers previous messages and can reference them.
+        
+        **Example:** 
+        1. "What's the weather in Toronto?"
+        2. "What about Mexico City?"
+        3. "Which one is warmer?"
         """)
-        
-        st.markdown("**Examples (try in order):**")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("1️⃣ What's the weather in Toronto?", key="thread_ex1"):
-                st.session_state.current_prompt = "What's the weather in Toronto?"
-                st.rerun()
-        with col2:
-            if st.button("2️⃣ What about Mexico City?", key="thread_ex2"):
-                st.session_state.current_prompt = "What about Mexico City?"
-                st.rerun()
-        with col3:
-            if st.button("3️⃣ Which one is warmer?", key="thread_ex3"):
-                st.session_state.current_prompt = "Which one is warmer?"
-                st.rerun()
-        
         demo_key = "thread"
         
         if st.sidebar.button("🔄 Reset Conversation"):
@@ -958,75 +939,51 @@ def main():
         This demo shows the agent's ability to write and execute Python code.
         Perfect for mathematical calculations, data analysis, and visualizations.
         
-        **Try these examples (click to use):** 
+        **Try these examples:** 
         """)
         
         # Create expandable sections for different categories
-        with st.expander("📊 Mathematical Visualizations", expanded=True):
-            if st.button("🌀 Plot the Mandelbrot set fractal", key="code_ex_mandel"):
-                st.session_state.current_prompt = "Plot the Mandelbrot set fractal"
-                st.rerun()
-            if st.button("🎯 Create a 3D surface plot of z = sin(x) * cos(y) for x and y from -5 to 5", key="code_ex_3d"):
-                st.session_state.current_prompt = "Create a 3D surface plot of z = sin(x) * cos(y) for x and y from -5 to 5"
-                st.rerun()
-            if st.button("🌺 Create a polar plot of r = sin(5θ) to make a flower pattern", key="code_ex_polar"):
-                st.session_state.current_prompt = "Create a polar plot of r = sin(5θ) to make a flower pattern"
-                st.rerun()
-            if st.button("🔢 Visualize the Fibonacci spiral with the first 15 numbers", key="code_ex_fib"):
-                st.session_state.current_prompt = "Visualize the Fibonacci spiral with the first 15 numbers"
-                st.rerun()
-            if st.button("🔥 Plot a heatmap of a correlation matrix for 5 random variables", key="code_ex_heat"):
-                st.session_state.current_prompt = "Plot a heatmap of a correlation matrix for 5 random variables"
-                st.rerun()
+        with st.expander("📊 Mathematical Visualizations"):
+            st.markdown("""
+            - "Create a 3D surface plot of z = sin(x) * cos(y) for x and y from -5 to 5"
+            - "Plot the Mandelbrot set fractal"
+            - "Create a polar plot of r = sin(5θ) to make a flower pattern"
+            - "Visualize the Fibonacci spiral with the first 15 numbers"
+            - "Plot a heatmap of a correlation matrix for 5 random variables"
+            """)
         
         with st.expander("📈 Data Analysis Plots"):
-            if st.button("📊 Generate 1000 points with scatter plot and regression line", key="code_ex_scatter"):
-                st.session_state.current_prompt = "Generate a dataset of 1000 points and create a scatter plot with a regression line"
-                st.rerun()
-            if st.button("📦 Create box plots comparing three normal distributions", key="code_ex_box"):
-                st.session_state.current_prompt = "Create box plots comparing three normal distributions with different means"
-                st.rerun()
-            if st.button("📉 Generate histogram with KDE overlay for bimodal distribution", key="code_ex_hist"):
-                st.session_state.current_prompt = "Generate a histogram with kernel density estimation overlay for a bimodal distribution"
-                st.rerun()
+            st.markdown("""
+            - "Generate a dataset of 1000 points and create a scatter plot with a regression line"
+            - "Create box plots comparing three normal distributions with different means"
+            - "Generate a histogram with kernel density estimation overlay for a bimodal distribution"
+            """)
         
         with st.expander("🎨 Creative Visualizations"):
-            if st.button("🥧 Create pie chart with exploded slices", key="code_ex_pie"):
-                st.session_state.current_prompt = "Create a pie chart with exploded slices showing market share data"
-                st.rerun()
-            if st.button("🎲 Generate a Voronoi diagram with 20 random points", key="code_ex_voronoi"):
-                st.session_state.current_prompt = "Generate a Voronoi diagram with 20 random points"
-                st.rerun()
+            st.markdown("""
+            - "Create a pie chart with exploded slices showing market share data"
+            - "Generate a Voronoi diagram with 20 random points"
+            """)
         
         with st.expander("🔬 Scientific Plots"):
-            if st.button("🎯 Plot projectile trajectory with different launch angles", key="code_ex_proj"):
-                st.session_state.current_prompt = "Plot the trajectory of a projectile with different launch angles"
-                st.rerun()
-            if st.button("🦋 Visualize the Lorenz attractor (butterfly effect)", key="code_ex_lorenz"):
-                st.session_state.current_prompt = "Visualize the Lorenz attractor (butterfly effect)"
-                st.rerun()
-            if st.button("⚡ Create phase diagram for damped harmonic oscillator", key="code_ex_phase"):
-                st.session_state.current_prompt = "Create a phase diagram for a damped harmonic oscillator"
-                st.rerun()
+            st.markdown("""
+            - "Plot the trajectory of a projectile with different launch angles"
+            - "Visualize the Lorenz attractor (butterfly effect)"
+            - "Create a phase diagram for a damped harmonic oscillator"
+            """)
         
         with st.expander("🌈 Patterns & Geometry"):
-            if st.button("🎨 Create colormap visualization showing matplotlib colormaps", key="code_ex_cmap"):
-                st.session_state.current_prompt = "Create a colormap visualization showing different matplotlib colormaps"
-                st.rerun()
-            if st.button("🌀 Generate a spirograph pattern", key="code_ex_spiro"):
-                st.session_state.current_prompt = "Generate a spirograph pattern with different parameters"
-                st.rerun()
+            st.markdown("""
+            - "Create a colormap visualization showing different matplotlib colormaps"
+            - "Generate a spirograph pattern with different parameters"
+            """)
         
         with st.expander("🧮 Simple Examples"):
-            if st.button("💯 Calculate the factorial of 100", key="code_ex_fact"):
-                st.session_state.current_prompt = "Calculate the factorial of 100"
-                st.rerun()
-            if st.button("🔢 Generate Fibonacci sequence up to 1000", key="code_ex_fib_seq"):
-                st.session_state.current_prompt = "Generate the Fibonacci sequence up to 1000"
-                st.rerun()
-            if st.button("📐 Create a plot of y = x^2 from -10 to 10", key="code_ex_simple"):
-                st.session_state.current_prompt = "Create a plot of y = x^2 from -10 to 10"
-                st.rerun()
+            st.markdown("""
+            - "Calculate the factorial of 100"
+            - "Generate the Fibonacci sequence up to 1000"
+            - "Create a plot of y = x^2 from -10 to 10"
+            """)
         
         demo_key = "code"
     
@@ -1039,26 +996,14 @@ def main():
         💬 **Conversation Memory:** This scenario maintains conversation history, so you can ask
         follow-up questions and the agent will remember previous searches and context.
         
-        **Examples (click to use):** 
+        **Example:** 
+        - "What are the latest developments in AI?"
+        - "Who won the most recent Nobel Prize in Physics?"
+        - "What's the current weather forecast for next week?"
+        - **Follow-up:** "Tell me more about that" (references previous search)
+        
+        **Note:** Requires Bing Grounding connection configured in Azure AI Foundry.
         """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🤖 What are the latest developments in AI?", key="bing_ex1"):
-                st.session_state.current_prompt = "What are the latest developments in AI?"
-                st.rerun()
-            if st.button("🌤️ What's the current weather forecast for next week?", key="bing_ex3"):
-                st.session_state.current_prompt = "What's the current weather forecast for next week?"
-                st.rerun()
-        with col2:
-            if st.button("🏆 Who won the most recent Nobel Prize in Physics?", key="bing_ex2"):
-                st.session_state.current_prompt = "Who won the most recent Nobel Prize in Physics?"
-                st.rerun()
-            if st.button("💬 Tell me more about that", key="bing_ex4"):
-                st.session_state.current_prompt = "Tell me more about that"
-                st.rerun()
-        
-        st.markdown("**Note:** Requires Bing Grounding connection configured in Azure AI Foundry.")
         demo_key = "bing"
         
         # Add clear memory button
@@ -1088,70 +1033,35 @@ def main():
             st.session_state.filesearch_thread_id = None
             st.success("✅ Conversation memory cleared! Starting fresh.")
         
-        # Show relevant example questions based on selected document with clickable buttons
+        # Show relevant example questions based on selected document
         if selected_doc == "employees.pdf":
-            st.markdown("**Example questions about employees (click to use):**")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("👶 Who is the youngest employee?", key="file_emp1"):
-                    st.session_state.current_prompt = "Who is the youngest employee?"
-                    st.rerun()
-                if st.button("📊 List all employees in marketing", key="file_emp3"):
-                    st.session_state.current_prompt = "List all employees in marketing"
-                    st.rerun()
-                if st.button("🤝 I have a customer request, who can help me?", key="file_emp5"):
-                    st.session_state.current_prompt = "I have a customer request, who can help me?"
-                    st.rerun()
-            with col2:
-                if st.button("💼 Who works in sales?", key="file_emp2"):
-                    st.session_state.current_prompt = "Who works in sales?"
-                    st.rerun()
-                if st.button("🏆 Who has the most experience?", key="file_emp4"):
-                    st.session_state.current_prompt = "Who has the most experience?"
-                    st.rerun()
+            st.markdown("""
+            **Example questions about employees:**
+            - "Who is the youngest employee?"
+            - "Who works in sales?"
+            - "List all employees in marketing"
+            - "Who has the most experience?"
+            - "I have a customer request, who can help me?"
+            """)
         elif selected_doc == "product_catalog.txt":
-            st.markdown("**Example questions about products (click to use):**")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("💻 What laptops do you have available?", key="file_prod1"):
-                    st.session_state.current_prompt = "What laptops do you have available?"
-                    st.rerun()
-                if st.button("💰 What's the most expensive product?", key="file_prod3"):
-                    st.session_state.current_prompt = "What's the most expensive product?"
-                    st.rerun()
-                if st.button("🎧 What accessories are available?", key="file_prod5"):
-                    st.session_state.current_prompt = "What accessories are available?"
-                    st.rerun()
-            with col2:
-                if st.button("💵 Show me all products under $500", key="file_prod2"):
-                    st.session_state.current_prompt = "Show me all products under $500"
-                    st.rerun()
-                if st.button("📱 Do you have any smartphones in stock?", key="file_prod4"):
-                    st.session_state.current_prompt = "Do you have any smartphones in stock?"
-                    st.rerun()
-                if st.button("📋 What's the warranty policy?", key="file_prod6"):
-                    st.session_state.current_prompt = "What's the warranty policy?"
-                    st.rerun()
+            st.markdown("""
+            **Example questions about products:**
+            - "What laptops do you have available?"
+            - "Show me all products under $500"
+            - "What's the most expensive product?"
+            - "Do you have any smartphones in stock?"
+            - "What accessories are available?"
+            - "What's the warranty policy?"
+            """)
         else:  # ai_research.pdf
-            st.markdown("**Example questions about the research paper (click to use):**")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📄 What is this paper about?", key="file_ai1"):
-                    st.session_state.current_prompt = "What is this paper about?"
-                    st.rerun()
-                if st.button("🔍 What are the main contributions of this paper?", key="file_ai3"):
-                    st.session_state.current_prompt = "What are the main contributions of this paper?"
-                    st.rerun()
-                if st.button("📊 What datasets were used in the experiments?", key="file_ai5"):
-                    st.session_state.current_prompt = "What datasets were used in the experiments?"
-                    st.rerun()
-            with col2:
-                if st.button("🤖 What is the Transformer architecture?", key="file_ai2"):
-                    st.session_state.current_prompt = "What is the Transformer architecture?"
-                    st.rerun()
-                if st.button("⚡ How does the attention mechanism work?", key="file_ai4"):
-                    st.session_state.current_prompt = "How does the attention mechanism work?"
-                    st.rerun()
+            st.markdown("""
+            **Example questions about the research paper:**
+            - "What is this paper about?"
+            - "What is the Transformer architecture?"
+            - "What are the main contributions of this paper?"
+            - "How does the attention mechanism work?"
+            - "What datasets were used in the experiments?"
+            """)
         
         demo_key = "filesearch"
         
@@ -1173,32 +1083,17 @@ def main():
         💬 **Conversation Memory:** This scenario maintains conversation history, so you can ask
         follow-up questions and the agent will remember previous searches and context.
         
-        **Example questions (click to use):**
+        **Example questions:**
+        - "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
+        - "Find luxury hotels with good ratings"
+        - "What hotels are available near the beach?"
+        - "Show me budget-friendly hotels"
+        - "Tell me about hotels with conference facilities"
+        - **Follow-up:** "Which of those has the best rating?" (references previous results)
+        
+        **Note:** Requires Azure AI Search connection configured in your Azure AI project
+        with the 'hotels-sample-index' deployed.
         """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🏨 Search for Stay-Kay City Hotel details", key="search_ex1"):
-                st.session_state.current_prompt = "Search the hotel database for Stay-Kay City Hotel and give me detailed information"
-                st.rerun()
-            if st.button("🏖️ Hotels available near the beach?", key="search_ex3"):
-                st.session_state.current_prompt = "What hotels are available near the beach?"
-                st.rerun()
-            if st.button("🎯 Hotels with conference facilities?", key="search_ex5"):
-                st.session_state.current_prompt = "Tell me about hotels with conference facilities"
-                st.rerun()
-        with col2:
-            if st.button("⭐ Find luxury hotels with good ratings", key="search_ex2"):
-                st.session_state.current_prompt = "Find luxury hotels with good ratings"
-                st.rerun()
-            if st.button("💰 Show me budget-friendly hotels", key="search_ex4"):
-                st.session_state.current_prompt = "Show me budget-friendly hotels"
-                st.rerun()
-            if st.button("🔍 Which has the best rating?", key="search_ex6"):
-                st.session_state.current_prompt = "Which of those has the best rating?"
-                st.rerun()
-        
-        st.markdown("**Note:** Requires Azure AI Search connection configured in your Azure AI project with the 'hotels-sample-index' deployed.")
         demo_key = "azureaisearch"
         
         # Add clear memory button
@@ -1215,29 +1110,15 @@ def main():
         🔥 **What is Firecrawl?** Firecrawl is a powerful web scraping service that converts 
         websites into clean markdown, handles JavaScript rendering, and bypasses bot detection.
         
-        **Example questions (click to use):**
+        **Example questions:**
+        - "Scrape the content from https://news.ycombinator.com and summarize the top stories"
+        - "What are the latest articles on https://techcrunch.com about AI?"
+        - "Extract and analyze the main content from https://example.com/article"
+        - "Get the pricing information from https://openai.com/pricing"
+        - "Summarize the documentation at https://docs.python.org/3/"
+        
+        **Note:** API key is loaded from .env file (FIRECRAWL_API_KEY)
         """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📰 Scrape and summarize Hacker News top stories", key="fire_ex1"):
-                st.session_state.current_prompt = "Scrape the content from https://news.ycombinator.com and summarize the top stories"
-                st.rerun()
-            if st.button("📄 Extract content from example.com/article", key="fire_ex3"):
-                st.session_state.current_prompt = "Extract and analyze the main content from https://example.com/article"
-                st.rerun()
-            if st.button("📚 Summarize Python documentation", key="fire_ex5"):
-                st.session_state.current_prompt = "Summarize the documentation at https://docs.python.org/3/"
-                st.rerun()
-        with col2:
-            if st.button("🤖 Latest TechCrunch AI articles", key="fire_ex2"):
-                st.session_state.current_prompt = "What are the latest articles on https://techcrunch.com about AI?"
-                st.rerun()
-            if st.button("💰 Get OpenAI pricing information", key="fire_ex4"):
-                st.session_state.current_prompt = "Get the pricing information from https://openai.com/pricing"
-                st.rerun()
-        
-        st.markdown("**Note:** API key is loaded from .env file (FIRECRAWL_API_KEY)")
         
         # Load API key from environment
         firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
@@ -1262,32 +1143,17 @@ def main():
         🔗 **What is MCP?** MCP is a standardized protocol that allows AI agents to connect to 
         external tools and data sources. [Learn more](./MCP_EXPLAINED.md)
         
-        **Example questions (click to use):**
+        **Example questions:**
+        - "How do I create an Azure storage account using az cli?"
+        - "What is the Microsoft Agent Framework?"
+        - "How do I deploy a Python web app to Azure?"
+        - "What are the best practices for Azure Functions?"
+        - "Explain Azure OpenAI Service capabilities"
+        - "How do I set up authentication for Azure resources?"
+        
+        **Note:** This uses a **hosted** MCP server (managed by Microsoft).
+        For the difference between hosted and local MCP, see `MCP_EXPLAINED.md`.
         """)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("💾 Create Azure storage account using az cli", key="mcp_ex1"):
-                st.session_state.current_prompt = "How do I create an Azure storage account using az cli?"
-                st.rerun()
-            if st.button("🌐 Deploy Python web app to Azure", key="mcp_ex3"):
-                st.session_state.current_prompt = "How do I deploy a Python web app to Azure?"
-                st.rerun()
-            if st.button("🤖 Azure OpenAI Service capabilities", key="mcp_ex5"):
-                st.session_state.current_prompt = "Explain Azure OpenAI Service capabilities"
-                st.rerun()
-        with col2:
-            if st.button("🤖 What is the Microsoft Agent Framework?", key="mcp_ex2"):
-                st.session_state.current_prompt = "What is the Microsoft Agent Framework?"
-                st.rerun()
-            if st.button("⚡ Azure Functions best practices", key="mcp_ex4"):
-                st.session_state.current_prompt = "What are the best practices for Azure Functions?"
-                st.rerun()
-            if st.button("🔐 Set up Azure resource authentication", key="mcp_ex6"):
-                st.session_state.current_prompt = "How do I set up authentication for Azure resources?"
-                st.rerun()
-        
-        st.markdown("**Note:** This uses a **hosted** MCP server (managed by Microsoft). For the difference between hosted and local MCP, see `MCP_EXPLAINED.md`.")
         demo_key = "hostedmcp"
     
     # Initialize message history for this demo
@@ -1307,15 +1173,8 @@ def main():
             else:
                 st.markdown(message["content"])
     
-    # Check if there's a prompt from a button click
-    if "current_prompt" in st.session_state and st.session_state.current_prompt:
-        prompt = st.session_state.current_prompt
-        st.session_state.current_prompt = None  # Clear it so it doesn't repeat
-    else:
-        # Chat input
-        prompt = st.chat_input("Ask me anything...")
-    
-    if prompt:
+    # Chat input
+    if prompt := st.chat_input("Ask me anything..."):
         # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
