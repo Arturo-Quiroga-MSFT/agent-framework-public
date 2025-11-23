@@ -6,7 +6,7 @@ echo "=========================================="
 echo ""
 
 # Check if we're in the right directory
-if [ ! -f "azure_ai_basic.py" ]; then
+if [ ! -d "azure_agents" ]; then
     echo "❌ Error: Please run this script from the azure_ai directory"
     exit 1
 fi
@@ -21,49 +21,56 @@ fi
 MODE=${1:-"standalone"}
 
 case $MODE in
-    "standalone"|"1")
-        echo "📍 Mode: Standalone Script"
-        echo "🔧 Running: python azure_ai_basic_devui.py"
+    "gallery"|"1"|"standalone")
+        echo "📍 Mode: DevUI Gallery (default)"
+        echo "🔧 Running: devui azure_agents --port 8100"
         echo ""
-        python azure_ai_basic_devui.py
+        echo "💡 All agents will be available in the dropdown menu"
+        echo "   Open http://localhost:8100 in your browser"
+        echo ""
+        devui azure_agents --port 8100
         ;;
     
-    "discovery"|"2")
-        echo "📍 Mode: Directory Discovery"
-        echo "🔧 Running: devui devui_agents --port 8090"
+    "tracing"|"2")
+        echo "📍 Mode: DevUI Gallery with Tracing"
+        echo "🔧 Running: devui azure_agents --port 8100 --tracing framework"
         echo ""
-        devui devui_agents --port 8090
-        ;;
-    
-    "tracing"|"3")
-        echo "📍 Mode: Directory Discovery with Tracing"
-        echo "🔧 Running: devui devui_agents --port 8090 --tracing framework"
+        echo "💡 OpenTelemetry tracing enabled"
+        echo "   Open http://localhost:8100 in your browser"
         echo ""
-        devui devui_agents --port 8090 --tracing framework
+        devui azure_agents --port 8100 --tracing framework
         ;;
     
     "test")
-        echo "📍 Mode: Test Agent"
-        echo "🔧 Running: python azure_ai_basic_devui.py --test"
+        echo "📍 Mode: Test Weather Agent"
+        echo "🔧 Running: python test_weather.py"
         echo ""
-        python azure_ai_basic_devui.py --test
+        python test_weather.py
         ;;
     
     *)
         echo "Usage: $0 [mode]"
         echo ""
         echo "Modes:"
-        echo "  standalone (1)  - Run standalone script (default)"
-        echo "  discovery (2)   - Use directory discovery"
-        echo "  tracing (3)     - Enable OpenTelemetry tracing"
-        echo "  test           - Test agent without DevUI"
+        echo "  gallery (1)    - Run DevUI Gallery (default)"
+        echo "  tracing (2)    - Enable OpenTelemetry tracing"
+        echo "  test           - Test weather agent without DevUI"
         echo ""
         echo "Examples:"
-        echo "  $0                    # Run standalone (default)"
-        echo "  $0 standalone         # Run standalone"
-        echo "  $0 discovery          # Use directory discovery"
+        echo "  $0                    # Run DevUI Gallery (default)"
+        echo "  $0 gallery            # Run DevUI Gallery"
         echo "  $0 tracing            # Enable tracing"
         echo "  $0 test               # Test without DevUI"
+        echo ""
+        echo "Available Agents in Gallery:"
+        echo "  • weather_agent_basic               - Weather queries"
+        echo "  • weather_agent_functions           - Multi-tool weather & time"
+        echo "  • bing_grounding_agent             - Web search"
+        echo "  • code_interpreter_agent           - Python code execution"
+        echo "  • code_interpreter_agent_with_images - Code with plot extraction"
+        echo "  • file_search_agent                - Document search/RAG"
+        echo "  • azure_search_agent               - Azure AI Search"
+        echo "  • openapi_tools_agent              - REST API integration"
         exit 1
         ;;
 esac

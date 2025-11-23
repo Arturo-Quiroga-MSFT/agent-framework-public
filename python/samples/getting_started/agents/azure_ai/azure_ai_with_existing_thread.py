@@ -7,9 +7,11 @@ from typing import Annotated
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
@@ -72,7 +74,7 @@ async def main() -> None:
             ) as agent:
                 thread = agent.get_new_thread(service_thread_id=created_thread.id)
                 assert thread.is_initialized
-                result = await agent.run("What's the weather like in Tokyo?", thread=thread)
+                result = await agent.run("What's the weather like in Cancun?", thread=thread)
                 print(f"Result: {result}\n")
         finally:
             # Clean up the thread manually

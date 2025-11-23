@@ -8,9 +8,11 @@ from typing import Annotated
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIAgentClient
@@ -74,7 +76,7 @@ async def tools_on_agent_level() -> None:
         ) as agent,
     ):
         # First query - agent can use weather tool
-        query1 = "What's the weather like in New York?"
+        query1 = "What's the weather like in Toronto?"
         print(f"User: {query1}")
         result1 = await agent.run(query1)
         print(f"Agent: {result1}\n")
@@ -86,7 +88,7 @@ async def tools_on_agent_level() -> None:
         print(f"Agent: {result2}\n")
 
         # Third query - agent can use both tools if needed
-        query3 = "What's the weather in London and what's the current UTC time?"
+        query3 = "What's the weather in Mexico City and what's the current UTC time?"
         print(f"User: {query3}")
         result3 = await agent.run(query3)
         print(f"Agent: {result3}\n")
@@ -108,7 +110,7 @@ async def tools_on_run_level() -> None:
         ) as agent,
     ):
         # First query with weather tool
-        query1 = "What's the weather like in Seattle?"
+        query1 = "What's the weather like in Guadalajara?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, tools=[get_weather])  # Tool passed to run method
         print(f"Agent: {result1}\n")
@@ -120,7 +122,7 @@ async def tools_on_run_level() -> None:
         print(f"Agent: {result2}\n")
 
         # Third query with multiple tools
-        query3 = "What's the weather in Chicago and what's the current UTC time?"
+        query3 = "What's the weather in Monterrey and what's the current UTC time?"
         print(f"User: {query3}")
         result3 = await agent.run(query3, tools=[get_weather, get_time])  # Multiple tools
         print(f"Agent: {result3}\n")

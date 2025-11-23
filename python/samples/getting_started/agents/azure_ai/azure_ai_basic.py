@@ -7,9 +7,11 @@ from typing import Annotated
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import AzureCliCredential
@@ -65,7 +67,7 @@ async def non_streaming_example() -> None:
             tools=get_weather,
         ) as agent,
     ):
-        query = "What's the weather like in Seattle?"
+        query = "What's the weather like in Toronto?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}\n")
@@ -87,7 +89,7 @@ async def streaming_example() -> None:
             tools=get_weather,
         ) as agent,
     ):
-        query = "What's the weather like in Portland?"
+        query = "What's the weather like in Mexico City?"
         print(f"User: {query}")
         print("Agent: ", end="", flush=True)
         async for chunk in agent.run_stream(query):

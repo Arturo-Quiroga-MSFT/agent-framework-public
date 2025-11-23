@@ -5,9 +5,11 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import ChatAgent, CitationAnnotation
 from agent_framework.azure import AzureAIAgentClient
@@ -55,7 +57,7 @@ async def main() -> None:
                 break
 
         # 1. Create Azure AI agent with the search tool
-        azure_ai_agent = await project_client.agents.create_agent(
+        azure_ai_agent = await agents_client.create_agent(
             model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
             name="HotelSearchAgent",
             instructions=(
@@ -69,7 +71,7 @@ async def main() -> None:
                         {
                             "index_connection_id": ai_search_conn_id,
                             "index_name": "hotels-sample-index",
-                            "query_type": "vector",
+                            "query_type": "simple",
                         }
                     ]
                 }
@@ -120,7 +122,7 @@ async def main() -> None:
 
         finally:
             # Clean up the agent manually
-            await project_client.agents.delete_agent(azure_ai_agent.id)
+            await agents_client.delete_agent(azure_ai_agent.id)
 
 
 if __name__ == "__main__":

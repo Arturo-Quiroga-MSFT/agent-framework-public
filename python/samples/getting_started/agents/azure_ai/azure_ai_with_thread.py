@@ -7,9 +7,11 @@ from typing import Annotated
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from getting_started/.env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import AgentThread, ChatAgent
 from agent_framework.azure import AzureAIAgentClient
@@ -65,7 +67,7 @@ async def example_with_automatic_thread_creation() -> None:
         ) as agent,
     ):
         # First conversation - no thread provided, will be created automatically
-        first_query = "What's the weather like in Seattle?"
+        first_query = "What's the weather like in Toronto?"
         print(f"User: {first_query}")
         first_result = await agent.run(first_query)
         print(f"Agent: {first_result.text}")
@@ -97,13 +99,13 @@ async def example_with_thread_persistence() -> None:
         thread = agent.get_new_thread()
 
         # First conversation
-        first_query = "What's the weather like in Tokyo?"
+        first_query = "What's the weather like in Mexico City?"
         print(f"User: {first_query}")
         first_result = await agent.run(first_query, thread=thread)
         print(f"Agent: {first_result.text}")
 
         # Second conversation using the same thread - maintains context
-        second_query = "How about London?"
+        second_query = "How about Guadalajara?"
         print(f"\nUser: {second_query}")
         second_result = await agent.run(second_query, thread=thread)
         print(f"Agent: {second_result.text}")
@@ -136,7 +138,7 @@ async def example_with_existing_thread_id() -> None:
     ):
         # Start a conversation and get the thread ID
         thread = agent.get_new_thread()
-        first_query = "What's the weather in Paris?"
+        first_query = "What's the weather in Monterrey?"
         print(f"User: {first_query}")
         first_result = await agent.run(first_query, thread=thread)
         print(f"Agent: {first_result.text}")
