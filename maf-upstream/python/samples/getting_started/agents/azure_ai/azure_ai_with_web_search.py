@@ -1,6 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import HostedWebSearchTool
 from agent_framework.azure import AzureAIClient
@@ -30,17 +38,17 @@ async def main() -> None:
             tools=[HostedWebSearchTool()],
         ) as agent,
     ):
-        query = "What's the weather today in Seattle?"
+        query = "What's the weather today in Toronto?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}\n")
 
     """
     Sample output:
-    User: What's the weather today in Seattle?
-    Agent: Here is the updated weather forecast for Seattle: The current temperature is approximately 57°F,
-           mostly cloudy conditions, with light winds and a chance of rain later tonight. Check out more details
-           at the [National Weather Service](https://forecast.weather.gov/zipcity.php?inputstring=Seattle%2CWA).
+    User: What's the weather today in Toronto?
+    Agent: Here is the updated weather forecast for Toronto: The current temperature is approximately 15°C,
+           partly cloudy conditions, with moderate winds. Check out more details
+           at the [Weather Network](https://www.theweathernetwork.com/ca/weather/ontario/toronto).
     """
 
 

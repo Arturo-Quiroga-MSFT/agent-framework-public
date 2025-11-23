@@ -1,8 +1,17 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import asyncio
-from random import randint
+import os
+import httpx
 from typing import Annotated
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework.azure import AzureAIClient
 from azure.identity.aio import AzureCliCredential
@@ -19,9 +28,29 @@ persistent conversation capabilities using service-managed threads as well as st
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
-    """Get the weather for a given location."""
-    conditions = ["sunny", "cloudy", "rainy", "stormy"]
-    return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
+    """Get the current weather for a given location using OpenWeatherMap API."""
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return f"Error: OPENWEATHER_API_KEY not found in environment variables."
+    
+    try:
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}&units=metric"
+        response = httpx.get(url, timeout=10.0)
+        response.raise_for_status()
+        data = response.json()
+        
+        temp = data["main"]["temp"]
+        feels_like = data["main"]["feels_like"]
+        description = data["weather"][0]["description"]
+        humidity = data["main"]["humidity"]
+        
+        return f"The weather in {location} is {description} with a temperature of {temp}°C (feels like {feels_like}°C) and {humidity}% humidity."
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return f"Error: Location '{location}' not found."
+        return f"Error fetching weather data: {e}"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 async def example_with_automatic_thread_creation() -> None:
@@ -37,7 +66,7 @@ async def example_with_automatic_thread_creation() -> None:
         ) as agent,
     ):
         # First conversation - no thread provided, will be created automatically
-        query1 = "What's the weather like in Seattle?"
+        query1 = "What's the weather like in Toronto?"
         print(f"User: {query1}")
         result1 = await agent.run(query1)
         print(f"Agent: {result1.text}")
@@ -69,13 +98,13 @@ async def example_with_thread_persistence_in_memory() -> None:
         thread = agent.get_new_thread()
 
         # First conversation
-        query1 = "What's the weather like in Tokyo?"
+        query1 = "What's the weather like in Mexico City?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, thread=thread, store=False)
         print(f"Agent: {result1.text}")
 
         # Second conversation using the same thread - maintains context
-        query2 = "How about London?"
+        query2 = "How about Guadalajara?"
         print(f"\nUser: {query2}")
         result2 = await agent.run(query2, thread=thread, store=False)
         print(f"Agent: {result2.text}")
@@ -109,7 +138,7 @@ async def example_with_existing_thread_id() -> None:
         # Start a conversation and get the thread ID
         thread = agent.get_new_thread()
 
-        query1 = "What's the weather in Paris?"
+        query1 = "What's the weather in Monterrey?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, thread=thread)
         print(f"Agent: {result1.text}")

@@ -2,16 +2,19 @@
 
 import asyncio
 import os
-
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import ChatAgent
 from agent_framework_aisearch import AzureAISearchContextProvider
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
-
-# Load environment variables from .env file
-load_dotenv()
 
 """
 This sample demonstrates how to use Azure AI Search with semantic mode for RAG

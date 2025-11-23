@@ -1,6 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
 import asyncio
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
+local_env_path = Path(__file__).parent / ".env"
+parent_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=local_env_path)  # Load local first
+load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework.azure import AzureAIClient
 from azure.identity.aio import AzureCliCredential
@@ -44,7 +52,7 @@ async def main() -> None:
             },
         ) as agent,
     ):
-        query = "What is today's date and weather in Seattle?"
+        query = "What is today's date and weather in Toronto?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Result: {result}\n")
