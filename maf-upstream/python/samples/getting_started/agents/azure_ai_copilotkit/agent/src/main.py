@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint
+from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
 
 from weather_agent import create_weather_agent
 
@@ -32,7 +32,7 @@ app.add_middleware(
 add_agent_framework_fastapi_endpoint(
     app=app,
     agent=agent,
-    path="/",
+    path="/copilotkit",
 )
 
 if __name__ == "__main__":

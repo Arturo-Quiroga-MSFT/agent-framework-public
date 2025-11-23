@@ -6,11 +6,15 @@ import os
 from typing import Annotated
 import httpx
 from pydantic import Field
+from dotenv import load_dotenv
 
 from agent_framework import ChatAgent, ai_function
-from agent_framework.azure import AzureAIClient
-from agent_framework_ag_ui import AgentFrameworkAgent
+from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework.ag_ui import AgentFrameworkAgent
 from azure.identity import DefaultAzureCredential
+
+# Load environment variables
+load_dotenv()
 
 
 @ai_function(
@@ -56,22 +60,35 @@ def get_weather(
 def create_weather_agent() -> AgentFrameworkAgent:
     """Create the Azure AI Weather Agent wrapped for AG-UI protocol."""
     
-    # Create Azure AI agent (same as DevUI version)
-    credential = DefaultAzureCredential()
-    azure_agent = AzureAIClient(credential=credential).create_agent(
+    # Get Azure configuration from environment
+    endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    deployment = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    
+    if not endpoint:
+        raise ValueError("AZURE_AI_PROJECT_ENDPOINT environment variable is required")
+    
+    # Create chat client
+    chat_client = AzureOpenAIChatClient(
+        credential=DefaultAzureCredential(),
+        deployment_name=deployment,
+        endpoint=endpoint,
+    )
+    
+    # Create base agent
+    base_agent = ChatAgent(
         name="WeatherAgent",
-        description="Get real-time weather information for any city",
         instructions=(
             "You are a helpful weather assistant. Use the get_weather function to provide "
             "accurate, real-time weather information. Always format responses in a clear, "
             "friendly manner. Include temperature, conditions, humidity, and wind speed."
         ),
-        tools=get_weather,
+        chat_client=chat_client,
+        tools=[get_weather],
     )
     
     # Wrap for AG-UI protocol (CopilotKit compatibility)
     return AgentFrameworkAgent(
-        agent=azure_agent,
+        agent=base_agent,
         name="AzureAIWeatherAgent",
         description="Azure AI-powered weather agent with real OpenWeatherMap data",
         require_confirmation=False,

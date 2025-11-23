@@ -6,7 +6,7 @@ import "@copilotkit/react-ui/styles.css";
 
 export default function Home() {
   return (
-    <CopilotKit runtimeUrl="http://localhost:8200">
+    <CopilotKit runtimeUrl="http://localhost:8200/copilotkit">
       <CopilotSidebar
         defaultOpen={true}
         labels={{
