@@ -1,20 +1,50 @@
 #!/bin/bash
+set -euo pipefail
 
 # Azure AI Weather Agent - Stop Script
-# Stops all running backend and frontend servers
+# Stops backend + frontend using PID files, with optional --quiet flag
 
-echo "🛑 Stopping Azure AI Weather Agent servers..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_PID_FILE="$SCRIPT_DIR/.backend.pid"
+FRONTEND_PID_FILE="$SCRIPT_DIR/.frontend.pid"
+QUIET=false
 
-# Kill processes on port 8200 (backend)
-lsof -ti:8200 | xargs kill -9 2>/dev/null && echo "✅ Stopped backend (port 8200)" || echo "ℹ️  No backend running on port 8200"
+if [ "${1:-}" = "--quiet" ]; then
+	QUIET=true
+fi
 
-# Kill processes on port 3200 (frontend)
-lsof -ti:3200 | xargs kill -9 2>/dev/null && echo "✅ Stopped frontend (port 3200)" || echo "ℹ️  No frontend running on port 3200"
+log() {
+	$QUIET && return
+	echo -e "$1"
+}
 
-# Kill any remaining node/python processes from this project
-pkill -f "npm run dev" 2>/dev/null
-pkill -f "next dev" 2>/dev/null
-pkill -f "python src/main.py" 2>/dev/null
+stop_pid() {
+	local pid_file="$1"
+	local name="$2"
+	if [ -f "$pid_file" ]; then
+		local pid
+		pid=$(cat "$pid_file")
+		if ps -p "$pid" > /dev/null 2>&1; then
+			kill "$pid" 2>/dev/null || true
+			wait "$pid" 2>/dev/null || true
+			log "✅ Stopped $name (PID $pid)"
+		else
+			log "ℹ️  $name PID file found but process already stopped"
+		fi
+		rm -f "$pid_file"
+	else
+		log "ℹ️  No PID file for $name"
+	fi
+}
 
-echo ""
-echo "✅ All servers stopped"
+log "🛑 Stopping Azure AI Weather Agent servers..."
+
+stop_pid "$BACKEND_PID_FILE" "backend"
+stop_pid "$FRONTEND_PID_FILE" "frontend"
+
+# Fallback: kill ports if still busy
+lsof -ti:8200 | xargs kill -9 2>/dev/null && log "✅ Cleared port 8200" || true
+lsof -ti:3200 | xargs kill -9 2>/dev/null && log "✅ Cleared port 3200" || true
+
+log ""
+log "✅ All servers stopped"

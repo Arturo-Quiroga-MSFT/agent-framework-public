@@ -49,6 +49,19 @@ Both use the **exact same Azure AI agent** with real OpenWeatherMap API.
 
 ## 🚀 Quick Start
 
+### Option A: One-command startup (recommended for testing)
+
+```bash
+cd /Users/arturoquiroga/GITHUB/agent-framework-public/maf-upstream/python/samples/getting_started/agents/azure_ai_copilotkit
+./start.sh
+# When finished
+./stop.sh
+```
+
+`start.sh` automatically stops any previous processes, starts backend + frontend in the background, and streams logs to `logs/backend.log` and `logs/frontend.log`. Use `restart.sh` to cycle both quickly.
+
+### Option B: Manual steps
+
 ### 1. Install Dependencies
 
 **Backend (Python):**
@@ -230,13 +243,16 @@ import { CopilotSidebar } from "@copilotkit/react-ui";
 
 export default function Home() {
   return (
-    <CopilotKit runtimeUrl="http://localhost:8200">
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="weather_agent">
       <CopilotSidebar defaultOpen={true}>
         <YourCustomUI />
       </CopilotSidebar>
     </CopilotKit>
   );
 }
+
+// CopilotKit runtime proxy lives in ui/src/app/api/copilotkit/route.ts
+// Override backend location with AGENT_RUNTIME_URL if needed.
 ```
 
 ### 4. Communication Flow

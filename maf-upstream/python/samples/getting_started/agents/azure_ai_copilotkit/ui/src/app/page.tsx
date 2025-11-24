@@ -2,19 +2,118 @@
 
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotSidebar } from "@copilotkit/react-ui";
+import { useCopilotAction, useDefaultTool } from "@copilotkit/react-core";
 import "@copilotkit/react-ui/styles.css";
+import { WeatherCard, CompareWeatherCard } from "@/components/weather-card";
 
-export default function Home() {
+function AgentContent() {
+  // Default tool renderer for debugging - shows all tool calls
+  useDefaultTool({
+    render: ({ name, args, status, result }) => {
+      console.log('Tool call:', { name, args, status, result });
+      return <></>; // Return empty fragment to let specific renderers handle display
+    },
+  });
+
+  // Render get_weather tool with custom UI
+  useCopilotAction({
+    name: "get_weather",
+    available: "disabled", // Backend handles execution, frontend only renders
+    parameters: [
+      { name: "location", type: "string", required: true },
+    ],
+    render: ({ args, status, result }) => {
+      console.log('get_weather render:', { args, status, result });
+      
+      // Show loading state while executing
+      if (status === "executing" || status === "inProgress") {
+        return (
+          <div className="rounded-xl shadow-lg bg-gradient-to-br from-blue-50 to-indigo-100 p-6 max-w-md w-full animate-pulse">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="h-8 w-8 bg-blue-300 rounded-full"></div>
+              <div className="h-6 bg-blue-300 rounded w-32"></div>
+            </div>
+            <div className="space-y-3">
+              <div className="h-4 bg-blue-200 rounded w-full"></div>
+              <div className="h-4 bg-blue-200 rounded w-3/4"></div>
+              <div className="h-4 bg-blue-200 rounded w-5/6"></div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Parse and render weather data when complete
+      if (status === "complete" && result) {
+        try {
+          // Result might be a string or already parsed object
+          const weatherData = typeof result === 'string' ? JSON.parse(result) : result;
+          return <WeatherCard weather={weatherData} />;
+        } catch (e) {
+          console.error('Failed to parse weather data:', e, result);
+          return (
+            <div className="text-sm text-red-500 bg-red-50 p-3 rounded">
+              Error parsing weather data: {String(e)}
+            </div>
+          );
+        }
+      }
+      
+      return (
+        <div className="text-sm text-blue-600 italic">
+          Getting weather for {args.location}...
+        </div>
+      );
+    },
+  });
+
+  // Render compare_weather tool with custom UI
+  useCopilotAction({
+    name: "compare_weather",
+    available: "disabled",
+    parameters: [
+      { name: "cities", type: "object", required: true },
+    ],
+    render: ({ args, status, result }) => {
+      console.log('compare_weather render:', { args, status, result });
+      
+      // Show loading state
+      if (status === "executing" || status === "inProgress") {
+        return (
+          <div className="rounded-xl shadow-lg bg-gradient-to-br from-blue-50 to-indigo-100 p-6 max-w-4xl w-full animate-pulse">
+            <div className="h-8 bg-blue-300 rounded w-48 mb-4"></div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="h-48 bg-blue-200 rounded"></div>
+              <div className="h-48 bg-blue-200 rounded"></div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Parse and render comparison data when complete
+      if (status === "complete" && result) {
+        try {
+          const citiesData = typeof result === 'string' ? JSON.parse(result) : result;
+          return <CompareWeatherCard cities={citiesData} />;
+        } catch (e) {
+          console.error('Failed to parse comparison data:', e, result);
+          return (
+            <div className="text-sm text-red-500 bg-red-50 p-3 rounded">
+              Error parsing comparison data: {String(e)}
+            </div>
+          );
+        }
+      }
+      
+      return (
+        <div className="text-sm text-blue-600 italic">
+          Comparing weather across cities...
+        </div>
+      );
+    },
+  });
+
   return (
-    <CopilotKit runtimeUrl="http://localhost:8200/copilotkit">
-      <CopilotSidebar
-        defaultOpen={true}
-        labels={{
-          title: "Azure AI Weather Agent",
-          initial: "Hi! 👋 I'm your Azure AI weather assistant. Ask me about the weather in any city!",
-        }}
-      >
-        <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-blue-50 to-indigo-100">
+    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-br from-blue-50 to-indigo-100">
           <div className="max-w-4xl w-full space-y-8">
             {/* Header */}
             <div className="text-center space-y-4">
@@ -132,6 +231,20 @@ export default function Home() {
             </div>
           </div>
         </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="weather_agent">
+      <CopilotSidebar
+        defaultOpen={true}
+        labels={{
+          title: "Azure AI Weather Agent",
+          initial: "Hi! 👋 I'm your Azure AI weather assistant. Ask me about the weather in any city!",
+        }}
+      >
+        <AgentContent />
       </CopilotSidebar>
     </CopilotKit>
   );

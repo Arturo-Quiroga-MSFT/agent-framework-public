@@ -1,110 +1,88 @@
 #!/bin/bash
+set -euo pipefail
 
 # Azure AI Weather Agent - CopilotKit Demo Startup Script
-# This script starts both backend and frontend servers for testing
-
-set -e  # Exit on error
+# Starts backend (FastAPI) and frontend (Next.js) with log files + PID tracking
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-$REPO_ROOT/.venv/bin/python}"
+[ -x "$PYTHON_BIN" ] || PYTHON_BIN="$(command -v python3)"
+
+LOG_DIR="$SCRIPT_DIR/logs"
+BACKEND_PID_FILE="$SCRIPT_DIR/.backend.pid"
+FRONTEND_PID_FILE="$SCRIPT_DIR/.frontend.pid"
+
+mkdir -p "$LOG_DIR"
+
+info() { echo -e "\033[0;34m$1\033[0m"; }
+success() { echo -e "\033[0;32m$1\033[0m"; }
+warn() { echo -e "\033[1;33m$1\033[0m"; }
+error() { echo -e "\033[0;31m$1\033[0m"; }
 
 echo "🚀 Starting Azure AI Weather Agent - CopilotKit Demo"
 echo "=================================================="
 echo ""
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Function to cleanup on exit
-cleanup() {
-    echo ""
-    echo "${YELLOW}🛑 Shutting down servers...${NC}"
-    kill $(jobs -p) 2>/dev/null || true
-    exit
-}
-
-trap cleanup SIGINT SIGTERM
-
-# Check if backend dependencies are installed
-echo "${BLUE}📦 Checking backend dependencies...${NC}"
-if [ ! -d "agent/.venv" ] && [ ! -f "agent/pyproject.toml" ]; then
-    echo "${YELLOW}Installing backend dependencies...${NC}"
-    cd agent
-    pip install -e . || {
-        echo "❌ Failed to install backend dependencies"
-        exit 1
-    }
-    cd ..
+# Always stop previous processes to avoid port conflicts
+if [ -x "$SCRIPT_DIR/stop.sh" ]; then
+    "$SCRIPT_DIR/stop.sh" --quiet || true
 fi
 
-# Check if frontend dependencies are installed
-echo "${BLUE}📦 Checking frontend dependencies...${NC}"
-if [ ! -d "ui/node_modules" ]; then
-    echo "${YELLOW}Installing frontend dependencies...${NC}"
-    cd ui
-    npm install || {
-        echo "❌ Failed to install frontend dependencies"
-        exit 1
-    }
-    cd ..
+# Ensure dependencies exist (install only if missing)
+if [ ! -f "$SCRIPT_DIR/agent/.installed" ]; then
+    info "📦 Installing backend dependencies (one-time)..."
+    (cd "$SCRIPT_DIR/agent" && "$PYTHON_BIN" -m pip install -e . && touch .installed)
 fi
 
-echo ""
-echo "${GREEN}✅ Dependencies ready${NC}"
-echo ""
+if [ ! -d "$SCRIPT_DIR/ui/node_modules" ]; then
+    info "📦 Installing frontend dependencies (one-time)..."
+    (cd "$SCRIPT_DIR/ui" && npm install)
+fi
 
 # Start backend
-echo "${BLUE}🔧 Starting Backend (FastAPI on port 8200)...${NC}"
-cd agent
-python src/main.py &
-BACKEND_PID=$!
-cd ..
+info "🔧 Starting Backend (FastAPI on port 8200)..."
+(cd "$SCRIPT_DIR/agent" && nohup "$PYTHON_BIN" src/main.py > "$LOG_DIR/backend.log" 2>&1 & echo $! > "$BACKEND_PID_FILE")
 
-# Wait for backend to start
-echo "${YELLOW}⏳ Waiting for backend to start...${NC}"
-sleep 3
-
-# Check if backend is running
-if ! curl -s http://localhost:8200/docs > /dev/null; then
-    echo "❌ Backend failed to start"
-    kill $BACKEND_PID 2>/dev/null || true
-    exit 1
-fi
-
-echo "${GREEN}✅ Backend running at http://localhost:8200${NC}"
-echo ""
+for i in {1..20}; do
+    sleep 1
+    if curl -s http://localhost:8200/docs > /dev/null 2>&1; then
+        success "✅ Backend running at http://localhost:8200"
+        break
+    fi
+    if [ $i -eq 20 ]; then
+        error "❌ Backend failed to start. Check $LOG_DIR/backend.log"
+        exit 1
+    fi
+done
 
 # Start frontend
-echo "${BLUE}🎨 Starting Frontend (Next.js on port 3200)...${NC}"
-cd ui
-npm run dev &
-FRONTEND_PID=$!
-cd ..
+info "🎨 Starting Frontend (Next.js on port 3200)..."
+(cd "$SCRIPT_DIR/ui" && nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 & echo $! > "$FRONTEND_PID_FILE")
 
-# Wait for frontend to start
-echo "${YELLOW}⏳ Waiting for frontend to start...${NC}"
-sleep 5
+for i in {1..40}; do
+    sleep 1
+    if curl -s http://localhost:3200 > /dev/null 2>&1; then
+        success "✅ Frontend running at http://localhost:3200"
+        break
+    fi
+    if [ $i -eq 40 ]; then
+        warn "⚠️  Frontend still starting. Tail $LOG_DIR/frontend.log for details."
+    fi
+done
 
-echo ""
-echo "${GREEN}✅ Frontend running at http://localhost:3200${NC}"
 echo ""
 echo "=================================================="
-echo "${GREEN}🎉 All services are running!${NC}"
-echo ""
+success "🎉 All services are running!"
 echo "📡 Backend API: http://localhost:8200"
 echo "📖 API Docs: http://localhost:8200/docs"
 echo "🌐 Frontend UI: http://localhost:3200"
+echo "📜 Logs: $LOG_DIR/backend.log | $LOG_DIR/frontend.log"
 echo ""
 echo "💡 Try these queries in the sidebar:"
 echo "   - What's the weather in Toronto?"
 echo "   - How's the weather in Mexico City?"
 echo "   - Compare weather in Guadalajara and Monterrey"
 echo ""
-echo "${YELLOW}Press Ctrl+C to stop all servers${NC}"
+warn "Stop servers with ./stop.sh"
 echo ""
-
-# Wait for both processes
-wait

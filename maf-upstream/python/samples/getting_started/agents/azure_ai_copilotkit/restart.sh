@@ -1,21 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
 # Azure AI Weather Agent - Restart Script
-# Stops and restarts both servers
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
 
 echo "🔄 Restarting Azure AI Weather Agent..."
-echo ""
 
-# Stop existing servers
-./stop.sh
-
-echo ""
-echo "⏳ Waiting 2 seconds before restart..."
+"$SCRIPT_DIR/stop.sh" || true
 sleep 2
-echo ""
-
-# Start servers
-./start.sh
+"$SCRIPT_DIR/start.sh"
