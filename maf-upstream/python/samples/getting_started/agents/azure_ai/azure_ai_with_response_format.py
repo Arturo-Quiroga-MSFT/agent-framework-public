@@ -6,6 +6,7 @@ from agent_framework.azure import AzureAIClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import BaseModel, ConfigDict
 
+
 """
 Azure AI Agent Response Format Example
 
