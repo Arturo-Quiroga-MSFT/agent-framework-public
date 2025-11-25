@@ -74,14 +74,36 @@
 │  │    • Natural language answer                          │   │
 │  └─────────────────────┬───────────────────────────────┘    │
 │                        │                                      │
+│                        ▼                                      │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 7. DATA EXPORTER (Executor)                           │  │
+│  │    • Export results to CSV                            │  │
+│  │    • Export results to Excel (XLS/XLSX)               │  │
+│  │    • Save to exports/ directory                       │  │
+│  │    • Timestamp-based filenames                        │  │
+│  └─────────────────────┬───────────────────────────────┘   │
+│                        │                                      │
+│                        ▼                                      │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ 8. VISUALIZATION GENERATOR (Executor)                 │  │
+│  │    • Analyze data patterns                            │  │
+│  │    • Generate appropriate charts                      │  │
+│  │    • Create bar/line/pie charts                       │  │
+│  │    • Save to visualizations/ directory                │  │
+│  └─────────────────────┬───────────────────────────────┘   │
+│                        │                                      │
 └────────────────────────┼──────────────────────────────────────┘
                          │
                          │ Natural Language Answer + Insights
+                         │ + CSV/XLS Files + Visualizations
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER RESPONSE                           │
 │         (Displayed in DevUI with suggestions)                   │
+│         • Natural language answer                               │
+│         • Download links for CSV/Excel                          │
+│         • Embedded visualization images                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,6 +181,38 @@ ChatMessage (with results)
     ↓
 ChatMessage(Role.ASSISTANT, text=natural_language_answer)
     ↓
+[Continue to Export Phase]
+```
+
+### 7. Data Export Phase
+```
+QueryResults
+    ↓
+Data Export (CSV + Excel)
+    ↓
+ExportedFiles {
+    csv_path: "exports/query_results_YYYYMMDD_HHMMSS.csv",
+    excel_path: "exports/query_results_YYYYMMDD_HHMMSS.xlsx",
+    row_count: 42
+}
+    ↓
+[Continue to Visualization Phase]
+```
+
+### 8. Visualization Generation Phase
+```
+QueryResults + Column Metadata
+    ↓
+Chart Type Selection (based on data)
+    ↓
+Visualization Generation (matplotlib/seaborn)
+    ↓
+VisualizationOutput {
+    chart_path: "visualizations/viz_YYYYMMDD_HHMMSS.png",
+    chart_type: "bar",
+    title: "..."
+}
+    ↓
 [Workflow Output]
 ```
 
@@ -201,6 +255,34 @@ ChatMessage(Role.ASSISTANT, text=natural_language_answer)
   - Result formatting for LLM
   - Performance metrics
 
+#### 5. DataExporterExecutor
+- **Input**: `QueryResults`
+- **Output**: `ExportedFiles` (CSV + Excel paths)
+- **Purpose**: Persist query results for download/analysis
+- **Key Logic**:
+  - Export to CSV using pandas `to_csv()`
+  - Export to Excel using pandas `to_excel()`
+  - Timestamp-based filenames
+  - Save to `exports/` directory
+  - Handle large datasets (chunking if needed)
+  - Preserve data types and formatting
+
+#### 6. VisualizationGeneratorExecutor
+- **Input**: `QueryResults` + Column metadata
+- **Output**: `VisualizationOutput` (chart image path)
+- **Purpose**: Automatic chart generation from query results
+- **Key Logic**:
+  - Analyze data characteristics (numeric, categorical, temporal)
+  - Select appropriate chart type:
+    - Bar charts for categorical comparisons
+    - Line charts for time series
+    - Pie charts for proportions
+    - Scatter plots for correlations
+  - Generate using matplotlib/seaborn
+  - Save to `visualizations/` directory
+  - Create descriptive titles and labels
+  - Handle edge cases (empty data, single value, etc.)
+
 ### Agents (LLM-Powered)
 
 #### 1. SQL Generator Agent
@@ -231,6 +313,8 @@ ChatMessage(Role.ASSISTANT, text=natural_language_answer)
 │   Presentation Layer                │
 │   • DevUI (port 8097)              │
 │   • REST API endpoints              │
+│   • File download endpoints         │
+│   • Image display for charts        │
 └────────────┬────────────────────────┘
              │
 ┌────────────▼────────────────────────┐
@@ -252,6 +336,16 @@ ChatMessage(Role.ASSISTANT, text=natural_language_answer)
 │   • Custom Executors               │
 │   • Validators                     │
 │   • Formatters                     │
+│   • Data Exporters                 │
+│   • Visualization Generators       │
+└────────────┬────────────────────────┘
+             │
+┌────────────▼────────────────────────┐
+│   Data Processing Layer             │
+│   • pandas (DataFrames)            │
+│   • matplotlib (Charts)            │
+│   • seaborn (Advanced viz)         │
+│   • openpyxl (Excel export)        │
 └────────────┬────────────────────────┘
              │
 ┌────────────▼────────────────────────┐
@@ -264,6 +358,13 @@ ChatMessage(Role.ASSISTANT, text=natural_language_answer)
 │   Data Layer                        │
 │   • Azure SQL Database             │
 │   • Connection Pool                │
+└─────────────────────────────────────┘
+             │
+┌────────────▼────────────────────────┐
+│   Storage Layer                     │
+│   • exports/ (CSV/Excel files)     │
+│   • visualizations/ (PNG charts)   │
+│   • Timestamped file management    │
 └─────────────────────────────────────┘
 ```
 
@@ -383,6 +484,14 @@ User Question
 │ Interpretation    │ ───► Error: Empty results
 └────────┬──────────┘      │
          │ ✓               └─► Explain no matches found
+┌────────▼──────────┐
+│ Data Export       │ ───► Error: File write permission
+└────────┬──────────┘      │
+         │ ✓               └─► Log error, continue workflow
+┌────────▼──────────┐
+│ Visualization     │ ───► Error: Invalid data for chart
+└────────┬──────────┘      │
+         │ ✓               └─► Skip viz, log reason
          ▼
     Success
 ```
@@ -397,7 +506,9 @@ User Question
 | SQL Validator | <50ms | Regex + rules |
 | Query Executor | 100ms-5s | Depends on query |
 | Results Interpreter | 1-2s | LLM inference |
-| **Total Pipeline** | **3-10s** | Typical question |
+| Data Exporter | 50-500ms | File I/O + pandas |
+| Visualization Generator | 200ms-2s | Chart rendering |
+| **Total Pipeline** | **4-14s** | Typical question |
 
 ## Scaling Considerations
 
@@ -420,3 +531,8 @@ User Question
 3. Result pagination
 4. Query result caching
 5. Schema information caching
+6. Async file exports (CSV/Excel in parallel)
+7. Lazy visualization generation (on-demand)
+8. Reuse visualizations for identical queries
+9. Compress/archive old exports periodically
+10. Thumbnail generation for quick preview
