@@ -28,7 +28,7 @@ Microsoft's AI agent ecosystem consists of three complementary components that w
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  Microsoft Agent Framework (MAF)                               │
+│  Microsoft Agent Framework (MAF)                              │
 │  Orchestration & Abstraction Layer                            │
 │  - Multi-agent patterns, workflows, type safety               │
 └───────────────┬───────────────────────────────────────────────┘
@@ -335,15 +335,15 @@ dotnet add package Microsoft.Agents.AI
 **Core Architecture:**
 ```
 ┌─────────────────────────────────────────┐
-│           User Input                     │
+│           User Input                    │
 └──────────────┬──────────────────────────┘
                ↓
 ┌──────────────────────────────────────────┐
-│  AI Agent                                 │
+│  AI Agent                                │
 │  ┌────────────┐                          │
 │  │    LLM     │ ← Process, Decide        │
 │  └─────┬──────┘                          │
-│        ↓                                  │
+│        ↓                                 │
 │  ┌──────────────────┐                    │
 │  │  Tools & MCP     │ ← Perform Actions  │
 │  └──────────────────┘                    │
@@ -499,10 +499,10 @@ result = workflow.run("Write an article about AI agents")
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│         Microsoft Agent Framework (MAF)                          │
-│         Open-Source Development Kit                              │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│  Capabilities:                                                   │
+│         Microsoft Agent Framework (MAF)                         │
+│         Open-Source Development Kit                             │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
+│  Capabilities:                                                  │
 │  • Single & Multi-Agent Abstractions                            │
 │  • Graph-based Workflows (executors + edges)                    │
 │  • Type Safety & Strong Typing                                  │
@@ -520,24 +520,24 @@ result = workflow.run("Write an article about AI agents")
 ┌───────────────▼──────────────────────────────────────────────────┐
 │  Azure AI Foundry Agent Service                                  │
 │  Managed Production Runtime (Platform)                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    │
 │  The "Agent Factory":                                            │
-│  1. Models: GPT-4o, Llama, custom models                        │
-│  2. Customization: Fine-tuning, prompts                         │
-│  3. AI Tools: Bing, SharePoint, Azure AI Search, OpenAPI       │
-│  4. Orchestration: Server-side, connected agents                │
-│  5. Observability: Traces, logs, Application Insights           │
-│  6. Trust: Entra ID, RBAC, content filters, encryption          │
+│  1. Models: GPT-4o, Llama, custom models                         │
+│  2. Customization: Fine-tuning, prompts                          │
+│  3. AI Tools: Bing, SharePoint, Azure AI Search, OpenAPI         │
+│  4. Orchestration: Server-side, connected agents                 │
+│  5. Observability: Traces, logs, Application Insights            │
+│  6. Trust: Entra ID, RBAC, content filters, encryption           │
 │                                                                  │
 │  Runtime Features:                                               │
-│  • Server-Side Orchestration & Tool Execution                   │
-│  • Persistent Threads (Cosmos DB-backed)                        │
-│  • Agent-to-Agent Messaging                                     │
-│  • Content Safety & Policy Enforcement                          │
-│  • Enterprise Integration (VNet, BYOS)                          │
-│  • Full Conversation Traceability                               │
-│  • Microsoft Entra Identity & RBAC                              │
-│  • BCDR with Cosmos DB                                          │
+│  • Server-Side Orchestration & Tool Execution                    │
+│  • Persistent Threads (Cosmos DB-backed)                         │
+│  • Agent-to-Agent Messaging                                      │
+│  • Content Safety & Policy Enforcement                           │
+│  • Enterprise Integration (VNet, BYOS)                           │
+│  • Full Conversation Traceability                                │
+│  • Microsoft Entra Identity & RBAC                               │
+│  • BCDR with Cosmos DB                                           │
 └───────────────┬──────────────────────────────────────────────────┘
                 │
                 │ Accessed Via
@@ -545,19 +545,19 @@ result = workflow.run("Write an article about AI agents")
 ┌───────────────▼──────────────────────────────────────────────────┐
 │  Azure AI Projects SDK (azure-ai-projects)                       │
 │  Python Client Library for Azure AI Foundry                      │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    │
 │  Client Operations:                                              │
-│  • Agent CRUD Operations (.agents)                              │
-│  • OpenAI Client Factory (.get_openai_client())                 │
-│  • Responses & Conversations API                                │
-│  • Tool Configuration (Code Interpreter, File Search, etc.)     │
-│  • Memory Store Management (.memory_stores)                     │
-│  • Evaluation & Testing Framework (.evaluators, .insights)      │
-│  • Dataset & Index Management (.datasets, .indexes)             │
-│  • Deployment & Connection Operations                           │
-│  • Fine-tuning Operations                                       │
-│  • OpenTelemetry Tracing (.telemetry)                           │
-│  • Red Team Scanning (.red_teams)                               │
+│  • Agent CRUD Operations (.agents)                               │
+│  • OpenAI Client Factory (.get_openai_client())                  │
+│  • Responses & Conversations API                                 │
+│  • Tool Configuration (Code Interpreter, File Search, etc.)      │
+│  • Memory Store Management (.memory_stores)                      │
+│  • Evaluation & Testing Framework (.evaluators, .insights)       │
+│  • Dataset & Index Management (.datasets, .indexes)              │
+│  • Deployment & Connection Operations                            │
+│  • Fine-tuning Operations                                        │
+│  • OpenTelemetry Tracing (.telemetry)                            │
+│  • Red Team Scanning (.red_teams)                                │ 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
