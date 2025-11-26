@@ -1,0 +1,14 @@
+# Azure AI Foundry Agent Management Requirements
+
+# Core Azure AI SDK
+azure-ai-projects>=1.0.0b1
+
+# Azure Identity for authentication
+azure-identity>=1.14.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Optional: YAML support for export
+# Uncomment if you want to export agents to YAML format
+# pyyaml>=6.0
