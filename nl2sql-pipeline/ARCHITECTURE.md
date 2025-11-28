@@ -2,109 +2,52 @@
 
 ## System Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE                          │
-│                    (DevUI on port 8097)                         │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             │ Natural Language Question
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    SEQUENTIAL WORKFLOW                          │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────┐    │
-│  │ 1. INPUT NORMALIZER (Executor)                        │    │
-│  │    • Parse user input                                 │    │
-│  │    • Validate format                                  │    │
-│  │    • Create ChatMessage                               │    │
-│  └─────────────────────┬─────────────────────────────────┘    │
-│                        │                                        │
-│                        ▼                                        │
-│  ┌───────────────────────────────────────────────────────┐    │
-│  │ 2. SCHEMA RETRIEVER (Executor)                        │    │
-│  │    • Connect to MSSQL ──────────────┐                │    │
-│  │    • List tables & schemas          │                │    │
-│  │    • Format schema context          │                │    │
-│  └─────────────────────┬───────────────┼────────────────┘    │
-│                        │               │                       │
-│                        │               │ MSSQL MCP Tools       │
-│                        │               │ • mssql_list_tables   │
-│                        │               │ • mssql_list_schemas  │
-│                        │               │ • mssql_get_details   │
-│                        │               │                       │
-│                        ▼               │                       │
-│  ┌───────────────────────────────────┼────────────────────┐  │
-│  │ 3. SQL GENERATOR (LLM Agent)      │                    │  │
-│  │    • Receive question + schema ◄──┘                    │  │
-│  │    • Generate SQL query                                │  │
-│  │    • Add explanation                                   │  │
-│  └─────────────────────┬──────────────────────────────────┘  │
-│                        │                                       │
-│                        │ Generated SQL                         │
-│                        │                                       │
-│                        ▼                                       │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ 4. SQL VALIDATOR (Executor)                           │   │
-│  │    • Parse SQL                                        │   │
-│  │    • Safety checks (no DROP/DELETE)                   │   │
-│  │    • Add row limits                                   │   │
-│  │    • Syntax validation                                │   │
-│  └─────────────────────┬─────────────────────────────────┘   │
-│                        │                                       │
-│                        │ Validated SQL                         │
-│                        │                                       │
-│                        ▼                                       │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ 5. QUERY EXECUTOR (Executor)                          │   │
-│  │    • Execute SQL ────────────────┐                    │   │
-│  │    • Handle errors               │                    │   │
-│  │    • Format results              │                    │   │
-│  └─────────────────────┬────────────┼────────────────────┘   │
-│                        │            │                         │
-│                        │            │ MSSQL MCP Tools         │
-│                        │            │ • mssql_run_query       │
-│                        │            │                         │
-│                        ▼            │                         │
-│  ┌───────────────────────────────┼──────────────────────┐   │
-│  │ 6. RESULTS INTERPRETER (Agent)│                       │   │
-│  │    • Receive query results ◄──┘                       │   │
-│  │    • Generate insights                                │   │
-│  │    • Natural language answer                          │   │
-│  └─────────────────────┬───────────────────────────────┘    │
-│                        │                                      │
-│                        ▼                                      │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 7. DATA EXPORTER (Executor)                           │  │
-│  │    • Export results to CSV                            │  │
-│  │    • Export results to Excel (XLS/XLSX)               │  │
-│  │    • Save to exports/ directory                       │  │
-│  │    • Timestamp-based filenames                        │  │
-│  └─────────────────────┬───────────────────────────────┘   │
-│                        │                                      │
-│                        ▼                                      │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ 8. VISUALIZATION GENERATOR (Executor)                 │  │
-│  │    • Analyze data patterns                            │  │
-│  │    • Generate appropriate charts                      │  │
-│  │    • Create bar/line/pie charts                       │  │
-│  │    • Save to visualizations/ directory                │  │
-│  └─────────────────────┬───────────────────────────────┘   │
-│                        │                                      │
-└────────────────────────┼──────────────────────────────────────┘
-                         │
-                         │ Natural Language Answer + Insights
-                         │ + CSV/XLS Files + Visualizations
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER RESPONSE                           │
-│         (Displayed in DevUI with suggestions)                   │
-│         • Natural language answer                               │
-│         • Download links for CSV/Excel                          │
-│         • Embedded visualization images                         │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    UI["USER INTERFACE<br/>(DevUI on port 8097)"] --> |Natural Language Question| WORKFLOW
+    
+    subgraph WORKFLOW["SEQUENTIAL WORKFLOW"]
+        direction TB
+        
+        Step1["1. INPUT NORMALIZER<br/>(Executor)<br/>• Parse user input<br/>• Validate format<br/>• Create ChatMessage"]
+        
+        Step2["2. SCHEMA RETRIEVER<br/>(Executor)<br/>• Connect to MSSQL<br/>• List tables & schemas<br/>• Format schema context"]
+        
+        Step3["3. SQL GENERATOR<br/>(LLM Agent)<br/>• Receive question + schema<br/>• Generate SQL query<br/>• Add explanation"]
+        
+        Step4["4. SQL VALIDATOR<br/>(Executor)<br/>• Parse SQL<br/>• Safety checks<br/>• Add row limits<br/>• Syntax validation"]
+        
+        Step5["5. QUERY EXECUTOR<br/>(Executor)<br/>• Execute SQL<br/>• Handle errors<br/>• Format results"]
+        
+        Step6["6. RESULTS INTERPRETER<br/>(Agent)<br/>• Receive query results<br/>• Generate insights<br/>• Natural language answer"]
+        
+        Step7["7. DATA EXPORTER<br/>(Executor)<br/>• Export to CSV<br/>• Export to Excel<br/>• Save to exports/<br/>• Timestamp filenames"]
+        
+        Step8["8. VISUALIZATION GENERATOR<br/>(Executor)<br/>• Analyze data patterns<br/>• Generate charts<br/>• Create bar/line/pie<br/>• Save to visualizations/"]
+        
+        Step1 --> Step2
+        Step2 --> Step3
+        Step3 --> Step4
+        Step4 --> Step5
+        Step5 --> Step6
+        Step6 --> Step7
+        Step7 --> Step8
+    end
+    
+    MCP[("MSSQL MCP Tools<br/>• mssql_list_tables<br/>• mssql_list_schemas<br/>• mssql_get_details<br/>• mssql_run_query")]
+    
+    Step2 -.-> MCP
+    Step5 -.-> MCP
+    
+    Step8 --> |Natural Language Answer<br/>+ Insights + CSV/XLS<br/>+ Visualizations| RESPONSE
+    
+    RESPONSE["USER RESPONSE<br/>(Displayed in DevUI)<br/>• Natural language answer<br/>• Download links for CSV/Excel<br/>• Embedded visualization images"]
+    
+    style UI fill:#e1f5ff
+    style RESPONSE fill:#e1f5ff
+    style Step3 fill:#fff4e1
+    style Step6 fill:#fff4e1
+    style MCP fill:#f0f0f0
 ```
 
 ## Data Flow
@@ -308,88 +251,51 @@ VisualizationOutput {
 
 ## Technology Stack
 
-```
-┌─────────────────────────────────────┐
-│   Presentation Layer                │
-│   • DevUI (port 8097)              │
-│   • REST API endpoints              │
-│   • File download endpoints         │
-│   • Image display for charts        │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Workflow Layer                    │
-│   • Agent Framework                 │
-│   • SequentialBuilder              │
-│   • WorkflowContext                │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Agent Layer                       │
-│   • Azure OpenAI Chat Client       │
-│   • ChatAgent (SQL Gen)            │
-│   • ChatAgent (Interpreter)        │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Business Logic Layer              │
-│   • Custom Executors               │
-│   • Validators                     │
-│   • Formatters                     │
-│   • Data Exporters                 │
-│   • Visualization Generators       │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Data Processing Layer             │
-│   • pandas (DataFrames)            │
-│   • matplotlib (Charts)            │
-│   • seaborn (Advanced viz)         │
-│   • openpyxl (Excel export)        │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Integration Layer                 │
-│   • MSSQL MCP Server               │
-│   • Azure CLI Authentication       │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Data Layer                        │
-│   • Azure SQL Database             │
-│   • Connection Pool                │
-└─────────────────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Storage Layer                     │
-│   • exports/ (CSV/Excel files)     │
-│   • visualizations/ (PNG charts)   │
-│   • Timestamped file management    │
-└─────────────────────────────────────┘
+```mermaid
+flowchart TD
+    PL["Presentation Layer<br/>• DevUI (port 8097)<br/>• REST API endpoints<br/>• File download endpoints<br/>• Image display for charts"]
+    
+    WL["Workflow Layer<br/>• Agent Framework<br/>• SequentialBuilder<br/>• WorkflowContext"]
+    
+    AL["Agent Layer<br/>• Azure OpenAI Chat Client<br/>• ChatAgent (SQL Gen)<br/>• ChatAgent (Interpreter)"]
+    
+    BL["Business Logic Layer<br/>• Custom Executors<br/>• Validators<br/>• Formatters<br/>• Data Exporters<br/>• Visualization Generators"]
+    
+    DP["Data Processing Layer<br/>• pandas (DataFrames)<br/>• matplotlib (Charts)<br/>• seaborn (Advanced viz)<br/>• openpyxl (Excel export)"]
+    
+    IL["Integration Layer<br/>• MSSQL MCP Server<br/>• Azure CLI Authentication"]
+    
+    DL["Data Layer<br/>• Azure SQL Database<br/>• Connection Pool"]
+    
+    SL["Storage Layer<br/>• exports/ (CSV/Excel files)<br/>• visualizations/ (PNG charts)<br/>• Timestamped file management"]
+    
+    PL --> WL --> AL --> BL --> DP --> IL --> DL --> SL
+    
+    style PL fill:#e1f5ff
+    style WL fill:#fff4e1
+    style AL fill:#ffe1f5
+    style BL fill:#e1ffe1
+    style DP fill:#f5e1ff
+    style IL fill:#ffe1e1
+    style DL fill:#e1ffe1
+    style SL fill:#fff4e1
 ```
 
 ## Security Architecture
 
-```
-┌─────────────────────────────────────┐
-│   Authentication Layer              │
-│   • Azure CLI (az login)           │
-│   • Managed Identity (optional)    │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Authorization Layer               │
-│   • SQL Validator (query safety)   │
-│   • Row-level filters (optional)   │
-│   • Schema restrictions            │
-└────────────┬────────────────────────┘
-             │
-┌────────────▼────────────────────────┐
-│   Audit Layer                       │
-│   • Query logging                  │
-│   • Performance metrics            │
-│   • Error tracking                 │
-└─────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Auth["Authentication Layer<br/>• Azure CLI (az login)<br/>• Managed Identity (optional)"]
+    
+    Authz["Authorization Layer<br/>• SQL Validator (query safety)<br/>• Row-level filters (optional)<br/>• Schema restrictions"]
+    
+    Audit["Audit Layer<br/>• Query logging<br/>• Performance metrics<br/>• Error tracking"]
+    
+    Auth --> Authz --> Audit
+    
+    style Auth fill:#ffe1e1
+    style Authz fill:#fff4e1
+    style Audit fill:#e1f5ff
 ```
 
 ## Observability Architecture
@@ -457,43 +363,44 @@ VisualizationOutput {
 
 ## Error Handling Flow
 
-```
-User Question
-    ↓
-┌───────────────────┐
-│ Input Validation  │ ───► Error: Invalid format
-└────────┬──────────┘
-         │ ✓
-┌────────▼──────────┐
-│ Schema Retrieval  │ ───► Error: Connection failed
-└────────┬──────────┘      │
-         │ ✓               └─► Retry 3x → User notification
-┌────────▼──────────┐
-│ SQL Generation    │ ───► Error: LLM timeout
-└────────┬──────────┘      │
-         │ ✓               └─► Fallback to simpler query
-┌────────▼──────────┐
-│ SQL Validation    │ ───► Error: Unsafe query
-└────────┬──────────┘      │
-         │ ✓               └─► Regenerate with constraints
-┌────────▼──────────┐
-│ Query Execution   │ ───► Error: Syntax/Permission
-└────────┬──────────┘      │
-         │ ✓               └─► Send error to LLM for fix
-┌────────▼──────────┐
-│ Interpretation    │ ───► Error: Empty results
-└────────┬──────────┘      │
-         │ ✓               └─► Explain no matches found
-┌────────▼──────────┐
-│ Data Export       │ ───► Error: File write permission
-└────────┬──────────┘      │
-         │ ✓               └─► Log error, continue workflow
-┌────────▼──────────┐
-│ Visualization     │ ───► Error: Invalid data for chart
-└────────┬──────────┘      │
-         │ ✓               └─► Skip viz, log reason
-         ▼
-    Success
+```mermaid
+flowchart TD
+    Start([User Question]) --> Input[Input Validation]
+    
+    Input -->|✓| Schema[Schema Retrieval]
+    Input -->|Error| E1[Invalid format]
+    
+    Schema -->|✓| SQLGen[SQL Generation]
+    Schema -->|Error| E2[Connection failed] --> R2[Retry 3x] --> N2[User notification]
+    
+    SQLGen -->|✓| SQLVal[SQL Validation]
+    SQLGen -->|Error| E3[LLM timeout] --> F3[Fallback to simpler query]
+    
+    SQLVal -->|✓| Exec[Query Execution]
+    SQLVal -->|Error| E4[Unsafe query] --> R4[Regenerate with constraints]
+    
+    Exec -->|✓| Interp[Interpretation]
+    Exec -->|Error| E5[Syntax/Permission] --> F5[Send error to LLM for fix]
+    
+    Interp -->|✓| Export[Data Export]
+    Interp -->|Error| E6[Empty results] --> F6[Explain no matches found]
+    
+    Export -->|✓| Viz[Visualization]
+    Export -->|Error| E7[File write permission] --> L7[Log error, continue workflow] --> Viz
+    
+    Viz -->|✓| Success([Success])
+    Viz -->|Error| E8[Invalid data for chart] --> L8[Skip viz, log reason] --> Success
+    
+    style Start fill:#e1f5ff
+    style Success fill:#e1ffe1
+    style E1 fill:#ffe1e1
+    style E2 fill:#ffe1e1
+    style E3 fill:#ffe1e1
+    style E4 fill:#ffe1e1
+    style E5 fill:#ffe1e1
+    style E6 fill:#ffe1e1
+    style E7 fill:#ffe1e1
+    style E8 fill:#ffe1e1
 ```
 
 ## Performance Characteristics
