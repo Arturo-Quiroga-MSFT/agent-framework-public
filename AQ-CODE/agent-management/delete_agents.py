@@ -6,6 +6,11 @@ This script provides a safe and efficient way to delete agents from your
 Azure AI Foundry project. It supports deleting all agents or specific agents
 by name, with a dry-run option for safety.
 
+🔄 SUPPORTS BOTH V1 (CLASSIC) AND V2 (NEW) AGENTS
+   - V1 agents created with create_agent() (ID format: asst_abc123)
+   - V2 agents created with create_version() (ID format: agent-name:1)
+   - See V1_VS_V2_AGENTS.md for details
+
 Usage:
     # Delete all agents
     python delete_agents.py --all

@@ -28,6 +28,17 @@ Azure AI Foundry agents can be managed through:
 
 This toolkit focuses on **Python SDK** methods for efficient bulk operations.
 
+### 🔄 V1 (Classic) and V2 (New) Agent Support
+
+**These scripts work with BOTH V1 (classic) and V2 (new) agents automatically!**
+
+📖 **See [V1_VS_V2_AGENTS.md](./V1_VS_V2_AGENTS.md) for complete details on:**
+- Differences between V1 (classic) and V2 (new) agents
+- When to use each version
+- Migration considerations
+- API comparison tables
+- Troubleshooting version-specific issues
+
 ---
 
 ## Prerequisites
@@ -85,14 +96,31 @@ export AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `delete_agents.py` | Delete agents (all or specific) | `python delete_agents.py --all` |
 | `list_agents.py` | List all agents with details | `python list_agents.py` |
-| `create_agent.py` | Create a new agent | `python create_agent.py --name "MyAgent"` |
-| `export_agents.py` | Export agent configurations to JSON/YAML | `python export_agents.py --output agents.json` |
+| `delete_agents.py` | Delete agents (all or specific) | `python delete_agents.py --all` |
+| `check_agent_versions.py` | Check which agents are V1 vs V2 | `python check_agent_versions.py` |
+
+**Note:** All scripts automatically support both V1 (classic) and V2 (new) agents.
 
 ---
 
 ## Quick Start
+
+### Check Agent Versions (V1 vs V2)
+
+```bash
+# 1. Authenticate
+az login
+
+# 2. Set endpoint
+export AZURE_AI_PROJECT_ENDPOINT="https://your-project.services.ai.azure.com/api/projects/your-project"
+
+# 3. Check which agents are V1 (classic) vs V2 (new)
+python check_agent_versions.py
+
+# 4. Export version report to JSON
+python check_agent_versions.py --output version-report.json
+```
 
 ### Delete All Agents
 

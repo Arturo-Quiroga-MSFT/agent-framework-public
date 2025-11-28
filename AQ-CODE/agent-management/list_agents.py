@@ -5,6 +5,11 @@ List all agents in Azure AI Foundry project.
 This script provides various ways to view agents in your Azure AI Foundry project,
 including basic listing, detailed information, filtering, and export options.
 
+🔄 SUPPORTS BOTH V1 (CLASSIC) AND V2 (NEW) AGENTS
+   - V1 agents created with create_agent() (no version field)
+   - V2 agents created with create_version() (has version field)
+   - See V1_VS_V2_AGENTS.md for details
+
 Usage:
     # Basic listing
     python list_agents.py
@@ -115,25 +120,49 @@ def list_agents_basic(agents: List, endpoint: str):
     for idx, agent in enumerate(agents, 1):
         name = getattr(agent, 'name', 'Unknown')
         agent_id = getattr(agent, 'id', 'Unknown')
-        model = getattr(agent, 'model', 'Unknown')
+        
+        # Get latest version details if available
+        model = 'Unknown'
+        created_at = None
+        tools = []
+        version_info = None
+        
+        if hasattr(agent, 'versions') and agent.versions:
+            latest = agent.versions.get('latest', {})
+            version_info = latest.get('version', 'N/A')
+            created_at = latest.get('created_at')
+            
+            # Get definition details
+            definition = latest.get('definition', {})
+            if isinstance(definition, dict):
+                model = definition.get('model', 'Unknown')
+                tools = definition.get('tools', [])
+            elif hasattr(definition, 'model'):
+                model = getattr(definition, 'model', 'Unknown')
+                tools = getattr(definition, 'tools', [])
         
         print(f"{idx}. {name} (ID: {agent_id})")
+        if version_info:
+            print(f"   Version: {version_info}")
         print(f"   Model: {model}")
         
-        # Try to get created timestamp if available
-        if hasattr(agent, 'created_at'):
+        # Display created timestamp if available
+        if created_at:
             from datetime import datetime
             try:
-                # created_at is usually a Unix timestamp
-                created = datetime.fromtimestamp(agent.created_at)
+                created = datetime.fromtimestamp(created_at)
                 print(f"   Created: {created.strftime('%Y-%m-%d %H:%M:%S')}")
             except:
-                print(f"   Created: {agent.created_at}")
+                print(f"   Created: {created_at}")
         
         # Count tools
-        tools = getattr(agent, 'tools', [])
         if tools:
-            tool_types = [getattr(tool, 'type', type(tool).__name__) for tool in tools]
+            tool_types = []
+            for tool in tools:
+                if isinstance(tool, dict):
+                    tool_types.append(tool.get('type', 'unknown'))
+                else:
+                    tool_types.append(getattr(tool, 'type', type(tool).__name__))
             print(f"   Tools: {len(tools)} ({', '.join(set(tool_types))})")
         else:
             print(f"   Tools: 0")
@@ -156,41 +185,77 @@ def list_agents_verbose(agents: List):
     for agent in agents:
         name = getattr(agent, 'name', 'Unknown')
         agent_id = getattr(agent, 'id', 'Unknown')
-        model = getattr(agent, 'model', 'Unknown')
+        
+        # Get latest version details
+        model = 'Unknown'
+        created_at = None
+        instructions = None
+        tools = []
+        version_info = None
+        definition_kind = 'Unknown'
+        
+        if hasattr(agent, 'versions') and agent.versions:
+            latest = agent.versions.get('latest', {})
+            version_info = latest.get('version', 'N/A')
+            created_at = latest.get('created_at')
+            
+            # Get definition details
+            definition = latest.get('definition', {})
+            if isinstance(definition, dict):
+                definition_kind = definition.get('kind', 'Unknown')
+                model = definition.get('model', 'Unknown')
+                instructions = definition.get('instructions', '')
+                tools = definition.get('tools', [])
+            elif hasattr(definition, 'kind'):
+                definition_kind = getattr(definition, 'kind', 'Unknown')
+                model = getattr(definition, 'model', 'Unknown')
+                instructions = getattr(definition, 'instructions', '')
+                tools = getattr(definition, 'tools', [])
         
         print(f"Agent: {name}")
         print(f"  ID: {agent_id}")
+        if version_info:
+            print(f"  Version: {version_info}")
+        print(f"  Type: {definition_kind}")
         print(f"  Model: {model}")
         
-        if hasattr(agent, 'created_at'):
+        if created_at:
             from datetime import datetime
             try:
-                created = datetime.fromtimestamp(agent.created_at)
+                created = datetime.fromtimestamp(created_at)
                 print(f"  Created: {created.strftime('%Y-%m-%d %H:%M:%S')}")
             except:
-                print(f"  Created: {agent.created_at}")
+                print(f"  Created: {created_at}")
         
-        if hasattr(agent, 'instructions') and agent.instructions:
-            instructions = agent.instructions[:200]
-            if len(agent.instructions) > 200:
-                instructions += "..."
+        if instructions:
+            inst_display = instructions[:200]
+            if len(instructions) > 200:
+                inst_display += "..."
             print(f"  Instructions:")
-            for line in instructions.split('\n'):
+            for line in inst_display.split('\n'):
                 print(f"    {line}")
         
-        if hasattr(agent, 'tools') and agent.tools:
-            print(f"  Tools: {len(agent.tools)}")
-            for tool in agent.tools:
-                tool_type = tool.type if hasattr(tool, 'type') else type(tool).__name__
-                print(f"    - {tool_type}")
-                
-                # Show function tool details
-                if hasattr(tool, 'function') and tool.function:
-                    func = tool.function
-                    if hasattr(func, 'name'):
-                        print(f"      Name: {func.name}")
-                    if hasattr(func, 'description'):
-                        print(f"      Description: {func.description}")
+        if tools:
+            print(f"  Tools: {len(tools)}")
+            for tool in tools:
+                if isinstance(tool, dict):
+                    tool_type = tool.get('type', 'unknown')
+                    print(f"    - {tool_type}")
+                    if 'function' in tool:
+                        func = tool['function']
+                        if 'name' in func:
+                            print(f"      Name: {func['name']}")
+                        if 'description' in func:
+                            print(f"      Description: {func['description']}")
+                else:
+                    tool_type = getattr(tool, 'type', type(tool).__name__)
+                    print(f"    - {tool_type}")
+                    if hasattr(tool, 'function') and tool.function:
+                        func = tool.function
+                        if hasattr(func, 'name'):
+                            print(f"      Name: {func.name}")
+                        if hasattr(func, 'description'):
+                            print(f"      Description: {func.description}")
         else:
             print(f"  Tools: 0")
         
