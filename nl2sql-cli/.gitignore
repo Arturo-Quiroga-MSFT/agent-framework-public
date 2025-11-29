@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+*.cache
+
+# Exports (optional - comment out if you want to track exports)
+exports/
+
+# Visualizations
+visualizations/
+
+# Workflow outputs (optional - comment out if you want to track outputs)
+workflow_outputs/
+
+# OS
+.DS_Store
+Thumbs.db
