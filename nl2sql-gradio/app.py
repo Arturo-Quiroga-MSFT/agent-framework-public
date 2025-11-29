@@ -50,6 +50,24 @@ async def process_query(question: str, session_id: Optional[str] = None):
             formatted_output = event.data
             break
     
+    # Extract suggestions from output
+    suggestions = []
+    if formatted_output:
+        lines = formatted_output.split('\n')
+        in_suggestions = False
+        for line in lines:
+            if '**Suggestions:**' in line:
+                in_suggestions = True
+                continue
+            if in_suggestions:
+                if line.strip().startswith('- '):
+                    # Remove markdown list marker and clean up
+                    suggestion = line.strip()[2:].strip()
+                    if suggestion and '?' in suggestion:
+                        suggestions.append(suggestion)
+                elif line.strip().startswith('────') or not line.strip():
+                    break
+    
     # Find latest chart
     viz_dir = Path(__file__).parent / "visualizations"
     chart_files = sorted(viz_dir.glob("chart_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -63,20 +81,20 @@ async def process_query(question: str, session_id: Optional[str] = None):
     latest_csv = str(csv_files[0]) if csv_files else None
     latest_xlsx = str(xlsx_files[0]) if xlsx_files else None
     
-    return formatted_output or "No output generated", latest_chart, latest_csv, latest_xlsx
+    return formatted_output or "No output generated", latest_chart, latest_csv, latest_xlsx, suggestions
 
 
 def chat_interface(message, history, session_id):
     """Handle chat messages."""
     if not message.strip():
-        return history, None, None, None
+        return history, None, None, None, gr.update(choices=[], visible=False)
     
     # Add user message to history
-    history = history + [[message, "Processing..."]]
+    history = history + [{"role": "user", "content": message}]
     
     # Process query
     try:
-        output, chart, csv, xlsx = asyncio.run(process_query(message, session_id or None))
+        output, chart, csv, xlsx, suggestions = asyncio.run(process_query(message, session_id or None))
         
         # Extract just the answer section for chat
         answer_lines = []
@@ -93,26 +111,37 @@ def chat_interface(message, history, session_id):
         
         answer = '\n'.join(answer_lines).strip() or output
         
-        # Update last message with response
-        history[-1][1] = answer
+        # Add assistant response
+        history = history + [{"role": "assistant", "content": answer}]
         
-        return history, chart, csv, xlsx
+        # Update suggestions dropdown
+        suggestion_update = gr.update(
+            choices=suggestions if suggestions else [],
+            visible=bool(suggestions),
+            value=None
+        )
+        
+        return history, chart, csv, xlsx, suggestion_update
         
     except Exception as e:
-        history[-1][1] = f"❌ Error: {str(e)}"
-        return history, None, None, None
+        history = history + [{"role": "assistant", "content": f"❌ Error: {str(e)}"}]
+        return history, None, None, None, gr.update(choices=[], visible=False)
 
 
 def build_ui():
     """Build Gradio interface."""
-    with gr.Blocks(title="NL2SQL Chat", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="NL2SQL Chat") as demo:
         gr.Markdown("""
-        # 🔍 NL2SQL Chat Interface
+        # 🏦 TERADATA-FI Financial Intelligence Chat
         
-        Ask questions about your database in natural language. The AI will:
-        1. Generate SQL queries
-        2. Execute them safely
-        3. Provide insights and visualizations
+        **Connected to:** TERADATA-FI Database | aqsqlserver001.database.windows.net
+        
+        Ask natural language questions about your financial data. The AI will:
+        1. Generate optimized SQL queries against dim.DimCustomer and FACT tables
+        2. Execute them safely with validation
+        3. Provide intelligent insights with automatic visualizations
+        
+        **Database Coverage:** Customer profiles, loan originations, payment transactions, financial metrics, and risk indicators.
         """)
         
         with gr.Row():
@@ -120,8 +149,15 @@ def build_ui():
                 chatbot = gr.Chatbot(
                     height=500,
                     label="Conversation",
-                    show_label=True,
-                    avatar_images=(None, "🤖")
+                    show_label=True
+                )
+                
+                # Suggestions dropdown
+                suggestions_dropdown = gr.Dropdown(
+                    label="💡 Suggested Follow-up Questions",
+                    choices=[],
+                    visible=False,
+                    interactive=True
                 )
                 
                 with gr.Row():
@@ -143,10 +179,17 @@ def build_ui():
                 gr.Examples(
                     examples=[
                         "What are the top 10 customers by revenue?",
-                        "Show me all orders from last month",
-                        "How many products are out of stock?",
-                        "What's the average order value by region?",
-                        "List employees hired in 2024"
+                        "Show me high-risk customers with loan volume over $100M",
+                        "What's the distribution of customers by tier?",
+                        "List VIP customers with more than 15 loans",
+                        "Show me loan volume trends by fiscal month",
+                        "Which customer segment has the highest default rate?",
+                        "Compare Bronze vs Platinum tier customers by total loan volume",
+                        "Show me customers in the Large Corporate segment with delinquent loans",
+                        "What's the average lifetime revenue by customer tier?",
+                        "List customers with internal risk rating above 8",
+                        "Show me loan origination volume by fiscal year and month",
+                        "Which customers have the highest loan-to-revenue ratio?"
                     ],
                     inputs=msg
                 )
@@ -163,16 +206,31 @@ def build_ui():
         submit_event = submit.click(
             chat_interface,
             inputs=[msg, chatbot, session],
-            outputs=[chatbot, chart_output, csv_output, xlsx_output]
+            outputs=[chatbot, chart_output, csv_output, xlsx_output, suggestions_dropdown]
         )
         
         msg.submit(
             chat_interface,
             inputs=[msg, chatbot, session],
-            outputs=[chatbot, chart_output, csv_output, xlsx_output]
+            outputs=[chatbot, chart_output, csv_output, xlsx_output, suggestions_dropdown]
         )
         
-        clear.click(lambda: ([], None, None, None), outputs=[chatbot, chart_output, csv_output, xlsx_output])
+        # Handle suggestion selection
+        def use_suggestion(suggestion, history, session_id):
+            if suggestion:
+                return chat_interface(suggestion, history, session_id)
+            return history, None, None, None, gr.update()
+        
+        suggestions_dropdown.change(
+            use_suggestion,
+            inputs=[suggestions_dropdown, chatbot, session],
+            outputs=[chatbot, chart_output, csv_output, xlsx_output, suggestions_dropdown]
+        )
+        
+        clear.click(
+            lambda: ([], None, None, None, gr.update(choices=[], visible=False)), 
+            outputs=[chatbot, chart_output, csv_output, xlsx_output, suggestions_dropdown]
+        )
         
         # Clear input after submit
         submit.click(lambda: "", outputs=msg)

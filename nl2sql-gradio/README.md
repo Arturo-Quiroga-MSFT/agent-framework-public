@@ -1,33 +1,37 @@
-# 🎯 NL2SQL Pipeline - CLI Version (No DevUI)
+# 🎯 NL2SQL Pipeline - Gradio Chat Interface
 
-> **A CLI-only version** of the production-ready NL2SQL workflow that runs from command line without web interface.
+> **Interactive chat UI** for the NL2SQL pipeline with real-time visualizations and exports.
 
 ## Quick Start
 
 ```bash
-# Run a query
-python nl2sql_workflow.py "What are the top 10 customers by revenue?"
+# Install Gradio
+pip install gradio
 
-# With session support for follow-ups
-python nl2sql_workflow.py "Show me customers" session1
-python nl2sql_workflow.py "What about their revenue?" session1
+# Launch chat interface
+python app.py
 ```
+
+Opens browser at `http://localhost:7860`
+
+## Features
+
+✅ **Chat Interface** - Natural conversation flow  
+✅ **Inline Charts** - Visualizations appear in sidebar  
+✅ **Export Downloads** - CSV/Excel available instantly  
+✅ **Session Support** - Follow-up questions in context  
+✅ **Query Examples** - Click to try pre-built questions  
 
 ## Configuration
 
-Copy `.env` from parent directory or configure:
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_DEPLOYMENT_NAME`
-- MSSQL connection details
+Same `.env` as CLI version (automatically shared).
 
-## Key Differences from DevUI Version
+## Usage
 
-✅ No web server - faster startup  
-✅ CLI arguments - direct execution  
-✅ Same pipeline logic & executors  
-✅ Same output files & exports  
-❌ No web UI  
-❌ No REST API endpoint
+1. Type question in chat
+2. View answer + chart
+3. Download exports as needed
+4. Use session ID for follow-ups
 
 ---
 

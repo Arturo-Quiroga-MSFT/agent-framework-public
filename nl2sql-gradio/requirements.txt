@@ -17,6 +17,9 @@ openpyxl>=3.1.0  # For Excel export
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 
+# Gradio UI
+gradio>=4.0.0
+
 # Optional: For enhanced observability
 opentelemetry-api>=1.20.0
 opentelemetry-sdk>=1.20.0

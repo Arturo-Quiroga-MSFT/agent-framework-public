@@ -143,29 +143,11 @@ class QueryResultsVisualizer:
             user_question: User's question for context
             
         Returns:
-            Chart type: "bar", "hbar", "line", "pie", "heatmap", or "none"
+            Chart type: "bar", "hbar", "line", "pie", or "none"
         """
         question_lower = user_question.lower()
         
-        # Heatmap keywords (matrix data)
-        if any(word in question_lower for word in ["heatmap", "heat map", "matrix", "correlation"]):
-            if len(column_names) >= 3:  # Need at least 3 columns for meaningful heatmap
-                return "heatmap"
-        
-        # Check if we have matrix-style data (multiple numeric columns)
-        if len(column_names) >= 3:
-            numeric_cols = sum(1 for col in column_names if self._is_numeric_column(rows, col))
-            if numeric_cols >= 2:
-                # Keywords suggesting cross-tabulation
-                if any(word in question_lower for word in ["by", "across", "compare", "vs", "versus"]):
-                    return "heatmap"
-        
-        # Pie chart keywords
-        if any(word in question_lower for word in ["percentage", "proportion", "distribution", "breakdown", "share"]):
-            if len(rows) <= 12:  # Pie charts work best with fewer categories (increased from 10 to 12)
-                return "pie"
-        
-        # Line chart keywords (time series)
+        # Line chart keywords (time series) - check first
         if any(word in question_lower for word in ["trend", "over time", "by month", "by year", "by quarter", "history"]):
             return "line"
         
@@ -174,10 +156,27 @@ class QueryResultsVisualizer:
             if any(word in col_name.lower() for word in ["date", "month", "year", "quarter", "day", "time"]):
                 return "line"
         
-        # Default to horizontal bar chart for rankings, comparisons, top N
-        # (horizontal is better for long category names)
-        if any(word in question_lower for word in ["top", "bottom", "highest", "lowest", "compare", "rank", "most", "least"]):
+        # Pie chart keywords - check second (only if few rows)
+        if any(word in question_lower for word in ["percentage", "proportion", "distribution", "breakdown", "share"]):
+            if len(rows) <= 12:  # Pie charts work best with fewer categories
+                return "pie"
+        
+        # Rankings and comparisons - use horizontal bar (best for most queries)
+        if any(word in question_lower for word in ["top", "bottom", "highest", "lowest", "compare", "rank", "most", "least", "by revenue", "by volume", "by count"]):
             return "hbar"
+        
+        # Heatmap only for specific matrix/correlation requests
+        if any(word in question_lower for word in ["heatmap", "heat map", "matrix", "correlation"]):
+            if len(column_names) >= 3:  # Need at least 3 columns for meaningful heatmap
+                return "heatmap"
+        
+        # Check if we have matrix-style data (multiple numeric columns) AND cross-tab keywords
+        if len(column_names) >= 4:  # Require 4+ columns for auto-heatmap
+            numeric_cols = sum(1 for col in column_names if self._is_numeric_column(rows, col))
+            if numeric_cols >= 3:  # Multiple numeric columns
+                # Keywords suggesting cross-tabulation
+                if any(word in question_lower for word in ["across", "vs", "versus", "breakdown by"]):
+                    return "heatmap"
         
         # Default to horizontal bar chart for general categorical data
         return "hbar"
