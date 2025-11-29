@@ -59,8 +59,15 @@ from executors import (
 # Load environment
 load_dotenv()
 
-# Global timing
+# Global timing and metrics
 START_TIME: datetime | None = None
+WORKFLOW_METRICS = {
+    "start_time": None,
+    "end_time": None,
+    "total_tokens_in": 0,
+    "total_tokens_out": 0,
+    "total_tokens": 0
+}
 
 
 # =============================================================================
@@ -307,6 +314,14 @@ Be concise, clear, and actionable.""",
                 input_data: NL2SQLInput with question field
                 ctx: WorkflowContext for sending messages
             """
+            # Start timing
+            import time
+            global WORKFLOW_METRICS
+            WORKFLOW_METRICS["start_time"] = time.time()
+            WORKFLOW_METRICS["total_tokens_in"] = 0
+            WORKFLOW_METRICS["total_tokens_out"] = 0
+            WORKFLOW_METRICS["total_tokens"] = 0
+            
             # If a session id is provided, publish a SYSTEM message with the session id
             # and attempt to load previous conversation messages from disk so agents
             # can use the prior context to resolve follow-ups.
@@ -353,6 +368,26 @@ Be concise, clear, and actionable.""",
         ) -> None:
             """Format complete NL2SQL conversation for display."""
             from datetime import datetime
+            import time
+            
+            # Calculate elapsed time
+            global WORKFLOW_METRICS
+            if WORKFLOW_METRICS["start_time"]:
+                WORKFLOW_METRICS["end_time"] = time.time()
+                elapsed_time = WORKFLOW_METRICS["end_time"] - WORKFLOW_METRICS["start_time"]
+            else:
+                elapsed_time = 0
+            
+            # Extract token usage from messages (if available)
+            total_tokens_in = 0
+            total_tokens_out = 0
+            for msg in conversation:
+                # Check if message has token usage metadata
+                if hasattr(msg, 'metadata') and msg.metadata:
+                    total_tokens_in += msg.metadata.get('prompt_tokens', 0)
+                    total_tokens_out += msg.metadata.get('completion_tokens', 0)
+            
+            total_tokens = total_tokens_in + total_tokens_out
             
             output_lines = []
             output_lines.append("=" * 80)
@@ -420,6 +455,18 @@ Be concise, clear, and actionable.""",
             
             output_lines.append("=" * 80)
             output_lines.append("✅ NL2SQL Pipeline Complete")
+            output_lines.append("=" * 80)
+            output_lines.append("")
+            
+            # Add performance metrics
+            output_lines.append("📊 PERFORMANCE METRICS")
+            output_lines.append("─" * 80)
+            output_lines.append(f"⏱️  Total Elapsed Time: {elapsed_time:.2f} seconds")
+            if total_tokens > 0:
+                output_lines.append(f"🔤 Tokens Used:")
+                output_lines.append(f"   • Input Tokens:  {total_tokens_in:,}")
+                output_lines.append(f"   • Output Tokens: {total_tokens_out:,}")
+                output_lines.append(f"   • Total Tokens:  {total_tokens:,}")
             output_lines.append("=" * 80)
             
             formatted_output = "\n".join(output_lines)
