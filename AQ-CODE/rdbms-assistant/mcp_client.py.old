@@ -14,6 +14,12 @@ Authentication Options:
 2. SQL Server Authentication - Set SQL_USERNAME and SQL_PASSWORD in .env
 3. Windows Authentication - .NET MCP server only
 
+Reference: https://devblogs.microsoft.com/azure-sql/introducing-mssql-mcp-server/
+"""
+
+from typing import Any, Optional, Dict, List
+from pydantic import BaseModel, Field
+
 
 class ConnectionInfo(BaseModel):
     """Information about a database connection."""
