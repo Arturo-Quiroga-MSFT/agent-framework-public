@@ -1,0 +1,308 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+"""
+MCP Client Wrapper for MSSQL Tools
+
+This module provides a Python wrapper around the MSSQL MCP Server tools,
+making them easily accessible to Azure AI agents.
+
+The MCP server runs STANDALONE - no VS Code required!
+Connection configuration uses environment variables from .env file.
+
+Authentication Options:
+1. Entra ID (Azure AD) - Default, requires: az login
+2. SQL Server Authentication - Set SQL_USERNAME and SQL_PASSWORD in .env
+3. Windows Authentication - .NET MCP server only
+
+
+class ConnectionInfo(BaseModel):
+    """Information about a database connection."""
+    connection_id: str
+    server_name: str
+    database_name: Optional[str] = None
+    user: Optional[str] = None
+
+
+class QueryResult(BaseModel):
+    """Result from a query execution."""
+    rows: List[Dict[str, Any]]
+    row_count: int
+    columns: List[str]
+    execution_time_ms: Optional[float] = None
+
+
+# MCP Tool Function Definitions
+# These will be exposed to the AI agents as callable tools
+
+def mssql_list_servers() -> str:
+    """
+    List all available MSSQL servers.
+    
+    Returns:
+        List of server names configured in VS Code SQL extension.
+    """
+    # This is a placeholder - actual implementation will call MCP server
+    return "mssql_list_servers tool - returns list of configured SQL servers"
+
+
+def mssql_connect(
+    server_name: str,
+    database: Optional[str] = None,
+    profile_id: Optional[str] = None
+) -> str:
+    """
+    Connect to an MSSQL database server.
+    
+    Args:
+        server_name: Server name from mssql_list_servers
+        database: Optional specific database name
+        profile_id: Optional connection profile ID (use when user mentions profile)
+    
+    Returns:
+        Connection ID (UUID) to use with other operations
+    """
+    return f"mssql_connect tool - server={server_name}, db={database}, profile={profile_id}"
+
+
+def mssql_disconnect(connection_id: str) -> str:
+    """
+    Disconnect from a database server.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        Success message
+    """
+    return f"mssql_disconnect tool - connection_id={connection_id}"
+
+
+def mssql_list_databases(connection_id: str) -> str:
+    """
+    List all databases on a connected server.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        List of database names
+    """
+    return f"mssql_list_databases tool - connection_id={connection_id}"
+
+
+def mssql_list_tables(connection_id: str) -> str:
+    """
+    List all tables in the connected database.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        List of tables with schema information
+    """
+    return f"mssql_list_tables tool - connection_id={connection_id}"
+
+
+def mssql_list_views(connection_id: str) -> str:
+    """
+    List all views in the connected database.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        List of views with schema information
+    """
+    return f"mssql_list_views tool - connection_id={connection_id}"
+
+
+def mssql_list_schemas(connection_id: str) -> str:
+    """
+    List all schemas in the connected database.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        List of schema names
+    """
+    return f"mssql_list_schemas tool - connection_id={connection_id}"
+
+
+def mssql_list_functions(connection_id: str) -> str:
+    """
+    List all functions in the connected database.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        List of functions with schema information
+    """
+    return f"mssql_list_functions tool - connection_id={connection_id}"
+
+
+def mssql_run_query(
+    connection_id: str,
+    query: str,
+    query_types: List[str],
+    query_intent: str
+) -> str:
+    """
+    Execute a SQL query against the connected database.
+    
+    IMPORTANT: This tool will execute ANY SQL statement provided.
+    Be extremely careful with write operations (INSERT, UPDATE, DELETE, CREATE, ALTER, DROP).
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+        query: SQL query to execute
+        query_types: List of operation types (SELECT, INSERT, UPDATE, DELETE, CREATE, etc.)
+        query_intent: Purpose of query (data_exploration, troubleshooting, schema_creation, etc.)
+    
+    Returns:
+        Query results including row count, columns, and data
+    """
+    return f"mssql_run_query tool - connection_id={connection_id}, query={query[:50]}..."
+
+
+def mssql_change_database(connection_id: str, database: str) -> str:
+    """
+    Change the database for an existing connection.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+        database: Database name to switch to
+    
+    Returns:
+        Success message
+    """
+    return f"mssql_change_database tool - connection_id={connection_id}, database={database}"
+
+
+def mssql_get_connection_details(connection_id: str) -> str:
+    """
+    Get details about a connection.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        Connection information (server, database, user, auth type)
+    """
+    return f"mssql_get_connection_details tool - connection_id={connection_id}"
+
+
+def mssql_show_schema(connection_id: str) -> str:
+    """
+    Open interactive schema designer for the database.
+    
+    Args:
+        connection_id: Connection ID from mssql_connect
+    
+    Returns:
+        Success message (opens graphical view in VS Code)
+    """
+    return f"mssql_show_schema tool - connection_id={connection_id}"
+
+
+# Tool Collections for Different Agent Types
+
+READONLY_TOOLS = [
+    mssql_list_servers,
+    mssql_connect,
+    mssql_disconnect,
+    mssql_list_databases,
+    mssql_list_tables,
+    mssql_list_views,
+    mssql_list_schemas,
+    mssql_list_functions,
+    mssql_get_connection_details,
+    mssql_show_schema,
+]
+
+QUERY_TOOLS = [
+    *READONLY_TOOLS,
+    mssql_run_query,
+]
+
+ALL_TOOLS = [
+    *QUERY_TOOLS,
+    mssql_change_database,
+]
+
+
+# DBA-Specific Query Templates
+
+DBA_QUERY_TEMPLATES = {
+    "index_fragmentation": """
+        SELECT 
+            OBJECT_NAME(ips.object_id) AS TableName,
+            i.name AS IndexName,
+            ips.index_type_desc,
+            ips.avg_fragmentation_in_percent,
+            ips.page_count
+        FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'SAMPLED') ips
+        INNER JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
+        WHERE ips.avg_fragmentation_in_percent > 10
+        AND ips.page_count > 1000
+        ORDER BY ips.avg_fragmentation_in_percent DESC
+    """,
+    
+    "blocking_sessions": """
+        SELECT 
+            blocking.session_id AS BlockingSessionID,
+            blocked.session_id AS BlockedSessionID,
+            blocked.wait_type,
+            blocked.wait_time,
+            blocked.wait_resource,
+            blocking_query.text AS BlockingQuery,
+            blocked_query.text AS BlockedQuery
+        FROM sys.dm_exec_requests blocked
+        INNER JOIN sys.dm_exec_requests blocking ON blocked.blocking_session_id = blocking.session_id
+        CROSS APPLY sys.dm_exec_sql_text(blocking.sql_handle) blocking_query
+        CROSS APPLY sys.dm_exec_sql_text(blocked.sql_handle) blocked_query
+        WHERE blocked.blocking_session_id > 0
+    """,
+    
+    "database_size": """
+        SELECT 
+            DB_NAME() AS DatabaseName,
+            SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS BIGINT) * 8 / 1024.0) AS UsedSpaceMB,
+            SUM(size * 8 / 1024.0) AS AllocatedSpaceMB,
+            SUM(size * 8 / 1024.0) - SUM(CAST(FILEPROPERTY(name, 'SpaceUsed') AS BIGINT) * 8 / 1024.0) AS FreeSpaceMB
+        FROM sys.database_files
+    """,
+    
+    "top_queries_by_cpu": """
+        SELECT TOP 10
+            SUBSTRING(qt.text, (qs.statement_start_offset/2)+1,
+                ((CASE qs.statement_end_offset
+                    WHEN -1 THEN DATALENGTH(qt.text)
+                    ELSE qs.statement_end_offset
+                END - qs.statement_start_offset)/2)+1) AS QueryText,
+            qs.execution_count,
+            qs.total_worker_time / 1000 AS TotalCPU_ms,
+            qs.total_worker_time / qs.execution_count / 1000 AS AvgCPU_ms,
+            qs.creation_time,
+            qs.last_execution_time
+        FROM sys.dm_exec_query_stats qs
+        CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) qt
+        ORDER BY qs.total_worker_time DESC
+    """,
+    
+    "missing_indexes": """
+        SELECT 
+            migs.avg_user_impact AS AvgImpact,
+            migs.user_seeks + migs.user_scans AS TotalSeeksScans,
+            mid.statement AS TableName,
+            mid.equality_columns AS EqualityColumns,
+            mid.inequality_columns AS InequalityColumns,
+            mid.included_columns AS IncludedColumns
+        FROM sys.dm_db_missing_index_groups mig
+        INNER JOIN sys.dm_db_missing_index_group_stats migs ON mig.index_group_handle = migs.group_handle
+        INNER JOIN sys.dm_db_missing_index_details mid ON mig.index_handle = mid.index_handle
+        WHERE migs.avg_user_impact > 50
+        ORDER BY migs.avg_user_impact DESC
+    """
+}
