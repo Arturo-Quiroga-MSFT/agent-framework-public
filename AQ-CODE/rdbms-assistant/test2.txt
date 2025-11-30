@@ -1,0 +1,206 @@
+What are the relationships between tables?
+
+
+Here are the table relationships in TERADATA-FI, extracted directly from the database.
+
+Relationships (ParentTable.Column → ReferencedTable.Column):
+
+fact.FACT_COVENANT_TEST
+
+CovenantTypeKey → DimCovenantType.CovenantTypeKey
+LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+TestDateKey → DimDate.DateKey
+fact.FACT_CUSTOMER_FINANCIALS
+
+CustomerKey → DimCustomer.CustomerKey
+StatementDateKey → DimDate.DateKey
+StatementTypeKey → DimStatementType.StatementTypeKey
+fact.FACT_CUSTOMER_INTERACTION
+
+InteractionChannelKey → DimInteractionChannel.ChannelKey
+CustomerKey → DimCustomer.CustomerKey
+FollowUpDateKey → DimDate.DateKey
+InteractionDateKey → DimDate.DateKey
+InteractionTypeKey → DimInteractionType.InteractionTypeKey
+RelatedApplicationKey → fact.FACT_LOAN_APPLICATION.ApplicationKey
+RelatedLoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+fact.FACT_LOAN_APPLICATION
+
+ApplicationDateKey → DimDate.DateKey
+CustomerKey → DimCustomer.CustomerKey
+DecisionDateKey → DimDate.DateKey
+ProductKey → DimLoanProduct.ProductKey
+PurposeKey → DimLoanPurpose.PurposeKey
+ApplicationStatusKey → DimApplicationStatus.StatusKey
+fact.FACT_LOAN_BALANCE_DAILY
+
+DelinquencyStatusKey → DimDelinquencyStatus.DelinquencyStatusKey
+LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+SnapshotDateKey → DimDate.DateKey
+fact.FACT_LOAN_ORIGINATION
+
+CustomerKey → DimCustomer.CustomerKey
+DelinquencyStatusKey → DimDelinquencyStatus.DelinquencyStatusKey
+FirstPaymentDateKey → DimDate.DateKey
+MaturityDateKey → DimDate.DateKey
+OriginationDateKey → DimDate.DateKey
+ProductKey → DimLoanProduct.ProductKey
+PurposeKey → DimLoanPurpose.PurposeKey
+fact.FACT_PAYMENT_TRANSACTION
+
+LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+PaymentDateKey → DimDate.DateKey
+PaymentMethodKey → DimPaymentMethod.PaymentMethodKey
+PaymentTypeKey → DimPaymentType.PaymentTypeKey
+ScheduledDateKey → DimDate.DateKey
+Analysis complete.
+
+
+create a simple ERD for this table of relationships
+
+
+Here is a simple ERD based on the foreign‑key relationships you provided.
+Since you asked for a simple ERD, this diagram shows only tables and their relationships, without listing columns.
+
+Format: Mermaid ER Diagram (renderable anywhere)
+
+
+erDiagram
+
+    dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+    dim_DimStatementType ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+    dim_DimDate ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+
+    dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimInteractionType ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimInteractionChannel ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimDate ||--o{ fact_FACT_CUSTOMER_INTERACTION : interaction_dates
+    fact_FACT_LOAN_APPLICATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : relates_to
+
+    dim_DimDate ||--o{ fact_FACT_LOAN_APPLICATION : dates
+    dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_APPLICATION : purpose
+    dim_DimApplicationStatus ||--o{ fact_FACT_LOAN_APPLICATION : status
+    dim_DimCustomer ||--o{ fact_FACT_LOAN_APPLICATION : customer
+    dim_DimLoanProduct ||--o{ fact_FACT_LOAN_APPLICATION : product
+
+    dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_BALANCE_DAILY : delinquency
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_LOAN_BALANCE_DAILY : loan
+    dim_DimDate ||--o{ fact_FACT_LOAN_BALANCE_DAILY : snapshot
+
+    dim_DimDate ||--o{ fact_FACT_LOAN_ORIGINATION : dates
+    dim_DimCustomer ||--o{ fact_FACT_LOAN_ORIGINATION : customer
+    dim_DimLoanProduct ||--o{ fact_FACT_LOAN_ORIGINATION : product
+    dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_ORIGINATION : delinquency
+    dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_ORIGINATION : purpose
+
+    dim_DimPaymentMethod ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_method
+    dim_DimPaymentType ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_type
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_PAYMENT_TRANSACTION : loan
+    dim_DimDate ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_dates
+
+    dim_DimCovenantType ||--o{ fact_FACT_COVENANT_TEST : covenant_type
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_COVENANT_TEST : loan
+    dim_DimDate ||--o{ fact_FACT_COVENANT_TEST : test_date
+If you'd like this exported as PNG, PDF, or a higher‑resolution graphic, tell me the format and I’ll produce it immediately.
+
+
+that is a great mermaid diagram, it is horizontal (landscape), any change you can make it vertical (portrait)
+
+
+Here is the same ER diagram rendered in vertical (portrait) layout using Mermaid’s TB direction.
+
+dim.DimCustomer
+
+fact.FACT_LOAN_ORIGINATION
+
+fact.FACT_LOAN_APPLICATION
+
+fact.FACT_PAYMENT_TRANSACTION
+
+
+can you use Graphviz/DOT instead?
+
+
+Yes, I can generate ER diagrams using Graphviz/DOT. Just tell me what you want diagrammed.
+
+
+this diagram that you cretaed earlier: erDiagram
+
+dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+dim_DimStatementType ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+dim_DimDate ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+
+dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+dim_DimInteractionType ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+dim_DimInteractionChannel ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+dim_DimDate ||--o{ fact_FACT_CUSTOMER_INTERACTION : interaction_dates
+fact_FACT_LOAN_APPLICATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : relates_to
+
+dim_DimDate ||--o{ fact_FACT_LOAN_APPLICATION : dates
+dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_APPLICATION : purpose
+dim_DimApplicationStatus ||--o{ fact_FACT_LOAN_APPLICATION : status
+dim_DimCustomer ||--o{ fact_FACT_LOAN_APPLICATION : customer
+dim_DimLoanProduct ||--o{ fact_FACT_LOAN_APPLICATION : product
+
+dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_BALANCE_DAILY : delinquency
+fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_LOAN_BALANCE_DAILY : loan
+dim_DimDate ||--o{ fact_FACT_LOAN_BALANCE_DAILY : snapshot
+
+dim_DimDate ||--o{ fact_FACT_LOAN_ORIGINATION : dates
+dim_DimCustomer ||--o{ fact_FACT_LOAN_ORIGINATION : customer
+dim_DimLoanProduct ||--o{ fact_FACT_LOAN_ORIGINATION : product
+dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_ORIGINATION : delinquency
+dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_ORIGINATION : purpose
+
+dim_DimPaymentMethod ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_method
+dim_DimPaymentType ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_type
+fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_PAYMENT_TRANSACTION : loan
+dim_DimDate ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_dates
+
+dim_DimCovenantType ||--o{ fact_FACT_COVENANT_TEST : covenant_type
+fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_COVENANT_TEST : loan
+dim_DimDate ||--o{ fact_FACT_COVENANT_TEST : test_date
+
+
+Here’s the same diagram you referenced, unchanged and ready for use:
+
+
+erDiagram
+
+    dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+    dim_DimStatementType ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+    dim_DimDate ||--o{ fact_FACT_CUSTOMER_FINANCIALS : has
+
+    dim_DimCustomer ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimInteractionType ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimInteractionChannel ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : has
+    dim_DimDate ||--o{ fact_FACT_CUSTOMER_INTERACTION : interaction_dates
+    fact_FACT_LOAN_APPLICATION ||--o{ fact_FACT_CUSTOMER_INTERACTION : relates_to
+
+    dim_DimDate ||--o{ fact_FACT_LOAN_APPLICATION : dates
+    dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_APPLICATION : purpose
+    dim_DimApplicationStatus ||--o{ fact_FACT_LOAN_APPLICATION : status
+    dim_DimCustomer ||--o{ fact_FACT_LOAN_APPLICATION : customer
+    dim_DimLoanProduct ||--o{ fact_FACT_LOAN_APPLICATION : product
+
+    dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_BALANCE_DAILY : delinquency
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_LOAN_BALANCE_DAILY : loan
+    dim_DimDate ||--o{ fact_FACT_LOAN_BALANCE_DAILY : snapshot
+
+    dim_DimDate ||--o{ fact_FACT_LOAN_ORIGINATION : dates
+    dim_DimCustomer ||--o{ fact_FACT_LOAN_ORIGINATION : customer
+    dim_DimLoanProduct ||--o{ fact_FACT_LOAN_ORIGINATION : product
+    dim_DimDelinquencyStatus ||--o{ fact_FACT_LOAN_ORIGINATION : delinquency
+    dim_DimLoanPurpose ||--o{ fact_FACT_LOAN_ORIGINATION : purpose
+
+    dim_DimPaymentMethod ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_method
+    dim_DimPaymentType ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_type
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_PAYMENT_TRANSACTION : loan
+    dim_DimDate ||--o{ fact_FACT_PAYMENT_TRANSACTION : payment_dates
+
+    dim_DimCovenantType ||--o{ fact_FACT_COVENANT_TEST : covenant_type
+    fact_FACT_LOAN_ORIGINATION ||--o{ fact_FACT_COVENANT_TEST : loan
+    dim_DimDate ||--o{ fact_FACT_COVENANT_TEST : test_date

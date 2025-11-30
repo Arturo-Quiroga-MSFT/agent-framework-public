@@ -1,0 +1,12 @@
+# Ignore all generated files in this directory
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+*.csv
+*.json
+*.html
+
+# But keep this directory in git
+!.gitignore

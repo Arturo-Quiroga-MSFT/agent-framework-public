@@ -1,287 +1,251 @@
 # RDBMS Assistant - Quick Start Guide
 
-## Installation
+## ✅ Prerequisites
 
-### 1. Build the MSSQL MCP Server (Standalone Mode)
+1. **Python 3.10+** 
+2. **Node.js 18+** and npm
+3. **Azure CLI** authenticated (`az login`)
+4. **Azure AI Project** (Foundry) endpoint
+5. **Azure SQL Database** or SQL Server credentials
 
-The MCP server runs as a standalone Node.js process - **no VS Code required!**
+## 🚀 Installation (5 Minutes)
 
+### Step 1: Install Python Dependencies
 ```bash
-# Install Node.js (if not already installed)
-# Download from: https://nodejs.org/
+cd /path/to/rdbms-assistant
 
-# Clone the MSSQL MCP Server repository
-git clone https://github.com/Azure-Samples/SQL-AI-samples.git
+# Activate virtual environment (or create one)
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Navigate to the Node.js MCP server
-cd SQL-AI-samples/MssqlMcp/Node
-
-# Install dependencies and build
-npm install
-
-# Note the path to the built index.js file
-# Location: SQL-AI-samples/MssqlMcp/Node/dist/index.js
-```
-
-### 2. Set up Python Environment
-```bash
-cd AQ-CODE/rdbms-assistant
-
-# Use the workspace virtual environment
-source ../../.venv/bin/activate
-
-# Install dependencies
+# Install requirements
 pip install -r requirements.txt
 ```
 
-### 3. Configure Azure Authentication
+### Step 2: Build MCP Server
+The MSSQL MCP Server is already included in `MssqlMcp/Node`. Build it:
+
 ```bash
-# Login to Azure
+cd MssqlMcp/Node
+npm install
+npm run build
+cd ../..
+```
+
+✅ This creates `MssqlMcp/Node/dist/index.js` which the agent automatically spawns.
+
+### Step 3: Configure Environment
+Create a `.env` file in the project root with your settings:
+
+```bash
+# Azure AI Project (Required)
+AZURE_AI_PROJECT_ENDPOINT=https://your-project.api.azureml.ms
+
+# SQL Server Connection (Required)
+SERVER_NAME=your-server.database.windows.net
+DATABASE_NAME=your-database
+SQL_USERNAME=your-username
+SQL_PASSWORD=your-password
+TRUST_SERVER_CERTIFICATE=true
+
+# Optional
+READONLY=false
+```
+
+**Get your Azure AI Project Endpoint:**
+1. Open Azure Portal
+2. Go to your Azure AI Project (AI Foundry)
+3. Copy the endpoint URL from Overview
+
+### Step 4: Authenticate with Azure
+```bash
 az login
-
-# Verify authentication
-az account show
 ```
 
-### 4. Set Up Environment Variables
+### Step 5: Run!
 ```bash
-# Copy template
-cp .env.template .env
-
-# Edit .env with your settings
-nano .env
+python dba_assistant.py
 ```
 
-**Required Settings in .env:**
-
-1. **Azure AI Project Connection String**
-   - Get from: Azure Portal → Your AI Project → Settings
-
-2. **SQL Server Connection**
-   ```bash
-   SERVER_NAME=localhost           # Or: your-server.database.windows.net
-   DATABASE_NAME=master            # Your database name
-   TRUST_SERVER_CERTIFICATE=true   # For local dev
-   ```
-
-3. **Authentication** (choose one):
-
-   **Option A: Entra ID (Azure AD) - For Azure SQL**
-   ```bash
-   # No username/password needed
-   # Just run: az login
-   ```
-
-   **Option B: SQL Server Authentication - For Local SQL**
-   ```bash
-   SQL_USERNAME=sa
-   SQL_PASSWORD=YourStrongPassword123!
-   ```
-
-### 5. Configure MCP Server Path
-
-The assistant needs to know where your built MCP server is located.
-
-Edit `db_health_agent.py` and update the MCP server path:
-```python
-MCP_SERVER_PATH = "/path/to/SQL-AI-samples/MssqlMcp/Node/dist/index.js"
-```
-
-## Usage
-
-### Run the Health Monitor Agent
-
-```bash
-python db_health_agent.py
-```
-
-This provides three modes:
-
-#### Mode 1: Comprehensive Health Check
-Runs a full suite of diagnostic queries:
-- Index fragmentation analysis
-- Blocking session detection
-- Database size monitoring
-- Performance bottleneck identification
-
-#### Mode 2: Quick Health Assessment (Streaming)
-Real-time streaming analysis for rapid diagnostics.
-
-#### Mode 3: Interactive DBA Session (Recommended)
-Chat-style interface where you can ask questions like:
-- "Check index fragmentation on all tables"
-- "Show me the top 5 slowest queries"
-- "Are there any blocking sessions?"
-- "What's the database size and growth trend?"
-
-### Example Session
+## 💬 Example Session
 
 ```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                   SQL Database Health Monitor Agent                          ║
-║                   Powered by Microsoft Agent Framework                       ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+$ python dba_assistant.py
+✓ Loaded environment from: /Users/.../rdbms-assistant/.env
 
-Choose a demo mode:
-  1. Comprehensive Health Check (non-streaming)
-  2. Quick Health Assessment (streaming)
-  3. Interactive DBA Session (recommended)
+╔══════════════════════════════════════════════════════════════╗
+║            Interactive DBA Assistant                         ║
+║        Powered by Microsoft Agent Framework                  ║
+║              & MSSQL MCP Server                             ║
+╚══════════════════════════════════════════════════════════════╝
 
-Enter choice (1-3) [3]: 3
+================================================================================
+INTERACTIVE DBA ASSISTANT
+Ask questions about your databases in natural language
+Type 'exit' to quit
+================================================================================
 
-Available servers (example - actual list from mssql_list_servers):
-  - localhost
-  - myserver.database.windows.net
+📡 Using server: aqsqlserver001.database.windows.net
+📊 Database: TERADATA-FI
+⏳ Starting MCP server...
 
-Enter server name: localhost
-
-✅ Connected to localhost
+✅ MCP server started
+✅ Agent ready
 💬 You can now ask questions...
 
-DBA> Check for high index fragmentation
+DBA> how many tables are in the database?
 
-🤖 Agent: I'll check the index fragmentation across your databases...
+🤖 Agent: There are 22 tables in the database. The tables are organized 
+under two schemas: "dim" and "fact". Here are the tables:
 
-[Agent performs analysis and provides recommendations]
+Under the "dim" schema (dimension tables):
+1. DimApplicationStatus
+2. DimCollateralType
+3. DimCovenantType
+4. DimCustomer
+5. DimDate
+...
+
+Under the "fact" schema (fact tables):
+1. FACT_COVENANT_TEST
+2. FACT_CUSTOMER_FINANCIALS
+3. FACT_CUSTOMER_INTERACTION
+...
+
+DBA> show me the top 5 largest tables
+
+🤖 Agent: [Agent queries the database and returns results]
+
+DBA> check for blocking sessions
+
+🤖 Agent: [Agent checks sys.dm_exec_requests for blocking]
 
 DBA> exit
 👋 Goodbye!
 ```
 
-## Architecture
+## 🛠️ Try These Questions
 
 ```
-Your Question
-     ↓
-db_health_agent.py (AzureAIAgentClient)
-     ↓
-Azure AI Agent Service + LLM
-     ↓
-mcp_client.py (MCP Tool Wrappers)
-     ↓
-MSSQL MCP Server (Standalone Node.js Process)
-     ↓
-Direct SQL Connection (Entra ID or SQL Auth)
-     ↓
-Azure SQL / SQL Server / On-Premises
+DBA> how many tables are in the database?
+DBA> show me all the dimension tables
+DBA> what's the schema of the customers table?
+DBA> list all the fact tables
+DBA> show me the top 10 largest tables
+DBA> check for blocking sessions
+DBA> what's the total database size?
+DBA> show me index fragmentation
+DBA> are there any long-running queries?
 ```
 
-**No VS Code Required!** The MCP server runs as a standalone process using environment variables for configuration.
+## 🔧 How It Works
 
-## Available Tools
+The assistant uses **Microsoft Agent Framework** with **MCPStdioTool** to connect your natural language questions to SQL operations:
 
-The agent has access to these MSSQL MCP tools:
+```
+┌─────────────────────────┐
+│   Your NL Question      │
+│  "how many tables?"     │
+└───────────┬─────────────┘
+            │
+      ┌─────▼──────┐
+      │   Agent    │  Azure AI Agent (GPT-4o)
+      │  Reasoning │  Decides which tools to call
+      └─────┬──────┘
+            │
+    ┌───────▼────────┐
+    │  MCPStdioTool  │  Spawns Node.js MCP server
+    │                │  as subprocess
+    └───────┬────────┘
+            │
+      ┌─────▼─────┐
+      │ MCP Server│  Node.js process
+      │ (Node.js) │  Handles SQL operations
+      └─────┬─────┘
+            │
+   ┌────────▼──────────┐
+   │   Azure SQL DB    │  Your database
+   └───────────────────┘
+```
 
-### Connection Management
-- `mssql_list_servers` - List configured servers
-- `mssql_connect` - Connect to a server/database
-- `mssql_disconnect` - Disconnect from server
-- `mssql_change_database` - Switch database
-- `mssql_get_connection_details` - View connection info
+**Key Components:**
 
-### Discovery
-- `mssql_list_databases` - List all databases
-- `mssql_list_tables` - List tables
-- `mssql_list_views` - List views
-- `mssql_list_schemas` - List schemas
-- `mssql_list_functions` - List functions
+1. **MCPStdioTool**: Framework's built-in tool that spawns and communicates with MCP servers via stdio
+2. **MCP Server**: Node.js process (`MssqlMcp/Node/dist/index.js`) that provides 13 SQL database tools
+3. **Agent**: Azure AI Agent that orchestrates tool calls based on your questions
 
-### Execution
-- `mssql_run_query` - Execute SQL queries
-- `mssql_show_schema` - Open schema visualizer
+## 📚 Available MCP Tools
 
-### Built-in DBA Queries
-The agent has access to pre-built queries for:
-- Index fragmentation analysis
-- Blocking session detection
-- Database size monitoring
-- Top CPU-consuming queries
-- Missing index recommendations
+The MCP server automatically provides these tools to the agent:
 
-## Safety Features
+| Tool | Description |
+|------|-------------|
+| `mssql_connect` | Connect to SQL Server |
+| `mssql_disconnect` | Close connection |
+| `mssql_list_databases` | List all databases |
+| `mssql_list_tables` | List tables in database |
+| `mssql_list_views` | List views |
+| `mssql_list_functions` | List functions |
+| `mssql_list_schemas` | List schemas |
+| `mssql_run_query` | Execute SQL queries |
+| `mssql_show_schema` | Visualize database schema |
+| `mssql_get_connection_details` | Get connection info |
+| `mssql_change_database` | Switch databases |
 
-### Read-Only by Default
-Most operations use SELECT queries only. Write operations require explicit approval.
+The agent automatically selects the right tools based on your question!
 
-### Query Validation
-All queries are analyzed before execution to identify:
-- Destructive operations (DROP, TRUNCATE, DELETE without WHERE)
-- Schema changes (ALTER, CREATE)
-- Data modifications (INSERT, UPDATE)
-
-### Approval Workflow
-Set `REQUIRE_APPROVAL_FOR_WRITES=true` in `.env` to enable approval prompts for any write operation.
-
-## Troubleshooting
-
-### "AZURE_AI_PROJECT_CONNECTION_STRING not set"
-- Create `.env` file from `.env.template`
-- Add your Azure AI project connection string
-
-### "Authentication failed"
-- Run `az login` to authenticate
-- Verify with `az account show`
+## 🐛 Troubleshooting
 
 ### "MCP server not found"
-- Install: `npm install -g @azure/mssql-mcp-server`
-- Verify: `npm list -g @azure/mssql-mcp-server`
-
-### "No servers available"
-- Configure connections in VS Code SQL extension
-- Verify connections work in VS Code SQL Explorer
-
-### "Connection refused"
-- Check SQL Server is running
-- Verify firewall rules allow connections
-- Test connection in VS Code SQL extension first
-
-## Next Steps
-
-### Create More Specialized Agents
-
-1. **Performance Tuner Agent** - Focus on query optimization
-2. **Backup Manager Agent** - Handle backup/restore operations
-3. **Security Auditor Agent** - Review permissions and vulnerabilities
-4. **Capacity Planner Agent** - Analyze growth trends
-
-### Add Custom Tools
-
-Extend `mcp_client.py` with domain-specific functions:
-```python
-def check_backup_status(connection_id: str) -> str:
-    """Check last backup date for all databases."""
-    # Implementation
-    pass
+```bash
+cd MssqlMcp/Node
+npm run build
 ```
 
-### Build a Web UI
+### "Failed to connect to SQL Server"
+1. Verify `SERVER_NAME` in `.env`
+2. Check SQL Server firewall rules allow your IP
+3. Confirm SQL authentication is enabled
+4. Test credentials with SSMS or Azure Data Studio
 
-Use Gradio to create a web interface:
-```python
-import gradio as gr
+### "AZURE_AI_PROJECT_ENDPOINT not set"
+1. Create Azure AI Project in Azure Portal (AI Foundry)
+2. Copy the endpoint URL from project Overview
+3. Add to `.env` file
 
-def health_check(server_name: str, question: str) -> str:
-    # Run agent and return results
-    pass
-
-demo = gr.Interface(
-    fn=health_check,
-    inputs=["text", "text"],
-    outputs="text"
-)
-demo.launch()
+### "Azure authentication failed"
+```bash
+az login
+az account show  # Verify you're logged in
 ```
 
-## Resources
+### MCP Server Logs
+The MCP server writes to stderr. To see logs:
+```bash
+# The agent will show MCP server output in the console
+```
 
-- [MSSQL MCP Server Blog](https://devblogs.microsoft.com/azure-sql/introducing-mssql-mcp-server/)
-- [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
-- [Azure AI Agent Service Docs](https://learn.microsoft.com/azure/ai-services/agents/)
-- [VS Code SQL Extension](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql)
+## 📖 Documentation
 
-## Support
+- **[README.md](README.md)** - Full project documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and architecture
+- **[SQL_AUTH_SETUP.md](SQL_AUTH_SETUP.md)** - SQL authentication setup
+- **[STANDALONE_MCP.md](STANDALONE_MCP.md)** - MCP server internals
 
-For issues or questions:
-1. Check troubleshooting section above
-2. Review project documentation in README.md and ARCHITECTURE.md
-3. Consult Azure AI Agent Service documentation
+## 🎯 What's Next?
+
+1. **Test with real queries**: Ask about your actual database schema
+2. **Explore diagnostics**: Try health check queries
+3. **Monitor performance**: Ask about slow queries or blocking
+4. **Customize**: Add your own system instructions in `dba_assistant.py`
+
+## 💡 Pro Tips
+
+- The agent **maintains conversation context** - follow-up questions work!
+- Ask for **explanations**: "Why is this table so large?"
+- Request **recommendations**: "How can I improve query performance?"
+- Be specific: "Check index fragmentation for tables over 1GB"
+
+---
+
+**Need Help?** Check the full [README.md](README.md) or [ARCHITECTURE.md](ARCHITECTURE.md) for more details.

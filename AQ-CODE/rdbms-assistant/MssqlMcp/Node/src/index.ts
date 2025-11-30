@@ -21,8 +21,12 @@ import { CreateTableTool } from "./tools/CreateTableTool.js";
 import { CreateIndexTool } from "./tools/CreateIndexTool.js";
 import { ListTableTool } from "./tools/ListTableTool.js";
 import { DropTableTool } from "./tools/DropTableTool.js";
-import { DefaultAzureCredential, InteractiveBrowserCredential } from "@azure/identity";
 import { DescribeTableTool } from "./tools/DescribeTableTool.js";
+import { ConnectDbTool } from "./tools/ConnectDbTool.js";
+import { RunQueryTool } from "./tools/RunQueryTool.js";
+import { ListDatabasesTool } from "./tools/ListDatabasesTool.js";
+import { PythonExecuteTool } from "./tools/PythonExecuteTool.js";
+import { DefaultAzureCredential, InteractiveBrowserCredential } from "@azure/identity";
 
 // MSSQL Database connection configuration
 // const credential = new DefaultAzureCredential();
@@ -73,6 +77,10 @@ const createIndexTool = new CreateIndexTool();
 const listTableTool = new ListTableTool();
 const dropTableTool = new DropTableTool();
 const describeTableTool = new DescribeTableTool();
+const connectDbTool = new ConnectDbTool();
+const runQueryTool = new RunQueryTool();
+const listDatabasesTool = new ListDatabasesTool();
+const pythonExecuteTool = new PythonExecuteTool();
 
 const server = new Server(
   {
@@ -93,8 +101,8 @@ const isReadOnly = process.env.READONLY === "true";
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: isReadOnly
-    ? [listTableTool, readDataTool, describeTableTool] // todo: add searchDataTool to the list of tools available in readonly mode once implemented
-    : [insertDataTool, readDataTool, describeTableTool, updateDataTool, createTableTool, createIndexTool, dropTableTool, listTableTool], // add all new tools here
+    ? [connectDbTool, listTableTool, listDatabasesTool, readDataTool, describeTableTool, runQueryTool, pythonExecuteTool]
+    : [connectDbTool, listTableTool, listDatabasesTool, insertDataTool, readDataTool, describeTableTool, updateDataTool, createTableTool, createIndexTool, dropTableTool, runQueryTool, pythonExecuteTool],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -102,6 +110,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     let result;
     switch (name) {
+      case connectDbTool.name:
+        result = await connectDbTool.run(args || {});
+        break;
+      case listDatabasesTool.name:
+        result = await listDatabasesTool.run(args || {});
+        break;
+      case runQueryTool.name:
+        if (!args || typeof args.query !== 'string') {
+          return {
+            content: [{ type: 'text', text: 'Missing required parameter: query' }],
+            isError: true,
+          };
+        }
+        result = await runQueryTool.run(args as { query: string; maxRows?: number });
+        break;
       case insertDataTool.name:
         result = await insertDataTool.run(args);
         break;
@@ -131,6 +154,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         }
         result = await describeTableTool.run(args as { tableName: string });
+        break;
+      case pythonExecuteTool.name:
+        if (!args || typeof args.code !== 'string' || typeof args.filename !== 'string') {
+          return {
+            content: [{ type: 'text', text: 'Missing required parameters: code and filename' }],
+            isError: true,
+          };
+        }
+        result = await pythonExecuteTool.run(args as { code: string; data?: string; filename: string });
         break;
       default:
         return {
