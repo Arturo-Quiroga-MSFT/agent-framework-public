@@ -11,14 +11,17 @@
 
 ## 📁 Directory Overview
 
-This directory contains three implementations of the same NL2SQL pipeline, each optimized for different deployment scenarios:
+This directory contains three implementations of the NL2SQL pipeline, each optimized for different deployment scenarios, plus a standalone DBMS Assistant solution:
 
 ```
 NL2SQL-WORK/
 ├── nl2sql-pipeline/        # Core implementation with DevUI web interface
 ├── nl2sql-cli/             # CLI-only version (no web UI)
-└── nl2sql-gradio/          # Gradio chat interface variant
+├── nl2sql-gradio/          # Gradio chat interface variant
+└── ../DBMS-ASSISTANT/      # Standalone RDBMS DBA Assistant with MSSQL MCP Server
 ```
+
+> **Note**: The DBMS-ASSISTANT was recently moved to the repository root level at `/DBMS-ASSISTANT` to serve as a standalone solution, but shares the same MCP server technology with the NL2SQL pipelines.
 
 ---
 
@@ -629,7 +632,75 @@ gradio>=4.0.0              # Chat UI framework
 
 ---
 
-## 📄 License
+## � Related Solution: DBMS-ASSISTANT
+
+### RDBMS Assistant for Azure SQL Database Administrators
+
+Located at `/DBMS-ASSISTANT`, this is a complementary solution that provides an AI-powered assistant specifically for SQL Database administrators to perform daily administrative tasks.
+
+**Key Differences from NL2SQL Pipeline**:
+
+| Feature | NL2SQL Pipeline | DBMS-ASSISTANT |
+|---------|----------------|-----------------|
+| **Primary User** | Data Analysts, Business Users | Database Administrators |
+| **Use Case** | Ad-hoc data queries & analytics | Database administration & monitoring |
+| **Focus** | Natural language to SELECT queries | Full DBA tasks (health, performance, backups) |
+| **Safety** | Read-only by default | Admin operations with approval workflows |
+| **Agent Type** | Sequential pipeline | Task-based specialized agents |
+| **Framework** | MAF with SequentialBuilder | MAF with AzureAIAgentClient |
+| **MCP Server** | Uses MSSQL MCP tools | Includes custom MSSQL MCP Server |
+
+### DBMS-ASSISTANT Features
+
+✅ **Specialized DBA Agents**: Health Monitor, Performance Tuner, Backup Manager, Security Auditor  
+✅ **Custom MCP Server**: Enhanced with 11 DBA-specific tools  
+✅ **Admin Operations**: Beyond SELECT - includes diagnostics, optimization, monitoring  
+✅ **Safety Mechanisms**: Approval workflows for destructive operations  
+✅ **Natural Language DBA**: "Check index fragmentation", "Find blocking sessions", "Show backup status"  
+
+### Shared Technology
+
+Both solutions leverage:
+- **Microsoft Agent Framework** (MAF)
+- **MSSQL MCP Server** for database operations
+- **Azure OpenAI** for natural language understanding
+- **Azure CLI Authentication**
+- **Pydantic** for data validation
+
+### When to Use Each
+
+**Use NL2SQL Pipeline when:**
+- Users need to query data for analysis
+- Focus is on SELECT queries and data exploration
+- Output needs CSV/Excel exports and visualizations
+- Target users are non-technical (analysts, managers)
+
+**Use DBMS-ASSISTANT when:**
+- Users are database administrators
+- Tasks include health monitoring, performance tuning
+- Need diagnostic queries (DMVs, system views)
+- Require admin operations beyond SELECT
+
+### Documentation
+
+**DBMS-ASSISTANT Documentation:**
+- [README.md](../DBMS-ASSISTANT/README.md) - Overview and architecture
+- [QUICKSTART.md](../DBMS-ASSISTANT/QUICKSTART.md) - 5-minute setup
+- [ARCHITECTURE.md](../DBMS-ASSISTANT/ARCHITECTURE.md) - Technical design decisions
+- [MCP_TOOLS_GUIDE.md](../DBMS-ASSISTANT/MCP_TOOLS_GUIDE.md) - All 11 MCP tools reference
+- [SQL_AUTH_SETUP.md](../DBMS-ASSISTANT/SQL_AUTH_SETUP.md) - SQL authentication setup
+- [STANDALONE_MCP.md](../DBMS-ASSISTANT/STANDALONE_MCP.md) - MCP server internals
+
+**Custom MSSQL MCP Server:**
+The DBMS-ASSISTANT includes an enhanced MSSQL MCP Server at `/DBMS-ASSISTANT/MssqlMcp/Node/` with:
+- **11 database tools** (vs standard set)
+- **Custom DBA tools**: `connect_db`, `run_query`, `list_databases`
+- **Safety features**: Read-only mode, WHERE clause enforcement
+- **Azure SQL compatibility**: Optimized for Azure SQL Database
+
+---
+
+## �📄 License
 
 See repository [LICENSE](../LICENSE) file.
 

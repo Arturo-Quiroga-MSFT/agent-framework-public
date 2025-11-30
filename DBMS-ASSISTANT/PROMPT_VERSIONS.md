@@ -77,15 +77,16 @@ This document describes three different prompt instruction versions for the DBA 
 
 ## How to Switch Versions
 
-In `gradio_app.py`, line ~96, change the `prompt_version` variable:
+In `dba_assistant.py`, modify the agent instructions to use your preferred prompt style:
 
 ```python
-prompt_version = "MINIMAL"  # Options: MINIMAL, BALANCED, STRUCTURED
+# Use one of the instruction sets from above
+instructions = MINIMAL_INSTRUCTIONS  # or BALANCED_INSTRUCTIONS or STRUCTURED_INSTRUCTIONS
 ```
 
-Then restart the Gradio application:
+Then restart the assistant:
 ```bash
-python gradio_app.py
+python dba_assistant.py
 ```
 
 ---

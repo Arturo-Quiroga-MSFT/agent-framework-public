@@ -435,7 +435,7 @@ AZURE_AI_PROJECT_ENDPOINT=your-endpoint
 
 - [Main README](README.md) - Project overview
 - [CHANGELOG](CHANGELOG.md) - Tool enhancements and fixes
-- [GRADIO_README](GRADIO_README.md) - Web UI guide
+- [QUICKSTART](QUICKSTART.md) - Quick start guide
 - [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
 - [MCP Protocol](https://modelcontextprotocol.io/)
 

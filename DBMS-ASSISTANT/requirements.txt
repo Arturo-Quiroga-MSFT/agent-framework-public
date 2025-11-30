@@ -29,6 +29,3 @@ pytest-asyncio>=0.21.0
 
 # Logging & Observability
 structlog>=23.2.0
-
-# Optional: UI
-gradio>=4.0.0

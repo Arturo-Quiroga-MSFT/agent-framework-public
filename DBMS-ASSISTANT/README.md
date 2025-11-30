@@ -33,7 +33,7 @@ After comparing `AzureAIClient` vs `AzureAIAgentClient`, we selected `AzureAIAge
 
 ```
 ┌──────────────────────────┐
-│   Admin Interface        │  (CLI/Gradio UI)
+│   Admin Interface        │  (CLI)
 │   - Natural Language     │
 │   - Task Selection       │
 └────────────┬─────────────┘
@@ -131,7 +131,7 @@ The official Microsoft MCP server provides these capabilities:
 - [ ] Integration with Azure Monitor
 
 ### Phase 4: Production Ready
-- [ ] Gradio web UI
+- [ ] Web UI (framework TBD)
 - [ ] Multi-database management
 - [ ] Role-based access control
 - [ ] Comprehensive audit logging

@@ -1,8 +1,10 @@
 #!/bin/bash
-# Startup script for RDBMS DBA Assistant Gradio UI
+# Startup script for RDBMS DBA Assistant UI
+# NOTE: Gradio UI has been removed. This script is deprecated.
+# Use: python dba_assistant.py for CLI interface
 
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-echo "║                    RDBMS DBA Assistant - Gradio UI                           ║"
+echo "║                    RDBMS DBA Assistant - CLI                                 ║"
 echo "║                 Powered by Microsoft Agent Framework                         ║"
 echo "╚══════════════════════════════════════════════════════════════════════════════╝"
 echo ""
@@ -39,19 +41,19 @@ if [ -d "../../.venv" ]; then
     source ../../.venv/bin/activate
 fi
 
-# Check if gradio is installed
-if ! python -c "import gradio" 2>/dev/null; then
-    echo "⚠️  Gradio not installed. Installing dependencies..."
+# Check dependencies
+if ! python -c "import agent_framework" 2>/dev/null; then
+    echo "⚠️  Dependencies not installed. Installing..."
     pip install -r requirements.txt
     echo "✅ Dependencies installed"
     echo ""
 fi
 
-# Start the Gradio app
-echo "🚀 Starting Gradio UI..."
-echo "📡 Server will be available at: http://localhost:7860"
+# Start the CLI assistant
+echo "🚀 Starting DBA Assistant CLI..."
+echo "💬 Ask questions about your database in natural language"
 echo ""
-echo "Press Ctrl+C to stop the server"
+echo "Press Ctrl+C to exit"
 echo ""
 
-python gradio_app.py
+python dba_assistant.py

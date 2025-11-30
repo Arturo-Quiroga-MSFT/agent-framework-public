@@ -219,7 +219,7 @@ Natural Language Response
 1. **Multi-Cloud Support**: Extend to AWS RDS, Google Cloud SQL
 2. **Advanced Analytics**: ML-based anomaly detection on database metrics
 3. **Proactive Monitoring**: Scheduled health checks and alerts
-4. **Web Interface**: Gradio UI for non-CLI users
+4. **Web Interface**: Modern web UI for non-CLI users (framework TBD)
 5. **Multi-Tenancy**: Support for managing hundreds of databases
 
 ## References
