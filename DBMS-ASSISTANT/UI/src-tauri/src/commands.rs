@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
+use crate::python_bridge;
 
 // Application state
 pub struct AppState {
     pub is_connected: Mutex<bool>,
     pub server_name: Mutex<Option<String>>,
     pub database_name: Mutex<Option<String>>,
+    pub conversation_history: Mutex<Vec<(String, String)>>, // (user_query, assistant_response)
 }
 
 impl Default for AppState {
@@ -15,6 +17,7 @@ impl Default for AppState {
             is_connected: Mutex::new(false),
             server_name: Mutex::new(None),
             database_name: Mutex::new(None),
+            conversation_history: Mutex::new(Vec::new()),
         }
     }
 }
@@ -50,23 +53,35 @@ pub fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-pub async fn run_dba_query(query: String, _state: State<'_, AppState>) -> Result<QueryResult, String> {
-    // TODO: Integrate with Python agent via python_bridge
-    // For now, return a mock response
-    
+pub async fn run_dba_query(query: String, state: State<'_, AppState>) -> Result<QueryResult, String> {
     let start = std::time::Instant::now();
     
-    // Simulate processing time
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Get conversation history
+    let history = state.conversation_history.lock().unwrap().clone();
+    
+    // Call Python bridge with history
+    let result = match python_bridge::run_python_query_with_history(query.clone(), history) {
+        Ok(response) => response,
+        Err(e) => return Err(format!("Python error: {}", e)),
+    };
+    
+    // Save to conversation history
+    state.conversation_history.lock().unwrap().push((query, result.clone()));
     
     let elapsed = start.elapsed().as_millis() as u64;
     
     Ok(QueryResult {
         success: true,
-        message: format!("Query processed successfully: {}", query),
-        data: Some("Mock response - Python integration coming soon".to_string()),
+        message: "Query executed successfully".to_string(),
+        data: Some(result),
         execution_time_ms: elapsed,
     })
+}
+
+#[tauri::command]
+pub fn clear_conversation(state: State<'_, AppState>) -> String {
+    state.conversation_history.lock().unwrap().clear();
+    "Conversation cleared".to_string()
 }
 
 #[tauri::command]

@@ -96,5 +96,10 @@ echo ""
 # Wait a moment
 sleep 2
 
+# Set Python to use venv for Pyo3
+export PYO3_PYTHON="$(cd ../.. && pwd)/.venv/bin/python3"
+echo "${GREEN}✓${NC} Using Python: $PYO3_PYTHON"
+echo ""
+
 # Run Tauri dev
 npm run tauri dev

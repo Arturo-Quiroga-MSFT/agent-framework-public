@@ -83,27 +83,64 @@ export class RunQueryTool implements Tool {
 
       await pool.close();
 
-      // Format results
-      const rows = result.recordset?.slice(0, maxRows) || [];
-      const totalRows = result.recordset?.length || 0;
-      const rowsAffected = result.rowsAffected?.[0] || 0;
+      // Check if we have multiple result sets (recordsets is an array when multiple SELECTs)
+      const recordsets = Array.isArray(result.recordsets) ? result.recordsets : [result.recordset];
+      const hasMultipleResultSets = recordsets.length > 1;
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              executionTimeMs: executionTime,
-              rowCount: totalRows,
-              rowsAffected: rowsAffected,
-              truncated: totalRows > maxRows,
-              columns: rows.length > 0 ? Object.keys(rows[0]) : [],
-              rows: rows,
-            }, null, 2),
-          },
-        ],
-      };
+      if (hasMultipleResultSets) {
+        // Format multiple result sets
+        const allResultSets = recordsets.map((recordset: any, index: number) => {
+          const rows = recordset?.slice(0, maxRows) || [];
+          const totalRows = recordset?.length || 0;
+          return {
+            resultSetNumber: index + 1,
+            rowCount: totalRows,
+            truncated: totalRows > maxRows,
+            columns: rows.length > 0 ? Object.keys(rows[0]) : [],
+            rows: rows,
+          };
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                executionTimeMs: executionTime,
+                multipleResultSets: true,
+                resultSetCount: recordsets.length,
+                resultSets: allResultSets,
+                totalRowsAffected: Array.isArray(result.rowsAffected) 
+                  ? result.rowsAffected.reduce((a: number, b: number) => a + b, 0) 
+                  : 0,
+              }, null, 2),
+            },
+          ],
+        };
+      } else {
+        // Format single result set (backward compatible)
+        const rows = result.recordset?.slice(0, maxRows) || [];
+        const totalRows = result.recordset?.length || 0;
+        const rowsAffected = result.rowsAffected?.[0] || 0;
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                executionTimeMs: executionTime,
+                rowCount: totalRows,
+                rowsAffected: rowsAffected,
+                truncated: totalRows > maxRows,
+                columns: rows.length > 0 ? Object.keys(rows[0]) : [],
+                rows: rows,
+              }, null, 2),
+            },
+          ],
+        };
+      }
     } catch (error: any) {
       return {
         content: [

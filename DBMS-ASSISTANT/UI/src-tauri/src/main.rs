@@ -7,7 +7,13 @@ mod python_bridge;
 use tauri::Manager;
 
 fn main() {
+    // Initialize Python environment on startup
+    if let Err(e) = python_bridge::initialize_python() {
+        eprintln!("Failed to initialize Python: {}", e);
+    }
+    
     tauri::Builder::default()
+        .manage(commands::AppState::default())
         .setup(|app| {
             #[cfg(debug_assertions)]
             {
@@ -24,6 +30,7 @@ fn main() {
             commands::run_dba_query,
             commands::connect_database,
             commands::get_connection_status,
+            commands::clear_conversation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
