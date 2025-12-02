@@ -1,0 +1,118 @@
+erDiagram
+    DIM_COVENANTTYPE {
+        int CovenantTypeKey PK
+    }
+    FACT_COVENANT_TEST {
+        int CovenantTypeKey FK
+        int LoanKey FK
+        int TestDateKey FK
+    }
+    DIM_DATE {
+        int DateKey PK
+    }
+    FACT_CUSTOMER_FINANCIALS {
+        int CustomerKey FK
+        int StatementDateKey FK
+        int StatementTypeKey FK
+    }
+    DIM_STATEMENTTYPE {
+        int StatementTypeKey PK
+    }
+    DIM_CUSTOMER {
+        int CustomerKey PK
+    }
+    FACT_CUSTOMER_INTERACTION {
+        int CustomerKey FK
+        int InteractionTypeKey FK
+        int InteractionChannelKey FK
+        int RelatedLoanKey FK
+        int InteractionDateKey FK
+        int FollowUpDateKey FK
+        int RelatedApplicationKey FK
+    }
+    DIM_INTERACTIONTYPE {
+        int InteractionTypeKey PK
+    }
+    DIM_INTERACTIONCHANNEL {
+        int ChannelKey PK
+    }
+    FACT_LOAN_ORIGINATION {
+        int LoanKey PK
+        int CustomerKey FK
+        int OriginationDateKey FK
+        int MaturityDateKey FK
+        int FirstPaymentDateKey FK
+        int ProductKey FK
+        int DelinquencyStatusKey FK
+        int PurposeKey FK
+    }
+    FACT_LOAN_APPLICATION {
+        int ApplicationKey PK
+        int ApplicationDateKey FK
+        int DecisionDateKey FK
+        int PurposeKey FK
+        int ApplicationStatusKey FK
+        int CustomerKey FK
+        int ProductKey FK
+    }
+    DIM_LOANPURPOSE {
+        int PurposeKey PK
+    }
+    DIM_APPLICATIONSTATUS {
+        int StatusKey PK
+    }
+    DIM_LOANPRODUCT {
+        int ProductKey PK
+    }
+    DIM_DELINQUENCYSTATUS {
+        int DelinquencyStatusKey PK
+    }
+    FACT_LOAN_BALANCE_DAILY {
+        int DelinquencyStatusKey FK
+        int LoanKey FK
+        int SnapshotDateKey FK
+    }
+    FACT_PAYMENT_TRANSACTION {
+        int PaymentMethodKey FK
+        int PaymentTypeKey FK
+        int LoanKey FK
+        int PaymentDateKey FK
+        int ScheduledDateKey FK
+    }
+    DIM_PAYMENTMETHOD {
+        int PaymentMethodKey PK
+    }
+    DIM_PAYMENTTYPE {
+        int PaymentTypeKey PK
+    }
+
+    DIM_COVENANTTYPE ||--o{ FACT_COVENANT_TEST : ""
+    FACT_LOAN_ORIGINATION ||--o{ FACT_COVENANT_TEST : ""
+    DIM_DATE ||--o{ FACT_COVENANT_TEST : ""
+    DIM_DATE ||--o{ FACT_CUSTOMER_FINANCIALS : ""
+    DIM_STATEMENTTYPE ||--o{ FACT_CUSTOMER_FINANCIALS : ""
+    DIM_CUSTOMER ||--o{ FACT_CUSTOMER_FINANCIALS : ""
+    DIM_CUSTOMER ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    DIM_INTERACTIONTYPE ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    DIM_INTERACTIONCHANNEL ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    FACT_LOAN_ORIGINATION ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    DIM_DATE ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    FACT_LOAN_APPLICATION ||--o{ FACT_CUSTOMER_INTERACTION : ""
+    DIM_DATE ||--o{ FACT_LOAN_APPLICATION : ""
+    DIM_LOANPURPOSE ||--o{ FACT_LOAN_APPLICATION : ""
+    DIM_APPLICATIONSTATUS ||--o{ FACT_LOAN_APPLICATION : ""
+    DIM_CUSTOMER ||--o{ FACT_LOAN_APPLICATION : ""
+    DIM_LOANPRODUCT ||--o{ FACT_LOAN_APPLICATION : ""
+    DIM_DELINQUENCYSTATUS ||--o{ FACT_LOAN_BALANCE_DAILY : ""
+    FACT_LOAN_ORIGINATION ||--o{ FACT_LOAN_BALANCE_DAILY : ""
+    DIM_DATE ||--o{ FACT_LOAN_BALANCE_DAILY : ""
+    DIM_DATE ||--o{ FACT_LOAN_ORIGINATION : ""
+    DIM_CUSTOMER ||--o{ FACT_LOAN_ORIGINATION : ""
+    DIM_LOANPRODUCT ||--o{ FACT_LOAN_ORIGINATION : ""
+    DIM_DELINQUENCYSTATUS ||--o{ FACT_LOAN_ORIGINATION : ""
+    DIM_LOANPURPOSE ||--o{ FACT_LOAN_ORIGINATION : ""
+    DIM_PAYMENTMETHOD ||--o{ FACT_PAYMENT_TRANSACTION : ""
+    DIM_PAYMENTTYPE ||--o{ FACT_PAYMENT_TRANSACTION : ""
+    FACT_LOAN_ORIGINATION ||--o{ FACT_PAYMENT_TRANSACTION : ""
+    DIM_DATE ||--o{ FACT_PAYMENT_TRANSACTION : ""
+

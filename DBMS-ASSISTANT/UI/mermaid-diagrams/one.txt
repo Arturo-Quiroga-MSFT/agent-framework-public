@@ -1,0 +1,91 @@
+erDiagram
+    DIMAPPLICATIONSTATUS {
+        PK StatusKey
+    }
+    DIMCOLLATERALTYPE {
+    }
+    DIMCOVENANTTYPE {
+        PK CovenantTypeKey
+    }
+    DIMCUSTOMER {
+        PK CustomerKey
+    }
+    DIMDATE {
+        PK DateKey
+    }
+    DIMDELINQUENCYSTATUS {
+        PK DelinquencyStatusKey
+    }
+    DIMINDUSTRY {
+    }
+    DIMINTERACTIONCHANNEL {
+        PK ChannelKey
+    }
+    DIMINTERACTIONTYPE {
+        PK InteractionTypeKey
+    }
+    DIMLOANPRODUCT {
+        PK ProductKey
+    }
+    DIMLOANPURPOSE {
+        PK PurposeKey
+    }
+    DIMPAYMENTMETHOD {
+        PK PaymentMethodKey
+    }
+    DIMPAYMENTTYPE {
+        PK PaymentTypeKey
+    }
+    DIMRISKRATING {
+    }
+    DIMSTATEMENTTYPE {
+        PK StatementTypeKey
+    }
+    FACTCOVENANTTEST {
+        FK CovenantTypeKey dim.DimCovenantType.CovenantTypeKey
+        FK LoanKey fact.FACT_LOAN_ORIGINATION.LoanKey
+        FK TestDateKey dim.DimDate.DateKey
+    }
+    FACTCUSTOMERFINANCIALS {
+        FK CustomerKey dim.DimCustomer.CustomerKey
+        FK StatementDateKey dim.DimDate.DateKey
+        FK StatementTypeKey dim.DimStatementType.StatementTypeKey
+    }
+    FACTCUSTOMERINTERACTION {
+        FK InteractionChannelKey dim.DimInteractionChannel.ChannelKey
+        FK CustomerKey dim.DimCustomer.CustomerKey
+        FK FollowUpDateKey dim.DimDate.DateKey
+        FK InteractionDateKey dim.DimDate.DateKey
+        FK InteractionTypeKey dim.DimInteractionType.InteractionTypeKey
+        FK RelatedApplicationKey fact.FACT_LOAN_APPLICATION.ApplicationKey
+        FK RelatedLoanKey fact.FACT_LOAN_ORIGINATION.LoanKey
+    }
+    FACTLOANAPPLICATION {
+        FK ApplicationDateKey dim.DimDate.DateKey
+        FK CustomerKey dim.DimCustomer.CustomerKey
+        FK DecisionDateKey dim.DimDate.DateKey
+        FK ProductKey dim.DimLoanProduct.ProductKey
+        FK PurposeKey dim.DimLoanPurpose.PurposeKey
+        FK ApplicationStatusKey dim.DimApplicationStatus.StatusKey
+    }
+    FACTLOANBALANCEDAILY {
+        FK DelinquencyStatusKey dim.DimDelinquencyStatus.DelinquencyStatusKey
+        FK LoanKey fact.FACT_LOAN_ORIGINATION.LoanKey
+        FK SnapshotDateKey dim.DimDate.DateKey
+    }
+    FACTLOANORIGINATION {
+        FK CustomerKey dim.DimCustomer.CustomerKey
+        FK DelinquencyStatusKey dim.DimDelinquencyStatus.DelinquencyStatusKey
+        FK FirstPaymentDateKey dim.DimDate.DateKey
+        FK MaturityDateKey dim.DimDate.DateKey
+        FK OriginationDateKey dim.DimDate.DateKey
+        FK ProductKey dim.DimLoanProduct.ProductKey
+        FK PurposeKey dim.DimLoanPurpose.PurposeKey
+    }
+    FACTPAYMENTTRANSACTION {
+        FK LoanKey fact.FACT_LOAN_ORIGINATION.LoanKey
+        FK PaymentDateKey dim.DimDate.DateKey
+        FK PaymentMethodKey dim.DimPaymentMethod.PaymentMethodKey
+        FK PaymentTypeKey dim.DimPaymentType.PaymentTypeKey
+        FK ScheduledDateKey dim.DimDate.DateKey
+    }
