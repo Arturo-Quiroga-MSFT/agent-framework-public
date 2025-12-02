@@ -1,0 +1,135 @@
+### Test AG-UI Server Endpoints
+### Use VS Code REST Client extension or similar tools
+
+@baseUrl = http://localhost:5100
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Simple Query - No Thread ID
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the capital of France?"
+    }
+  ],
+  "context": {}
+}
+
+### Query with Thread ID (for conversation continuity)
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "threadId": "thread_abc123",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Tell me more about Paris"
+    }
+  ],
+  "context": {}
+}
+
+### Complex Query
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "threadId": "thread_complex_001",
+  "runId": "run_001",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain quantum computing in simple terms, then give me 3 real-world applications"
+    }
+  ],
+  "context": {
+    "user_level": "beginner",
+    "language": "en"
+  }
+}
+
+### List Active Threads
+GET {{baseUrl}}/threads
+
+### Delete Thread
+DELETE {{baseUrl}}/threads/thread_abc123
+
+### Multi-turn Conversation Example
+# First message
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "threadId": "thread_multiturn_001",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the primary colors?"
+    }
+  ],
+  "context": {}
+}
+
+###
+# Follow-up message (same thread)
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "threadId": "thread_multiturn_001",
+  "messages": [
+    {
+      "role": "user",
+      "content": "How do you mix them to create secondary colors?"
+    }
+  ],
+  "context": {}
+}
+
+### Technical Question
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a Python function to calculate the Fibonacci sequence up to n terms"
+    }
+  ],
+  "context": {}
+}
+
+### Data Analysis Question
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the difference between supervised and unsupervised machine learning? Give examples of each."
+    }
+  ],
+  "context": {}
+}
+
+### Creative Question
+POST {{baseUrl}}/
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a short haiku about artificial intelligence"
+    }
+  ],
+  "context": {}
+}

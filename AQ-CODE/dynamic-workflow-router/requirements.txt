@@ -1,0 +1,23 @@
+# Dynamic Workflow Router Requirements
+# Microsoft Agent Framework with Cosmos DB integration
+
+# Azure AI & MAF
+azure-ai-projects>=1.0.0b1
+azure-identity>=1.19.0
+
+# Azure Cosmos DB
+azure-cosmos>=4.7.0
+
+# Async support
+aiohttp>=3.10.0
+
+# Data validation
+pydantic>=2.10.0
+
+# Utilities
+python-dotenv>=1.0.1
+
+# Observability (optional - integrates with llmops)
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+azure-monitor-opentelemetry>=1.6.4

@@ -1,0 +1,21 @@
+# AG-UI Client-Server Requirements
+# Python implementation of AG-UI protocol for Microsoft Agent Framework
+
+# Web Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+sse-starlette>=2.2.1
+
+# HTTP Client with SSE support
+httpx>=0.27.2
+httpx-sse>=0.4.0
+
+# Azure AI & Authentication
+azure-ai-projects>=1.0.0b1
+azure-identity>=1.19.0
+
+# Data validation
+pydantic>=2.10.0
+
+# Utilities
+python-dotenv>=1.0.1

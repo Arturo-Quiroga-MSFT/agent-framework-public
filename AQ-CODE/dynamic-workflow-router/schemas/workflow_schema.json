@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MAF Workflow Definition",
+  "description": "Schema for MAF workflow definitions stored in Cosmos DB",
+  "type": "object",
+  "required": ["id", "type", "name", "agent_config"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique workflow identifier",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "partitionKey": {
+      "type": "array",
+      "description": "Hierarchical partition key [category, workflow_id]",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2,
+      "maxItems": 3
+    },
+    "type": {
+      "type": "string",
+      "enum": ["workflow"],
+      "description": "Document type (always 'workflow')"
+    },
+    "category": {
+      "type": "string",
+      "description": "Workflow category (support, sales, technical, etc.)",
+      "examples": ["support", "sales", "technical", "operations"]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable workflow name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of workflow purpose"
+    },
+    "version": {
+      "type": "string",
+      "description": "Workflow version (semantic versioning)",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "agent_config": {
+      "type": "object",
+      "description": "MAF agent configuration",
+      "required": ["model", "instructions"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Azure OpenAI model deployment name",
+          "examples": ["gpt-4o", "gpt-4", "gpt-35-turbo"]
+        },
+        "instructions": {
+          "type": "string",
+          "description": "System instructions for the agent"
+        },
+        "tools": {
+          "type": "array",
+          "description": "Tools available to the agent",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["bing_grounding", "code_interpreter", "function"]
+              }
+            }
+          }
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Sampling temperature (0.0 to 2.0)",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "top_p": {
+          "type": "number",
+          "description": "Nucleus sampling (0.0 to 1.0)",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "description": "Routing configuration for orchestrator",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "description": "Keywords that trigger this workflow",
+          "items": {
+            "type": "string"
+          }
+        },
+        "intent_examples": {
+          "type": "array",
+          "description": "Example user intents for this workflow",
+          "items": {
+            "type": "string"
+          }
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Routing priority (higher = preferred)",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Workflow metadata",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp (ISO 8601)"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp (ISO 8601)"
+        },
+        "author": {
+          "type": "string",
+          "description": "Workflow author/owner"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags for categorization and search",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether workflow is active",
+          "default": true
+        }
+      }
+    }
+  }
+}

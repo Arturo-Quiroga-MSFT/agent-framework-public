@@ -1,0 +1,51 @@
+{
+  "id": "customer_support_workflow",
+  "partitionKey": ["support", "customer_support_workflow"],
+  "type": "workflow",
+  "category": "support",
+  "name": "Customer Support Agent",
+  "description": "Handles customer support inquiries, complaints, and questions about products and services. Provides empathetic assistance and resolves issues efficiently.",
+  "version": "1.0",
+  
+  "agent_config": {
+    "model": "gpt-4o",
+    "instructions": "You are a helpful and empathetic customer support agent. Your role is to:\n\n1. Listen carefully to customer issues and concerns\n2. Ask clarifying questions to fully understand the problem\n3. Provide clear, step-by-step solutions\n4. Offer alternatives if the primary solution doesn't work\n5. Always maintain a professional and friendly tone\n6. Escalate to human support when necessary\n\nGuidelines:\n- Be patient and understanding\n- Acknowledge customer frustration\n- Provide specific timelines when possible\n- Offer proactive follow-up\n- Keep responses concise but complete",
+    "tools": [
+      {"type": "bing_grounding"}
+    ],
+    "temperature": 0.7,
+    "top_p": 0.95
+  },
+  
+  "routing": {
+    "keywords": [
+      "support",
+      "help",
+      "issue",
+      "problem",
+      "complaint",
+      "not working",
+      "broken",
+      "error",
+      "assistance",
+      "customer service"
+    ],
+    "intent_examples": [
+      "I have a problem with my order",
+      "Need help with product setup",
+      "Want to file a complaint",
+      "My product isn't working",
+      "How do I get support?",
+      "I need assistance with my account"
+    ],
+    "priority": 5
+  },
+  
+  "metadata": {
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z",
+    "author": "CSA Team",
+    "tags": ["support", "customer-service", "helpdesk", "troubleshooting"],
+    "enabled": true
+  }
+}

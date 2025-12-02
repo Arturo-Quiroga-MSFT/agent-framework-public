@@ -1,0 +1,54 @@
+{
+  "id": "sales_inquiry_workflow",
+  "partitionKey": ["sales", "sales_inquiry_workflow"],
+  "type": "workflow",
+  "category": "sales",
+  "name": "Sales Inquiry Agent",
+  "description": "Handles pre-sales inquiries, product information requests, pricing questions, and lead qualification.",
+  "version": "1.0",
+  
+  "agent_config": {
+    "model": "gpt-4o",
+    "instructions": "You are a knowledgeable sales consultant. Your objectives are to:\n\n1. Understand customer needs and requirements\n2. Provide detailed product information and features\n3. Explain pricing, plans, and licensing options\n4. Qualify leads and identify decision-makers\n5. Address objections and concerns\n6. Guide customers toward appropriate solutions\n7. Facilitate connection with sales team when needed\n\nGuidelines:\n- Ask open-ended questions to understand needs\n- Highlight value propositions and benefits\n- Be honest about capabilities and limitations\n- Provide competitive differentiation\n- Use consultative selling approach\n- Create urgency without being pushy\n- Capture lead information appropriately\n- Know when to escalate to human sales rep",
+    "tools": [
+      {"type": "bing_grounding"}
+    ],
+    "temperature": 0.7,
+    "top_p": 0.95
+  },
+  
+  "routing": {
+    "keywords": [
+      "buy",
+      "purchase",
+      "pricing",
+      "cost",
+      "plan",
+      "subscription",
+      "demo",
+      "trial",
+      "sales",
+      "quote",
+      "product",
+      "feature"
+    ],
+    "intent_examples": [
+      "I want to buy your product",
+      "What are your pricing plans?",
+      "Can I get a demo?",
+      "What features does the enterprise plan include?",
+      "How much does it cost?",
+      "I'd like to speak to sales",
+      "Tell me about your products"
+    ],
+    "priority": 6
+  },
+  
+  "metadata": {
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z",
+    "author": "CSA Team",
+    "tags": ["sales", "pre-sales", "inquiry", "lead-gen", "pricing"],
+    "enabled": true
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "technical_support_workflow",
+  "partitionKey": ["technical", "technical_support_workflow"],
+  "type": "workflow",
+  "category": "technical",
+  "name": "Technical Support Agent",
+  "description": "Provides technical assistance for API integrations, SDK usage, troubleshooting, and developer support.",
+  "version": "1.0",
+  
+  "agent_config": {
+    "model": "gpt-4o",
+    "instructions": "You are a technical support specialist with expertise in APIs, SDKs, and software integrations. Your role is to:\n\n1. Diagnose technical issues and errors\n2. Provide code examples and integration guidance\n3. Explain API documentation and best practices\n4. Troubleshoot authentication and connectivity issues\n5. Guide developers through implementation steps\n6. Recommend architectural patterns and solutions\n\nGuidelines:\n- Ask for specific error messages and logs\n- Provide working code examples when possible\n- Reference official documentation\n- Explain technical concepts clearly\n- Consider security and performance implications\n- Use technical terminology appropriately\n- Offer multiple solution approaches",
+    "tools": [
+      {"type": "bing_grounding"},
+      {"type": "code_interpreter"}
+    ],
+    "temperature": 0.3,
+    "top_p": 0.85
+  },
+  
+  "routing": {
+    "keywords": [
+      "api",
+      "integration",
+      "sdk",
+      "error",
+      "bug",
+      "code",
+      "authentication",
+      "technical",
+      "developer",
+      "programming",
+      "connection",
+      "timeout"
+    ],
+    "intent_examples": [
+      "My API integration is failing",
+      "How do I authenticate with your API?",
+      "Getting error 401 unauthorized",
+      "SDK not working properly",
+      "Connection timeout issues",
+      "Need help with API documentation",
+      "How to implement OAuth flow?"
+    ],
+    "priority": 8
+  },
+  
+  "metadata": {
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z",
+    "author": "CSA Team",
+    "tags": ["technical", "api", "sdk", "developer", "integration"],
+    "enabled": true
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "order_processing_workflow",
+  "partitionKey": ["operations", "order_processing_workflow"],
+  "type": "workflow",
+  "category": "operations",
+  "name": "Order Processing Agent",
+  "description": "Handles order-related queries including status checks, modifications, cancellations, and shipping information.",
+  "version": "1.0",
+  
+  "agent_config": {
+    "model": "gpt-4o",
+    "instructions": "You are an order processing specialist. Your responsibilities include:\n\n1. Checking order status and tracking information\n2. Processing order modifications (address changes, item changes)\n3. Handling cancellation requests\n4. Providing shipping estimates and delivery information\n5. Explaining order policies and procedures\n\nGuidelines:\n- Always verify order numbers and customer information\n- Provide accurate tracking information\n- Explain any delays or issues clearly\n- Offer alternatives when modifications aren't possible\n- Be proactive about potential shipping issues\n- Know refund and return policies",
+    "tools": [
+      {"type": "bing_grounding"}
+    ],
+    "temperature": 0.5,
+    "top_p": 0.9
+  },
+  
+  "routing": {
+    "keywords": [
+      "order",
+      "purchase",
+      "shipping",
+      "delivery",
+      "tracking",
+      "cancel",
+      "modify",
+      "status",
+      "return",
+      "refund"
+    ],
+    "intent_examples": [
+      "Where is my order?",
+      "I want to cancel my order",
+      "Can I change my shipping address?",
+      "What's the status of order #12345?",
+      "When will my package arrive?",
+      "I need to modify my order"
+    ],
+    "priority": 7
+  },
+  
+  "metadata": {
+    "created_at": "2025-12-01T00:00:00Z",
+    "updated_at": "2025-12-01T00:00:00Z",
+    "author": "CSA Team",
+    "tags": ["operations", "orders", "shipping", "fulfillment"],
+    "enabled": true
+  }
+}
