@@ -144,6 +144,8 @@ function App() {
         }
       });
 
+      console.log("Opening save dialog...");
+      
       // Open save dialog
       const filePath = await save({
         defaultPath: `rdbms-chat-${timestamp}.txt`,
@@ -156,11 +158,18 @@ function App() {
         }]
       });
 
+      console.log("File path selected:", filePath);
+
       if (filePath) {
+        console.log("Writing to file:", filePath);
         await writeTextFile(filePath, content);
-        alert(`Chat history exported to:\n${filePath}`);
+        console.log("File written successfully");
+        alert(`Chat history exported successfully to:\n${filePath}`);
+      } else {
+        console.log("User cancelled save dialog");
       }
     } catch (error) {
+      console.error("Export error:", error);
       alert(`Failed to export chat: ${error}`);
     }
   };
