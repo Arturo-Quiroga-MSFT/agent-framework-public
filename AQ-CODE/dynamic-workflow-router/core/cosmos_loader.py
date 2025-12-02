@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import PartitionKey
+from azure.identity.aio import DefaultAzureCredential
 
 
 class CosmosWorkflowLoader:
@@ -71,11 +72,18 @@ class CosmosWorkflowLoader:
         if self._initialized:
             return
         
-        if not self.endpoint or not self.key:
-            raise ValueError("Cosmos DB endpoint and key are required")
+        if not self.endpoint:
+            raise ValueError("Cosmos DB endpoint is required")
         
-        # Create async Cosmos client
-        self.client = CosmosClient(self.endpoint, credential=self.key)
+        # Create async Cosmos client with Azure AD authentication
+        # Try DefaultAzureCredential first (for AAD), fallback to key if provided
+        if self.key and not self.key.startswith('$'):  # Check if it's an actual key, not env variable
+            # Use key-based auth
+            self.client = CosmosClient(self.endpoint, credential=self.key)
+        else:
+            # Use Azure AD auth (recommended for production)
+            credential = DefaultAzureCredential()
+            self.client = CosmosClient(self.endpoint, credential=credential)
         
         # Get database and container
         self.database = self.client.get_database_client(self.database_name)
