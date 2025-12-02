@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Database, Send, Settings, Activity, Trash2, Lightbulb } from "lucide-react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { Database, Send, Settings, Activity, Trash2, Lightbulb, Download } from "lucide-react";
 import "./App.css";
 
 interface ChatMessage {
@@ -10,21 +12,51 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface ConnectionStatus {
+  is_connected: boolean;
+  server: string | null;
+  database: string | null;
+}
+
 const SAMPLE_QUESTIONS = [
   "Show me the foreign key relationships",
-  "What's the total loan balance?",
-  "List all tables with row counts",
-  "Show me customers by industry",
-  "Find loans that are past due",
-  "Generate an ERD diagram"
+  "Generate an ERD diagram",
+  "Check for blocking sessions and locks",
+  "Show index fragmentation levels",
+  "List the top 10 largest tables",
+  "Find long-running queries"
 ];
 
 function App() {
   const [query, setQuery] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({ 
+    is_connected: false, 
+    server: null, 
+    database: null 
+  });
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Check connection status on mount and periodically
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const status = await invoke<ConnectionStatus>("get_connection_status");
+        setConnectionStatus(status);
+      } catch (error) {
+        console.error("Failed to get connection status:", error);
+      }
+    };
+
+    // Check immediately on mount
+    checkConnection();
+
+    // Check every 5 seconds
+    const interval = setInterval(checkConnection, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -60,6 +92,9 @@ function App() {
         timestamp: new Date()
       };
       setChatHistory(prev => [...prev, assistantMessage]);
+      
+      // Update connection status after successful query
+      setConnectionStatus(prev => ({ ...prev, is_connected: true }));
     } catch (error) {
       const errorMessage: ChatMessage = {
         id: Date.now() + 1,
@@ -79,6 +114,55 @@ function App() {
 
   const clearChat = () => {
     setChatHistory([]);
+    invoke("clear_conversation");
+  };
+
+  const exportChat = async () => {
+    if (chatHistory.length === 0) {
+      alert("No conversation to export");
+      return;
+    }
+
+    try {
+      // Format the chat history
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const serverInfo = connectionStatus.is_connected 
+        ? `Server: ${connectionStatus.server}\nDatabase: ${connectionStatus.database}\n`
+        : 'Not connected\n';
+      
+      let content = `RDBMS Assistant - Chat Export\n`;
+      content += `Export Date: ${new Date().toLocaleString()}\n`;
+      content += `${serverInfo}`;
+      content += `${'='.repeat(80)}\n\n`;
+
+      chatHistory.forEach((msg, idx) => {
+        content += `[${msg.timestamp.toLocaleTimeString()}] ${msg.type.toUpperCase()}\n`;
+        content += `${'-'.repeat(80)}\n`;
+        content += `${msg.content}\n\n`;
+        if (idx < chatHistory.length - 1) {
+          content += `${'='.repeat(80)}\n\n`;
+        }
+      });
+
+      // Open save dialog
+      const filePath = await save({
+        defaultPath: `rdbms-chat-${timestamp}.txt`,
+        filters: [{
+          name: 'Text Files',
+          extensions: ['txt']
+        }, {
+          name: 'Markdown Files',
+          extensions: ['md']
+        }]
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, content);
+        alert(`Chat history exported to:\n${filePath}`);
+      }
+    } catch (error) {
+      alert(`Failed to export chat: ${error}`);
+    }
   };
 
   return (
@@ -92,15 +176,29 @@ function App() {
           </div>
         </div>
         <div className="header-actions">
+          <button className="icon-button" onClick={exportChat} title="Export Chat History">
+            <Download className="icon" />
+          </button>
           <button className="icon-button" onClick={clearChat} title="Clear Chat History">
             <Trash2 className="icon" />
           </button>
           <button className="icon-button" title="Settings">
             <Settings className="icon" />
           </button>
-          <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
+          <div 
+            className={`status-indicator ${connectionStatus.is_connected ? 'connected' : 'disconnected'}`}
+            title={connectionStatus.is_connected ? 
+              `Connected to ${connectionStatus.server}/${connectionStatus.database}` : 
+              'Not connected'
+            }
+          >
             <Activity className="icon-small" />
-            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <span>
+              {connectionStatus.is_connected ? 
+                `Connected: ${connectionStatus.database}` : 
+                'Disconnected'
+              }
+            </span>
           </div>
         </div>
       </header>

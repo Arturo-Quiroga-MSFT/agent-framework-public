@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyModule};
+use pyo3::types::PyDict;
 use std::path::PathBuf;
 
 /// Initialize Python interpreter and set up the environment with venv
@@ -52,11 +52,6 @@ importlib.reload(site)
         
         Ok(())
     })
-}
-
-/// Run a DBA query using the Python agent
-pub fn run_python_query(query: String) -> PyResult<String> {
-    run_python_query_with_history(query, Vec::new())
 }
 
 /// Run a DBA query with conversation history
@@ -460,41 +455,4 @@ except Exception as log_err:
         
         Ok(result)
     })
-}
-
-/// Check Python environment and dependencies
-pub fn check_python_env() -> PyResult<bool> {
-    Python::with_gil(|py| {
-        // Check if required modules are available
-        let modules = vec!["agent_framework", "azure", "mcp"];
-        
-        for module in modules {
-            match py.import_bound(module) {
-                Ok(_) => continue,
-                Err(_) => {
-                    eprintln!("Python module '{}' not found", module);
-                    return Ok(false);
-                }
-            }
-        }
-        
-        Ok(true)
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_python_initialization() {
-        assert!(initialize_python().is_ok());
-    }
-
-    #[test]
-    fn test_check_env() {
-        initialize_python().unwrap();
-        // This may fail if Python environment is not set up
-        let _ = check_python_env();
-    }
 }

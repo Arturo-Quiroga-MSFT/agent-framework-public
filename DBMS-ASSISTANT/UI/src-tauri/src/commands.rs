@@ -61,8 +61,38 @@ pub async fn run_dba_query(query: String, state: State<'_, AppState>) -> Result<
     
     // Call Python bridge with history
     let result = match python_bridge::run_python_query_with_history(query.clone(), history) {
-        Ok(response) => response,
-        Err(e) => return Err(format!("Python error: {}", e)),
+        Ok(response) => {
+            // Check if response indicates successful connection
+            let is_success = !response.contains("Error:") && 
+                           !response.contains("Failed to") &&
+                           !response.contains("login failure");
+            
+            if is_success {
+                // Update connection status
+                *state.is_connected.lock().unwrap() = true;
+                
+                // Try to extract server/database info from .env if not set
+                if state.server_name.lock().unwrap().is_none() {
+                    if let Ok(server) = std::env::var("SERVER_NAME") {
+                        *state.server_name.lock().unwrap() = Some(server);
+                    }
+                }
+                if state.database_name.lock().unwrap().is_none() {
+                    if let Ok(database) = std::env::var("DATABASE_NAME") {
+                        *state.database_name.lock().unwrap() = Some(database);
+                    }
+                }
+            } else {
+                // Query failed, mark as disconnected
+                *state.is_connected.lock().unwrap() = false;
+            }
+            
+            response
+        },
+        Err(e) => {
+            *state.is_connected.lock().unwrap() = false;
+            return Err(format!("Python error: {}", e));
+        }
     };
     
     // Save to conversation history
@@ -104,6 +134,18 @@ pub async fn connect_database(
 
 #[tauri::command]
 pub fn get_connection_status(state: State<'_, AppState>) -> ConnectionStatus {
+    // Try to load from environment if not already set
+    if state.server_name.lock().unwrap().is_none() {
+        if let Ok(server) = std::env::var("SERVER_NAME") {
+            *state.server_name.lock().unwrap() = Some(server);
+        }
+    }
+    if state.database_name.lock().unwrap().is_none() {
+        if let Ok(database) = std::env::var("DATABASE_NAME") {
+            *state.database_name.lock().unwrap() = Some(database);
+        }
+    }
+    
     ConnectionStatus {
         is_connected: *state.is_connected.lock().unwrap(),
         server: state.server_name.lock().unwrap().clone(),

@@ -168,6 +168,46 @@ For read-only analysis or safe operations, just do it.
 
 Just execute and deliver results. DBAs want action, not conversation.
 
+**ERD DIAGRAM GENERATION:**
+
+When asked to generate an ERD (Entity Relationship Diagram), use the `graphviz` Python library (NOT pygraphviz or networkx).
+
+Example code to generate ERD:
+```python
+from graphviz import Digraph
+
+# Create a new directed graph
+dot = Digraph(comment='Database ERD', format='png')
+dot.attr(rankdir='LR')
+dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue')
+
+# Add dimension tables
+dot.node('DimCustomer', 'dim.DimCustomer')
+dot.node('DimDate', 'dim.DimDate')
+
+# Change style for fact tables
+dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightyellow')
+dot.node('FactLoan', 'fact.FACT_LOAN_ORIGINATION')
+
+# Add edges for foreign keys
+dot.edge('FactLoan', 'DimCustomer', label='CustomerKey')
+dot.edge('FactLoan', 'DimDate', label='OriginationDateKey')
+
+# Render to file
+output_path = '/path/to/output/erd_diagram'
+dot.render(output_path, format='png', cleanup=True)
+
+# Return the path
+print(f"ERD diagram saved to: {{output_path}}.png")
+```
+
+**Available visualization libraries in this environment:**
+- ✅ `graphviz` - Use this for ERD generation (creates .dot files and renders to PNG/SVG)
+- ✅ `matplotlib` - Available for charts and plots
+- ✅ `pandas` - Available for data manipulation
+- ❌ `pygraphviz` - NOT available (requires C libraries)
+- ❌ `networkx` - NOT available
+
 Always explain your findings clearly and provide actionable recommendations.
 When suggesting SQL queries, ensure they are safe and read-only unless explicitly asked for changes.""",
             tools=mcp_tool,

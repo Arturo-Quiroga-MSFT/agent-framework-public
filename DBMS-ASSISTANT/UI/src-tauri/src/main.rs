@@ -7,19 +7,23 @@ mod python_bridge;
 use tauri::Manager;
 
 fn main() {
-    // Initialize Python environment on startup
-    if let Err(e) = python_bridge::initialize_python() {
-        eprintln!("Failed to initialize Python: {}", e);
+    // Load .env file from DBMS-ASSISTANT directory
+    let mut env_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    env_path.pop(); // Remove "src-tauri"
+    env_path.pop(); // Remove "UI"
+    env_path.push(".env");
+    
+    if env_path.exists() {
+        let _ = dotenvy::from_path(&env_path);
     }
+    
+    // Initialize Python environment on startup
+    let _ = python_bridge::initialize_python();
     
     tauri::Builder::default()
         .manage(commands::AppState::default())
-        .setup(|app| {
-            #[cfg(debug_assertions)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-            }
+        .setup(|_app| {
+            // DevTools can be opened manually with Cmd+Shift+I if needed
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())

@@ -1,0 +1,133 @@
+Found 34 foreign key relationships for the database 'TERADATA-FI'. These define the links between fact and dimension tables that form the basis of the ERD:
+
+| FK_Name                 | Schema_Name | Table_Name            | Column_Name          | Referenced_Schema | Referenced_Table    | Referenced_Column |
+|-------------------------|-------------|-----------------------|---------------------|-------------------|--------------------|-------------------|
+| FK_Covenant_CovenantType| fact        | FACT_COVENANT_TEST    | CovenantTypeKey     | dim               | DimCovenantType    | CovenantTypeKey   |
+| FK_Covenant_Loan        | fact        | FACT_COVENANT_TEST    | LoanKey             | fact              | FACT_LOAN_ORIGINATION| LoanKey         |
+| FK_Covenant_TestDate    | fact        | FACT_COVENANT_TEST    | TestDateKey         | dim               | DimDate            | DateKey           |
+| FK_Financials_Customer  | fact        | FACT_CUSTOMER_FINANCIALS| CustomerKey       | dim               | DimCustomer        | CustomerKey       |
+| FK_Financials_StatementDate| fact     | FACT_CUSTOMER_FINANCIALS| StatementDateKey  | dim               | DimDate            | DateKey           |
+| FK_Financials_StatementType| fact     | FACT_CUSTOMER_FINANCIALS| StatementTypeKey | dim               | DimStatementType   | StatementTypeKey  |
+| FK_Interaction_Channel  | fact        | FACT_CUSTOMER_INTERACTION| InteractionChannelKey| dim             | DimInteractionChannel | ChannelKey     |
+| FK_Interaction_Customer | fact        | FACT_CUSTOMER_INTERACTION| CustomerKey      | dim               | DimCustomer        | CustomerKey       |
+| FK_Interaction_FollowUpDate| fact     | FACT_CUSTOMER_INTERACTION| FollowUpDateKey | dim               | DimDate            | DateKey           |
+| FK_Interaction_InteractionDate| fact  | FACT_CUSTOMER_INTERACTION| InteractionDateKey| dim               | DimDate            | DateKey           |
+| FK_Interaction_InteractionType| fact  | FACT_CUSTOMER_INTERACTION| InteractionTypeKey| dim               | DimInteractionType | InteractionTypeKey|
+| FK_Interaction_RelatedApplication| fact| FACT_CUSTOMER_INTERACTION| RelatedApplicationKey| fact            | FACT_LOAN_APPLICATION| ApplicationKey  |
+| FK_Interaction_RelatedLoan| fact      | FACT_CUSTOMER_INTERACTION| RelatedLoanKey   | fact              | FACT_LOAN_ORIGINATION| LoanKey         |
+| FK_LoanApplication_ApplicationDate| fact| FACT_LOAN_APPLICATION| ApplicationDateKey| dim               | DimDate            | DateKey           |
+| FK_LoanApplication_Customer| fact     | FACT_LOAN_APPLICATION| CustomerKey        | dim               | DimCustomer        | CustomerKey       |
+| FK_LoanApplication_DecisionDate| fact| FACT_LOAN_APPLICATION | DecisionDateKey     | dim               | DimDate            | DateKey           |
+| FK_LoanApplication_Product| fact      | FACT_LOAN_APPLICATION | ProductKey          | dim               | DimLoanProduct     | ProductKey        |
+| FK_LoanApplication_Purpose| fact      | FACT_LOAN_APPLICATION | PurposeKey          | dim               | DimLoanPurpose     | PurposeKey        |
+| FK_LoanApplication_Status| fact      | FACT_LOAN_APPLICATION | ApplicationStatusKey| dim               | DimApplicationStatus| StatusKey       |
+| FK_LoanBalance_DelinquencyStatus| fact| FACT_LOAN_BALANCE_DAILY| DelinquencyStatusKey| dim               | DimDelinquencyStatus| DelinquencyStatusKey|
+| FK_LoanBalance_Loan     | fact        | FACT_LOAN_BALANCE_DAILY| LoanKey            | fact              | FACT_LOAN_ORIGINATION| LoanKey         |
+| FK_LoanBalance_SnapshotDate| fact    | FACT_LOAN_BALANCE_DAILY| SnapshotDateKey    | dim               | DimDate            | DateKey           |
+| FK_LoanOrigination_Customer| fact    | FACT_LOAN_ORIGINATION | CustomerKey         | dim               | DimCustomer        | CustomerKey       |
+| FK_LoanOrigination_DelinquencyStatus| fact| FACT_LOAN_ORIGINATION| DelinquencyStatusKey| dim               | DimDelinquencyStatus| DelinquencyStatusKey|
+| FK_LoanOrigination_FirstPaymentDate| fact| FACT_LOAN_ORIGINATION| FirstPaymentDateKey| dim               | DimDate            | DateKey           |
+| FK_LoanOrigination_MaturityDate| fact| FACT_LOAN_ORIGINATION | MaturityDateKey     | dim               | DimDate            | DateKey           |
+| FK_LoanOrigination_OriginationDate| fact| FACT_LOAN_ORIGINATION| OriginationDateKey | dim               | DimDate            | DateKey           |
+| FK_LoanOrigination_Product| fact     | FACT_LOAN_ORIGINATION | ProductKey          | dim               | DimLoanProduct     | ProductKey        |
+| FK_LoanOrigination_Purpose| fact     | FACT_LOAN_ORIGINATION | PurposeKey          | dim               | DimLoanPurpose     | PurposeKey        |
+| FK_Payment_Loan        | fact        | FACT_PAYMENT_TRANSACTION| LoanKey            | fact              | FACT_LOAN_ORIGINATION| LoanKey         |
+| FK_Payment_PaymentDate | fact        | FACT_PAYMENT_TRANSACTION| PaymentDateKey     | dim               | DimDate            | DateKey           |
+| FK_Payment_PaymentMethod| fact       | FACT_PAYMENT_TRANSACTION| PaymentMethodKey   | dim               | DimPaymentMethod   | PaymentMethodKey  |
+| FK_Payment_PaymentType | fact        | FACT_PAYMENT_TRANSACTION| PaymentTypeKey     | dim               | DimPaymentType     | PaymentTypeKey    |
+| FK_Payment_ScheduledDate| fact       | FACT_PAYMENT_TRANSACTION| ScheduledDateKey   | dim               | DimDate            | DateKey           |
+
+Now I will generate a high-level ERD diagram with the above relationships covering the major dimension and fact tables.I do not have the pandas module available for Python execution in this environment. I will switch to generating the ERD diagram using a different approach without pandas.
+
+I will create a Graphviz dot script to generate the ERD diagram as a PNG image using the foreign key relationships and tables we discovered.Unable to generate ERD diagram using Python libraries due to missing modules (pandas, graphviz) in this environment.
+
+I will instead provide the ERD logic in graphviz dot format code which you can run in your environment to generate the diagram as PNG or other formats.
+
+Here is the graphviz dot script representing your ER model with fact and dimension tables and their foreign key relationships:
+
+```
+digraph TERADATA_FI_ERD {
+    rankdir=LR;
+    node [shape=box, style=\"rounded, filled\", fillcolor=lightblue];
+
+    // Dimension tables
+    DimApplicationStatus;
+    DimCollateralType;
+    DimCovenantType;
+    DimCustomer;
+    DimDate;
+    DimDelinquencyStatus;
+    DimIndustry;
+    DimInteractionChannel;
+    DimInteractionType;
+    DimLoanProduct;
+    DimLoanPurpose;
+    DimPaymentMethod;
+    DimPaymentType;
+    DimRiskRating;
+    DimStatementType;
+
+    node [shape=ellipse, fillcolor=lightyellow];
+
+    // Fact tables
+    FACT_COVENANT_TEST;
+    FACT_CUSTOMER_FINANCIALS;
+    FACT_CUSTOMER_INTERACTION;
+    FACT_LOAN_APPLICATION;
+    FACT_LOAN_BALANCE_DAILY;
+    FACT_LOAN_ORIGINATION;
+    FACT_PAYMENT_TRANSACTION;
+
+    // Relationships (fact to dimension)
+    FACT_COVENANT_TEST -> DimCovenantType;
+    FACT_COVENANT_TEST -> FACT_LOAN_ORIGINATION;
+    FACT_COVENANT_TEST -> DimDate;
+
+    FACT_CUSTOMER_FINANCIALS -> DimCustomer;
+    FACT_CUSTOMER_FINANCIALS -> DimDate;
+    FACT_CUSTOMER_FINANCIALS -> DimStatementType;
+
+    FACT_CUSTOMER_INTERACTION -> DimInteractionChannel;
+    FACT_CUSTOMER_INTERACTION -> DimCustomer;
+    FACT_CUSTOMER_INTERACTION -> DimDate; 
+    FACT_CUSTOMER_INTERACTION -> DimDate;  // multiple date keys
+    FACT_CUSTOMER_INTERACTION -> DimInteractionType;
+    FACT_CUSTOMER_INTERACTION -> FACT_LOAN_APPLICATION;
+    FACT_CUSTOMER_INTERACTION -> FACT_LOAN_ORIGINATION;
+
+    FACT_LOAN_APPLICATION -> DimDate; // application date
+    FACT_LOAN_APPLICATION -> DimCustomer;
+    FACT_LOAN_APPLICATION -> DimDate; // decision date
+    FACT_LOAN_APPLICATION -> DimLoanProduct;
+    FACT_LOAN_APPLICATION -> DimLoanPurpose;
+    FACT_LOAN_APPLICATION -> DimApplicationStatus;
+
+    FACT_LOAN_BALANCE_DAILY -> DimDelinquencyStatus;
+    FACT_LOAN_BALANCE_DAILY -> FACT_LOAN_ORIGINATION;
+    FACT_LOAN_BALANCE_DAILY -> DimDate;
+
+    FACT_LOAN_ORIGINATION -> DimCustomer;
+    FACT_LOAN_ORIGINATION -> DimDelinquencyStatus;
+    FACT_LOAN_ORIGINATION -> DimDate; // multiple date keys (origination, maturity, first payment)
+    FACT_LOAN_ORIGINATION -> DimDate;
+    FACT_LOAN_ORIGINATION -> DimDate;
+    FACT_LOAN_ORIGINATION -> DimLoanProduct;
+    FACT_LOAN_ORIGINATION -> DimLoanPurpose;
+
+    FACT_PAYMENT_TRANSACTION -> FACT_LOAN_ORIGINATION;
+    FACT_PAYMENT_TRANSACTION -> DimDate;
+    FACT_PAYMENT_TRANSACTION -> DimPaymentMethod;
+    FACT_PAYMENT_TRANSACTION -> DimPaymentType;
+    FACT_PAYMENT_TRANSACTION -> DimDate; // scheduled date
+}
+```
+
+You can save that text into a file named `teradata_fi_erd.dot` and generate a PNG by running:
+
+```
+dot -Tpng teradata_fi_erd.dot -o teradata_fi_erd.png
+```
+
+This ERD depicts the major tables and their foreign key relationships in your database schema.
+
+If you want, I can next assist you with a smaller subset, or specific tables in more detail.
