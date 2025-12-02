@@ -166,8 +166,11 @@ body {
 
 .sample-buttons-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
 .sample-question-btn {
@@ -176,13 +179,15 @@ body {
   border: 1px solid rgba(96, 165, 250, 0.3);
   border-radius: 8px;
   color: #93c5fd;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.3;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .sample-question-btn:hover:not(:disabled) {

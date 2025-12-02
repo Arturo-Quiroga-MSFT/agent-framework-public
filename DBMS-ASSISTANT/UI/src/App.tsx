@@ -17,12 +17,37 @@ interface ConnectionStatus {
 }
 
 const SAMPLE_QUESTIONS = [
+  // Schema & Structure
   "Show me the foreign key relationships",
   "Generate an ERD diagram",
-  "Check for blocking sessions and locks",
+  "List all tables with row counts",
+  "What are the missing indexes?",
+  
+  // Performance & Optimization
   "Show index fragmentation levels",
+  "Find unused indexes",
+  "Check for blocking sessions and locks",
+  "Show current wait statistics",
+  "Find long-running queries",
+  "Show top queries by CPU time",
+  
+  // Space & Capacity
   "List the top 10 largest tables",
-  "Find long-running queries"
+  "Show database file sizes and growth",
+  "Find tables without clustered indexes",
+  "Show tempdb usage by session",
+  
+  // Maintenance & Health
+  "When were statistics last updated?",
+  "Show backup history for last 7 days",
+  "Check database integrity status",
+  "Show job execution history",
+  
+  // Security & Auditing
+  "List database users and their roles",
+  "Show failed login attempts",
+  "Find orphaned users",
+  "Show granted permissions by user"
 ];
 
 function App() {
