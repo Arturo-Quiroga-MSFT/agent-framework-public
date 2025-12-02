@@ -1,0 +1,64 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 11:53:56 AM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[11:51:29 AM] USER
+--------------------------------------------------------------------------------
+List the top 10 largest tables
+
+================================================================================
+
+[11:51:48 AM] ASSISTANT
+--------------------------------------------------------------------------------
+Top 10 largest tables by total space used (in KB) along with row counts:
+
+1. fact.FACT_CUSTOMER_INTERACTION - 30,948 rows - 2,512 KB
+2. fact.FACT_PAYMENT_TRANSACTION - 12,000 rows - 1,232 KB
+3. fact.FACT_LOAN_APPLICATION - 6,000 rows - 784 KB
+4. fact.FACT_LOAN_ORIGINATION - 3,056 rows - 592 KB
+5. dim.DimDate - 7,305 rows - 552 KB
+6. fact.FACT_LOAN_BALANCE_DAILY - 3,000 rows - 392 KB
+7. dim.DimCustomer - 1,120 rows - 328 KB
+8. dim.DimLoanProduct - 16 rows - 144 KB
+9. dim.DimInteractionType - 10 rows - 144 KB
+10. dim.DimInteractionChannel - 10 rows - 144 KB
+
+Let me know if you want details or samples from any of these tables.
+
+================================================================================
+
+[11:53:16 AM] USER
+--------------------------------------------------------------------------------
+show me a sample fo the seventh table
+
+
+================================================================================
+
+[11:53:49 AM] ASSISTANT
+--------------------------------------------------------------------------------
+Here is a sample of 10 rows from the table dim.DimCustomer:
+
+1. CustomerKey: 1, CustomerId: CUST00001, CompanyName: Johnson Manufacturing Inc, TaxId: 123456789, LegalEntityType: Corporation, YearFounded: 2012, EmployeeCount: 145, AnnualRevenue: 12500000, PrimaryIndustryId: 1, PrimarySICCode: 2000, PrimaryNAICSCode: 31-33, CreditRating_SP: BBB+, InternalRiskRating: BBB, CustomerSegment: Middle Market, CustomerTier: Gold, TotalLoansCount: 3, TotalLoanVolume: 8500000, LifetimeRevenue: 425000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+2. CustomerKey: 2, CustomerId: CUST00002, CompanyName: Smith Healthcare Systems, TaxId: 234567890, LegalEntityType: LLC, YearFounded: 2015, EmployeeCount: 265, AnnualRevenue: 28000000, PrimarySICCode: 8000, PrimaryNAICSCode: 62, CreditRating_SP: A-, InternalRiskRating: A, CustomerSegment: Middle Market, CustomerTier: Platinum, TotalLoansCount: 5, TotalLoanVolume: 15000000, LifetimeRevenue: 750000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: true, EffectiveDate: 2024-01-01, IsCurrent: true
+
+3. CustomerKey: 3, CustomerId: CUST00003, CompanyName: Williams Auto Parts Corp, TaxId: 345678901, LegalEntityType: Corporation, YearFounded: 2008, EmployeeCount: 85, AnnualRevenue: 8200000, PrimaryIndustryId: 1, PrimarySICCode: 3714, PrimaryNAICSCode: 336, CreditRating_SP: BBB, InternalRiskRating: BBB, CustomerSegment: Small Business, CustomerTier: Silver, TotalLoansCount: 2, TotalLoanVolume: 3500000, LifetimeRevenue: 175000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+4. CustomerKey: 4, CustomerId: CUST00004, CompanyName: Brown Medical Devices LLC, TaxId: 456789012, LegalEntityType: LLC, YearFounded: 2018, EmployeeCount: 125, AnnualRevenue: 15000000, PrimarySICCode: 3841, PrimaryNAICSCode: 3391, CreditRating_SP: A, InternalRiskRating: A, CustomerSegment: Middle Market, CustomerTier: Gold, TotalLoansCount: 4, TotalLoanVolume: 9000000, LifetimeRevenue: 450000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+5. CustomerKey: 5, CustomerId: CUST00005, CompanyName: Davis Steel Industries, TaxId: 567890123, LegalEntityType: Corporation, YearFounded: 2005, EmployeeCount: 420, AnnualRevenue: 45000000, PrimaryIndustryId: 1, PrimarySICCode: 3312, PrimaryNAICSCode: 331, CreditRating_SP: BBB-, InternalRiskRating: BB, CustomerSegment: Large Corporate, CustomerTier: Platinum, TotalLoansCount: 8, TotalLoanVolume: 32000000, LifetimeRevenue: 1600000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: true, EffectiveDate: 2024-01-01, IsCurrent: true
+
+6. CustomerKey: 6, CustomerId: CUST00006, CompanyName: Miller Health Services Group, TaxId: 678901234, LegalEntityType: Corporation, YearFounded: 2010, EmployeeCount: 580, AnnualRevenue: 65000000, PrimarySICCode: 8062, PrimaryNAICSCode: 6211, CreditRating_SP: A+, InternalRiskRating: A, CustomerSegment: Large Corporate, CustomerTier: Platinum, TotalLoansCount: 12, TotalLoanVolume: 48000000, LifetimeRevenue: 2400000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: true, EffectiveDate: 2024-01-01, IsCurrent: true
+
+7. CustomerKey: 7, CustomerId: CUST00007, CompanyName: Wilson Precision Machining, TaxId: 789012345, LegalEntityType: LLC, YearFounded: 2016, EmployeeCount: 52, AnnualRevenue: 4500000, PrimaryIndustryId: 1, PrimarySICCode: 3599, PrimaryNAICSCode: 3339, CreditRating_SP: BB+, InternalRiskRating: BB, CustomerSegment: Small Business, CustomerTier: Silver, TotalLoansCount: 1, TotalLoanVolume: 2000000, LifetimeRevenue: 100000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+8. CustomerKey: 8, CustomerId: CUST00008, CompanyName: Moore Pharmaceutical Supply, TaxId: 890123456, LegalEntityType: Corporation, YearFounded: 2013, EmployeeCount: 195, AnnualRevenue: 22000000, PrimarySICCode: 5122, PrimaryNAICSCode: 4242, CreditRating_SP: BBB+, InternalRiskRating: BBB, CustomerSegment: Middle Market, CustomerTier: Gold, TotalLoansCount: 6, TotalLoanVolume: 12000000, LifetimeRevenue: 600000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+9. CustomerKey: 9, CustomerId: CUST00009, CompanyName: Taylor Electronics Mfg, TaxId: 901234567, LegalEntityType: LLC, YearFounded: 2011, EmployeeCount: 310, AnnualRevenue: 35000000, PrimaryIndustryId: 1, PrimarySICCode: 3674, PrimaryNAICSCode: 3344, CreditRating_SP: A-, InternalRiskRating: BBB, CustomerSegment: Large Corporate, CustomerTier: Gold, TotalLoansCount: 7, TotalLoanVolume: 25000000, LifetimeRevenue: 1250000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: false, EffectiveDate: 2024-01-01, IsCurrent: true
+
+10. CustomerKey: 10, CustomerId: CUST00010, CompanyName: Anderson Hospital Group, TaxId: 012345678, LegalEntityType: Corporation, YearFounded: 2007, EmployeeCount: 950, AnnualRevenue: 125000000, PrimarySICCode: 8062, PrimaryNAICSCode: 6221, CreditRating_SP: A, InternalRiskRating: A, CustomerSegment: Large Corporate, CustomerTier: Platinum, TotalLoansCount: 15, TotalLoanVolume: 75000000, LifetimeRevenue: 3750000, DefaultCount: 0, IsActive: true, IsHighRisk: false, IsVIP: true, EffectiveDate: 2024-01-01, IsCurrent: true
+
+Let me know if you need more details or from other tables.
+

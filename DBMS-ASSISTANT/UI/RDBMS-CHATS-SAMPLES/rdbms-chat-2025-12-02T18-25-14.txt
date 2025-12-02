@@ -1,0 +1,404 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 1:25:14 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[1:20:46 PM] USER
+--------------------------------------------------------------------------------
+Generate an ERD diagram
+
+================================================================================
+
+[1:21:57 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Let me generate the ERD in Mermaid format based on the foreign keys and table schemas retrieved. I will show the key columns for each table and the relationships discovered.
+
+```mermaid
+erDiagram
+    FACT_COVENANT_TEST {
+        int CovenantTestKey PK
+        int LoanKey FK
+        int TestDateKey FK
+        int CovenantTypeKey FK
+        decimal ThresholdValue
+        decimal ActualValue
+        varchar PassFailStatus
+        varchar ViolationSeverity
+        int DaysSinceViolation
+        varchar ActionRequired
+        varchar ActionTaken
+        bit WaiverGranted
+        datetime2 CreatedDate
+    }
+    DimCovenantType {
+        int CovenantTypeKey PK
+        varchar CovenantCategory
+        varchar CovenantName
+        nvarchar CovenantDescription
+        varchar TestFrequency
+        varchar ThresholdType
+        varchar DefaultSeverity
+        datetime2 CreatedDate
+    }
+    FACT_LOAN_ORIGINATION {
+        int LoanKey PK
+        varchar LoanId
+        int CustomerKey FK
+        int OriginationDateKey FK
+        int MaturityDateKey FK
+        int FirstPaymentDateKey FK
+        int ProductKey FK
+        int PurposeKey FK
+        int DelinquencyStatusKey FK
+        decimal OriginalAmount
+        decimal FundedAmount
+        decimal CurrentBalance
+        decimal PrincipalPaid
+        decimal InterestPaid
+        int TermMonths
+        int RemainingTermMonths
+        decimal InterestRate
+        varchar RateType
+        varchar ReferenceRate
+        decimal Margin
+        decimal APR
+        decimal OriginationFee
+        decimal ProcessingFee
+        decimal OtherFees
+        decimal TotalFeesCollected
+        decimal CollateralValue
+        decimal LTV
+        int DaysDelinquent
+        int PaymentsMade
+        int PaymentsScheduled
+        int MissedPayments
+        int LatePayments
+        decimal NPV
+        decimal IRR
+        decimal ROE
+        decimal Yield
+        bit IsActive
+        bit IsPaidOff
+        bit IsChargedOff
+        bit IsRestructured
+        bit HasPersonalGuarantee
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimDate {
+        int DateKey PK
+        date Date
+        int Year
+        int Quarter
+        int Month
+        varchar MonthName
+        int Week
+        int DayOfYear
+        int DayOfMonth
+        int DayOfWeek
+        varchar DayName
+        bit IsWeekend
+        bit IsHoliday
+        varchar HolidayName
+        bit IsQuarterEnd
+        bit IsYearEnd
+        bit IsMonthEnd
+        int FiscalYear
+        int FiscalQuarter
+        int FiscalMonth
+        date PriorDay
+        date PriorWeek
+        date PriorMonth
+        date PriorQuarter
+        date PriorYear
+        datetime2 CreatedDate
+    }
+    FACT_CUSTOMER_FINANCIALS {
+        int FinancialKey PK
+        int CustomerKey FK
+        int StatementDateKey FK
+        int StatementTypeKey FK
+        decimal Revenue
+        decimal COGS
+        decimal GrossProfit
+        decimal OperatingExpenses
+        decimal EBITDA
+        decimal EBIT
+        decimal InterestExpense
+        decimal NetIncome
+        decimal TotalAssets
+        decimal CurrentAssets
+        decimal FixedAssets
+        decimal TotalLiabilities
+        decimal CurrentLiabilities
+        decimal LongTermDebt
+        decimal TotalEquity
+        decimal OperatingCashFlow
+        decimal InvestingCashFlow
+        decimal FinancingCashFlow
+        decimal CurrentRatio
+        decimal QuickRatio
+        decimal DebtToEquityRatio
+        decimal DebtServiceCoverageRatio
+        decimal ROA
+        decimal ROE
+        decimal GrossMargin
+        decimal NetMargin
+        datetime2 CreatedDate
+    }
+    DimCustomer {
+        int CustomerKey PK
+        varchar CustomerId
+        nvarchar CompanyName
+        varchar TaxId
+        varchar LegalEntityType
+        int YearFounded
+        int EmployeeCount
+        decimal AnnualRevenue
+        int PrimaryIndustryId
+        varchar PrimarySICCode
+        varchar PrimaryNAICSCode
+        varchar CreditRating_SP
+        varchar CreditRating_Moody
+        varchar CreditRating_Fitch
+        varchar InternalRiskRating
+        int RelationshipManagerId
+        varchar CustomerSegment
+        varchar CustomerTier
+        int TotalLoansCount
+        decimal TotalLoanVolume
+        decimal LifetimeRevenue
+        int DefaultCount
+        bit IsActive
+        bit IsHighRisk
+        bit IsVIP
+        date EffectiveDate
+        date EndDate
+        bit IsCurrent
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimStatementType {
+        int StatementTypeKey PK
+        varchar TypeCode
+        varchar TypeName
+        int PeriodMonths
+        bit IsAudited
+        datetime2 CreatedDate
+    }
+    FACT_CUSTOMER_INTERACTION {
+        bigint InteractionKey PK
+        varchar InteractionId
+        int CustomerKey FK
+        int InteractionDateKey FK
+        int InteractionTypeKey FK
+        int InteractionChannelKey FK
+        nvarchar Subject
+        nvarchar Notes
+        int Duration_Minutes
+        varchar Outcome
+        int RelatedLoanKey FK
+        int RelatedApplicationKey FK
+        bit RequiresFollowUp
+        int FollowUpDateKey FK
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimInteractionChannel {
+        int ChannelKey PK
+        varchar ChannelCode
+        varchar ChannelName
+        bit IsFaceToFace
+        datetime2 CreatedDate
+    }
+    DimInteractionType {
+        int InteractionTypeKey PK
+        varchar TypeCode
+        varchar TypeName
+        varchar Category
+        datetime2 CreatedDate
+    }
+    FACT_LOAN_APPLICATION {
+        int ApplicationKey PK
+        varchar ApplicationId
+        int CustomerKey FK
+        int ApplicationDateKey FK
+        int DecisionDateKey FK
+        int ProductKey FK
+        int PurposeKey FK
+        int ApplicationStatusKey FK
+        decimal RequestedAmount
+        decimal ApprovedAmount
+        int RequestedTerm
+        int ApprovedTerm
+        int CreditScoreAtApplication
+        decimal DebtToIncomeRatio
+        decimal AnnualRevenue
+        int InternalRiskScore
+        varchar DecisionCode
+        nvarchar DecisionReason
+        int ReviewDuration_Days
+        int OriginatedLoanKey FK
+        bit IsApproved
+        bit IsConverted
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimLoanProduct {
+        int ProductKey PK
+        varchar ProductId
+        varchar ProductName
+        varchar ProductCategory
+        varchar ProductType
+        nvarchar ProductDescription
+        decimal MinAmount
+        decimal MaxAmount
+        int MinTerm
+        int MaxTerm
+        varchar BaseRateType
+        varchar ReferenceRateType
+        int MarginBps
+        bit RequiresCollateral
+        bit RequiresPersonalGuarantee
+        bit AllowsPrepayment
+        decimal PrepaymentPenaltyPercent
+        bit IsActive
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimLoanPurpose {
+        int PurposeKey PK
+        varchar PurposeId
+        varchar PurposeCategory
+        varchar PurposeName
+        nvarchar PurposeDescription
+        decimal RiskWeight
+        datetime2 CreatedDate
+    }
+    DimApplicationStatus {
+        int StatusKey PK
+        varchar StatusCode
+        varchar StatusName
+        varchar StatusCategory
+        bit IsActive
+        bit IsTerminal
+        int SortOrder
+        datetime2 CreatedDate
+    }
+    FACT_LOAN_BALANCE_DAILY {
+        bigint BalanceKey PK
+        int LoanKey FK
+        int SnapshotDateKey FK
+        int DelinquencyStatusKey FK
+        decimal PrincipalBalance
+        decimal InterestBalance
+        decimal FeesBalance
+        decimal TotalBalance
+        decimal AccruedInterest
+        int DaysDelinquent
+        decimal DelinquentAmount
+        decimal Allowance
+        datetime2 CreatedDate
+    }
+    DimDelinquencyStatus {
+        int DelinquencyStatusKey PK
+        varchar StatusCode
+        varchar StatusName
+        int MinDaysDelinquent
+        int MaxDaysDelinquent
+        bit IsPerforming
+        bit IsNonPerforming
+        bit RequiresRestructuring
+        datetime2 CreatedDate
+    }
+    FACT_PAYMENT_TRANSACTION {
+        bigint PaymentKey PK
+        varchar PaymentId
+        int LoanKey FK
+        int PaymentDateKey FK
+        int ScheduledDateKey FK
+        int PaymentMethodKey FK
+        int PaymentTypeKey FK
+        decimal TotalPaymentAmount
+        decimal PrincipalAmount
+        decimal InterestAmount
+        decimal FeesAmount
+        decimal PenaltyAmount
+        decimal ScheduledAmount
+        int PaymentNumber
+        int DaysLate
+        bit IsEarlyPayment
+        bit IsLatePayment
+        bit IsPrepayment
+        bit IsReversed
+        datetime2 CreatedDate
+        datetime2 ModifiedDate
+    }
+    DimPaymentMethod {
+        int PaymentMethodKey PK
+        varchar MethodCode
+        varchar MethodName
+        nvarchar MethodDescription
+        decimal ProcessingFee
+        int ProcessingDays
+        bit IsElectronic
+        datetime2 CreatedDate
+    }
+    DimPaymentType {
+        int PaymentTypeKey PK
+        varchar TypeCode
+        varchar TypeName
+        nvarchar TypeDescription
+        datetime2 CreatedDate
+    }
+
+    %% Relationships %%
+    FACT_COVENANT_TEST }o--|| DimCovenantType : "CovenantTypeKey"
+    FACT_COVENANT_TEST }o--|| FACT_LOAN_ORIGINATION : "LoanKey"
+    FACT_COVENANT_TEST }o--|| DimDate : "TestDateKey"
+
+    FACT_CUSTOMER_FINANCIALS }o--|| DimCustomer : "CustomerKey"
+    FACT_CUSTOMER_FINANCIALS }o--|| DimDate : "StatementDateKey"
+    FACT_CUSTOMER_FINANCIALS }o--|| DimStatementType : "StatementTypeKey"
+
+    FACT_CUSTOMER_INTERACTION }o--|| DimInteractionChannel : "InteractionChannelKey"
+    FACT_CUSTOMER_INTERACTION }o--|| DimCustomer : "CustomerKey"
+    FACT_CUSTOMER_INTERACTION }o--|| DimDate : "FollowUpDateKey"
+    FACT_CUSTOMER_INTERACTION }o--|| DimDate : "InteractionDateKey"
+    FACT_CUSTOMER_INTERACTION }o--|| DimInteractionType : "InteractionTypeKey"
+    FACT_CUSTOMER_INTERACTION }o--|| FACT_LOAN_APPLICATION : "RelatedApplicationKey"
+    FACT_CUSTOMER_INTERACTION }o--|| FACT_LOAN_ORIGINATION : "RelatedLoanKey"
+
+    FACT_LOAN_APPLICATION }o--|| DimDate : "ApplicationDateKey"
+    FACT_LOAN_APPLICATION }o--|| DimCustomer : "CustomerKey"
+    FACT_LOAN_APPLICATION }o--|| DimDate : "DecisionDateKey"
+    FACT_LOAN_APPLICATION }o--|| DimLoanProduct : "ProductKey"
+    FACT_LOAN_APPLICATION }o--|| DimLoanPurpose : "PurposeKey"
+    FACT_LOAN_APPLICATION }o--|| DimApplicationStatus : "ApplicationStatusKey"
+
+    FACT_LOAN_BALANCE_DAILY }o--|| DimDelinquencyStatus : "DelinquencyStatusKey"
+    FACT_LOAN_BALANCE_DAILY }o--|| FACT_LOAN_ORIGINATION : "LoanKey"
+    FACT_LOAN_BALANCE_DAILY }o--|| DimDate : "SnapshotDateKey"
+
+    FACT_LOAN_ORIGINATION }o--|| DimCustomer : "CustomerKey"
+    FACT_LOAN_ORIGINATION }o--|| DimDelinquencyStatus : "DelinquencyStatusKey"
+    FACT_LOAN_ORIGINATION }o--|| DimDate : "FirstPaymentDateKey"
+    FACT_LOAN_ORIGINATION }o--|| DimDate : "MaturityDateKey"
+    FACT_LOAN_ORIGINATION }o--|| DimDate : "OriginationDateKey"
+    FACT_LOAN_ORIGINATION }o--|| DimLoanProduct : "ProductKey"
+    FACT_LOAN_ORIGINATION }o--|| DimLoanPurpose : "PurposeKey"
+
+    FACT_PAYMENT_TRANSACTION }o--|| FACT_LOAN_ORIGINATION : "LoanKey"
+    FACT_PAYMENT_TRANSACTION }o--|| DimDate : "PaymentDateKey"
+    FACT_PAYMENT_TRANSACTION }o--|| DimPaymentMethod : "PaymentMethodKey"
+    FACT_PAYMENT_TRANSACTION }o--|| DimPaymentType : "PaymentTypeKey"
+    FACT_PAYMENT_TRANSACTION }o--|| DimDate : "ScheduledDateKey"
+```
+
+You can paste this Mermaid code into https://mermaid.live to visualize the ERD diagram.
+
+This ERD includes 20 tables with their key attributes and all foreign key relationships as discovered in the database.
+
+Done.
+

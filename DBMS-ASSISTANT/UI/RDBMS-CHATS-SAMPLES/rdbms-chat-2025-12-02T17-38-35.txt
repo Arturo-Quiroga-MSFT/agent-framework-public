@@ -1,0 +1,46 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 12:38:35 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[12:31:12 PM] USER
+--------------------------------------------------------------------------------
+Generate an ERD diagram
+
+================================================================================
+
+[12:32:23 PM] ASSISTANT
+--------------------------------------------------------------------------------
+I have generated the ERD (Entity-Relationship Diagram) showing the table relationships based on the foreign key constraints in the database.
+
+Here is the ERD diagram image file: ERD_Diagram.png
+
+It includes the fact and dimension tables with arrows indicating foreign key relationships from dimension to fact tables as well as between fact tables themselves.
+
+The tables included are:
+- DimApplicationStatus
+- DimCollateralType
+- DimCovenantType
+- DimCustomer
+- DimDate
+- DimDelinquencyStatus
+- DimIndustry
+- DimInteractionChannel
+- DimInteractionType
+- DimLoanProduct
+- DimLoanPurpose
+- DimPaymentMethod
+- DimPaymentType
+- DimRiskRating
+- DimStatementType
+- FACT_COVENANT_TEST
+- FACT_CUSTOMER_FINANCIALS
+- FACT_CUSTOMER_INTERACTION
+- FACT_LOAN_APPLICATION
+- FACT_LOAN_BALANCE_DAILY
+- FACT_LOAN_ORIGINATION
+- FACT_PAYMENT_TRANSACTION
+
+If you want, I can help analyze or export this diagram further. Otherwise, ERD generation is complete.
+

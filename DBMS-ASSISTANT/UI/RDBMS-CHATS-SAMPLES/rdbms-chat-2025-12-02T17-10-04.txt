@@ -1,0 +1,59 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 12:10:04 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[12:08:53 PM] USER
+--------------------------------------------------------------------------------
+List the top 10 largest tables
+
+================================================================================
+
+[12:09:12 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Top 10 largest tables by total space used (in KB) in the database 'TERADATA-FI' on server 'aqsqlserver001.database.windows.net' are:
+
+1. fact.FACT_CUSTOMER_INTERACTION - Rows: 7,737, TotalSpaceKB: 2,512, UsedSpaceKB: 2,408, UnusedSpaceKB: 104
+2. fact.FACT_PAYMENT_TRANSACTION - Rows: 6,000, TotalSpaceKB: 1,232, UsedSpaceKB: 1,168, UnusedSpaceKB: 64
+3. fact.FACT_LOAN_APPLICATION - Rows: 3,000, TotalSpaceKB: 784, UsedSpaceKB: 672, UnusedSpaceKB: 112
+4. fact.FACT_LOAN_ORIGINATION - Rows: 1,528, TotalSpaceKB: 592, UsedSpaceKB: 504, UnusedSpaceKB: 88
+5. dim.DimDate - Rows: 1,461, TotalSpaceKB: 552, UsedSpaceKB: 456, UnusedSpaceKB: 96
+6. fact.FACT_LOAN_BALANCE_DAILY - Rows: 3,000, TotalSpaceKB: 392, UsedSpaceKB: 376, UnusedSpaceKB: 16
+7. dim.DimCustomer - Rows: 1,120, TotalSpaceKB: 328, UsedSpaceKB: 288, UnusedSpaceKB: 40
+8. dim.DimLoanProduct - Rows: 8, TotalSpaceKB: 144, UsedSpaceKB: 32, UnusedSpaceKB: 112
+9. dim.DimInteractionType - Rows: 5, TotalSpaceKB: 144, UsedSpaceKB: 32, UnusedSpaceKB: 112
+10. dim.DimInteractionChannel - Rows: 5, TotalSpaceKB: 144, UsedSpaceKB: 32, UnusedSpaceKB: 112
+
+These are the top 10 largest tables by storage space in the database.
+
+================================================================================
+
+[12:09:22 PM] USER
+--------------------------------------------------------------------------------
+show me sample of 8
+
+================================================================================
+
+[12:09:44 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Sample data from table dim.DimLoanProduct (8 rows):
+
+1. ProductKey: 1, ProductId: PROD001, ProductName: Term Loan - 5 Year, ProductCategory: Commercial, ProductType: Standard Term Loan, MinAmount: 100000, MaxAmount: 5000000, MinTerm: 60, MaxTerm: 60, BaseRateType: Fixed, MarginBps: 500, RequiresCollateral: true, RequiresPersonalGuarantee: false, AllowsPrepayment: true, PrepaymentPenaltyPercent: 2, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+2. ProductKey: 2, ProductId: PROD002, ProductName: Term Loan - 7 Year, ProductCategory: Commercial, ProductType: Standard Term Loan, MinAmount: 250000, MaxAmount: 10000000, MinTerm: 84, MaxTerm: 84, BaseRateType: Fixed, MarginBps: 550, RequiresCollateral: true, RequiresPersonalGuarantee: true, AllowsPrepayment: true, PrepaymentPenaltyPercent: 1.5, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+3. ProductKey: 3, ProductId: PROD003, ProductName: Revolving Line of Credit, ProductCategory: Commercial, ProductType: Working Capital Line, MinAmount: 50000, MaxAmount: 2000000, MinTerm: 12, MaxTerm: 36, BaseRateType: Variable, ReferenceRateType: SOFR, MarginBps: 250, RequiresCollateral: false, RequiresPersonalGuarantee: false, AllowsPrepayment: true, PrepaymentPenaltyPercent: 0, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+4. ProductKey: 4, ProductId: PROD004, ProductName: SBA 7(a) Loan, ProductCategory: SBA, ProductType: Small Business Admin Guarantee, MinAmount: 50000, MaxAmount: 5000000, MinTerm: 120, MaxTerm: 300, BaseRateType: Variable, ReferenceRateType: Prime, MarginBps: 275, RequiresCollateral: true, RequiresPersonalGuarantee: true, AllowsPrepayment: true, PrepaymentPenaltyPercent: 0, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+5. ProductKey: 5, ProductId: PROD005, ProductName: Commercial Real Estate, ProductCategory: Real Estate, ProductType: Property Acquisition/Refinance, MinAmount: 500000, MaxAmount: 25000000, MinTerm: 120, MaxTerm: 360, BaseRateType: Fixed, MarginBps: 200, RequiresCollateral: true, RequiresPersonalGuarantee: false, AllowsPrepayment: true, PrepaymentPenaltyPercent: 3, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+6. ProductKey: 6, ProductId: PROD006, ProductName: Equipment Financing, ProductCategory: Equipment, ProductType: Equipment Purchase, MinAmount: 25000, MaxAmount: 1000000, MinTerm: 24, MaxTerm: 84, BaseRateType: Fixed, MarginBps: 400, RequiresCollateral: true, RequiresPersonalGuarantee: false, AllowsPrepayment: true, PrepaymentPenaltyPercent: 0, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+7. ProductKey: 7, ProductId: PROD007, ProductName: Bridge Loan, ProductCategory: Commercial, ProductType: Short-term Financing, MinAmount: 100000, MaxAmount: 5000000, MinTerm: 6, MaxTerm: 24, BaseRateType: Variable, ReferenceRateType: SOFR, MarginBps: 600, RequiresCollateral: true, RequiresPersonalGuarantee: false, AllowsPrepayment: true, PrepaymentPenaltyPercent: 5, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+8. ProductKey: 8, ProductId: PROD008, ProductName: Construction Loan, ProductCategory: Real Estate, ProductType: New Construction, MinAmount: 1000000, MaxAmount: 50000000, MinTerm: 12, MaxTerm: 36, BaseRateType: Variable, ReferenceRateType: SOFR, MarginBps: 350, RequiresCollateral: true, RequiresPersonalGuarantee: true, AllowsPrepayment: true, PrepaymentPenaltyPercent: 2, IsActive: true, CreatedDate: 2025-10-09, ModifiedDate: 2025-10-09
+
+Let me know if you need more details or samples from other tables.
+

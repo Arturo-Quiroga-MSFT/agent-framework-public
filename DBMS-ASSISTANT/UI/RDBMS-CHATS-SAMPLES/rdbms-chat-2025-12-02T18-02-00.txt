@@ -1,0 +1,126 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 1:02:00 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[1:00:30 PM] USER
+--------------------------------------------------------------------------------
+Generate an ERD diagram
+
+================================================================================
+
+[1:01:47 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Here are the foreign key relationships found in the database for the ER diagram:
+
+| FK_Name                 | Schema_Name | Table_Name             | Column_Name          | Referenced_Schema | Referenced_Table    | Referenced_Column |
+|-------------------------|-------------|------------------------|----------------------|-------------------|---------------------|-------------------|
+| FK_Covenant_CovenantType| fact        | FACT_COVENANT_TEST     | CovenantTypeKey      | dim               | DimCovenantType     | CovenantTypeKey   |
+| FK_Covenant_Loan        | fact        | FACT_COVENANT_TEST     | LoanKey              | fact              | FACT_LOAN_ORIGINATION| LoanKey           |
+| FK_Covenant_TestDate    | fact        | FACT_COVENANT_TEST     | TestDateKey          | dim               | DimDate             | DateKey           |
+| FK_Financials_Customer  | fact        | FACT_CUSTOMER_FINANCIALS| CustomerKey          | dim               | DimCustomer         | CustomerKey       |
+| FK_Financials_StatementDate| fact      | FACT_CUSTOMER_FINANCIALS| StatementDateKey     | dim               | DimDate             | DateKey           |
+| FK_Financials_StatementType| fact      | FACT_CUSTOMER_FINANCIALS| StatementTypeKey     | dim               | DimStatementType    | StatementTypeKey  |
+| FK_Interaction_Channel  | fact        | FACT_CUSTOMER_INTERACTION| InteractionChannelKey| dim               | DimInteractionChannel| ChannelKey        |
+| FK_Interaction_Customer | fact        | FACT_CUSTOMER_INTERACTION| CustomerKey          | dim               | DimCustomer         | CustomerKey       |
+| FK_Interaction_FollowUpDate| fact      | FACT_CUSTOMER_INTERACTION| FollowUpDateKey     | dim               | DimDate             | DateKey           |
+| FK_Interaction_InteractionDate| fact   | FACT_CUSTOMER_INTERACTION| InteractionDateKey  | dim               | DimDate             | DateKey           |
+| FK_Interaction_InteractionType| fact  | FACT_CUSTOMER_INTERACTION| InteractionTypeKey  | dim               | DimInteractionType  | InteractionTypeKey|
+| FK_Interaction_RelatedApplication| fact| FACT_CUSTOMER_INTERACTION| RelatedApplicationKey| fact              | FACT_LOAN_APPLICATION| ApplicationKey    |
+| FK_Interaction_RelatedLoan| fact      | FACT_CUSTOMER_INTERACTION| RelatedLoanKey       | fact              | FACT_LOAN_ORIGINATION| LoanKey           |
+| FK_LoanApplication_ApplicationDate| fact| FACT_LOAN_APPLICATION  | ApplicationDateKey   | dim               | DimDate             | DateKey           |
+| FK_LoanApplication_Customer| fact     | FACT_LOAN_APPLICATION  | CustomerKey          | dim               | DimCustomer         | CustomerKey       |
+| FK_LoanApplication_DecisionDate| fact | FACT_LOAN_APPLICATION  | DecisionDateKey      | dim               | DimDate             | DateKey           |
+| FK_LoanApplication_Product| fact      | FACT_LOAN_APPLICATION  | ProductKey           | dim               | DimLoanProduct      | ProductKey        |
+| FK_LoanApplication_Purpose| fact      | FACT_LOAN_APPLICATION  | PurposeKey           | dim               | DimLoanPurpose      | PurposeKey        |
+| FK_LoanApplication_Status| fact       | FACT_LOAN_APPLICATION  | ApplicationStatusKey | dim               | DimApplicationStatus| StatusKey         |
+| FK_LoanBalance_DelinquencyStatus| fact| FACT_LOAN_BALANCE_DAILY| DelinquencyStatusKey | dim               | DimDelinquencyStatus| DelinquencyStatusKey|
+| FK_LoanBalance_Loan     | fact        | FACT_LOAN_BALANCE_DAILY| LoanKey              | fact              | FACT_LOAN_ORIGINATION| LoanKey           |
+| FK_LoanBalance_SnapshotDate| fact     | FACT_LOAN_BALANCE_DAILY| SnapshotDateKey      | dim               | DimDate             | DateKey           |
+| FK_LoanOrigination_Customer| fact     | FACT_LOAN_ORIGINATION  | CustomerKey          | dim               | DimCustomer         | CustomerKey       |
+| FK_LoanOrigination_DelinquencyStatus| fact| FACT_LOAN_ORIGINATION| DelinquencyStatusKey | dim               | DimDelinquencyStatus| DelinquencyStatusKey|
+| FK_LoanOrigination_FirstPaymentDate| fact| FACT_LOAN_ORIGINATION| FirstPaymentDateKey  | dim               | DimDate             | DateKey           |
+| FK_LoanOrigination_MaturityDate| fact  | FACT_LOAN_ORIGINATION  | MaturityDateKey      | dim               | DimDate             | DateKey           |
+| FK_LoanOrigination_OriginationDate| fact| FACT_LOAN_ORIGINATION  | OriginationDateKey   | dim               | DimDate             | DateKey           |
+| FK_LoanOrigination_Product| fact      | FACT_LOAN_ORIGINATION  | ProductKey           | dim               | DimLoanProduct      | ProductKey        |
+| FK_LoanOrigination_Purpose| fact      | FACT_LOAN_ORIGINATION  | PurposeKey           | dim               | DimLoanPurpose      | PurposeKey        |
+| FK_Payment_Loan         | fact        | FACT_PAYMENT_TRANSACTION| LoanKey              | fact              | FACT_LOAN_ORIGINATION| LoanKey           |
+| FK_Payment_PaymentDate  | fact        | FACT_PAYMENT_TRANSACTION| PaymentDateKey       | dim               | DimDate             | DateKey           |
+| FK_Payment_PaymentMethod| fact        | FACT_PAYMENT_TRANSACTION| PaymentMethodKey     | dim               | DimPaymentMethod    | PaymentMethodKey  |
+| FK_Payment_PaymentType  | fact        | FACT_PAYMENT_TRANSACTION| PaymentTypeKey       | dim               | DimPaymentType      | PaymentTypeKey    |
+| FK_Payment_ScheduledDate| fact        | FACT_PAYMENT_TRANSACTION| ScheduledDateKey     | dim               | DimDate             | DateKey           |
+
+Now I will generate the ER diagram PNG showing these tables and their relationships.The environment does not have the required Python package 'networkx' to generate the ER diagram visualization.
+
+Instead, I will generate a textual representation of the ER diagram (tables and their foreign key relationships) to help you understand the relationships in this database:
+
+- fact.FACT_COVENANT_TEST
+  - FK_Covenant_CovenantType → dim.DimCovenantType
+  - FK_Covenant_Loan → fact.FACT_LOAN_ORIGINATION
+  - FK_Covenant_TestDate → dim.DimDate
+
+- fact.FACT_CUSTOMER_FINANCIALS
+  - FK_Financials_Customer → dim.DimCustomer
+  - FK_Financials_StatementDate → dim.DimDate
+  - FK_Financials_StatementType → dim.DimStatementType
+
+- fact.FACT_CUSTOMER_INTERACTION
+  - FK_Interaction_Channel → dim.DimInteractionChannel
+  - FK_Interaction_Customer → dim.DimCustomer
+  - FK_Interaction_FollowUpDate → dim.DimDate
+  - FK_Interaction_InteractionDate → dim.DimDate
+  - FK_Interaction_InteractionType → dim.DimInteractionType
+  - FK_Interaction_RelatedApplication → fact.FACT_LOAN_APPLICATION
+  - FK_Interaction_RelatedLoan → fact.FACT_LOAN_ORIGINATION
+
+- fact.FACT_LOAN_APPLICATION
+  - FK_LoanApplication_ApplicationDate → dim.DimDate
+  - FK_LoanApplication_Customer → dim.DimCustomer
+  - FK_LoanApplication_DecisionDate → dim.DimDate
+  - FK_LoanApplication_Product → dim.DimLoanProduct
+  - FK_LoanApplication_Purpose → dim.DimLoanPurpose
+  - FK_LoanApplication_Status → dim.DimApplicationStatus
+
+- fact.FACT_LOAN_BALANCE_DAILY
+  - FK_LoanBalance_DelinquencyStatus → dim.DimDelinquencyStatus
+  - FK_LoanBalance_Loan → fact.FACT_LOAN_ORIGINATION
+  - FK_LoanBalance_SnapshotDate → dim.DimDate
+
+- fact.FACT_LOAN_ORIGINATION
+  - FK_LoanOrigination_Customer → dim.DimCustomer
+  - FK_LoanOrigination_DelinquencyStatus → dim.DimDelinquencyStatus
+  - FK_LoanOrigination_FirstPaymentDate → dim.DimDate
+  - FK_LoanOrigination_MaturityDate → dim.DimDate
+  - FK_LoanOrigination_OriginationDate → dim.DimDate
+  - FK_LoanOrigination_Product → dim.DimLoanProduct
+  - FK_LoanOrigination_Purpose → dim.DimLoanPurpose
+
+- fact.FACT_PAYMENT_TRANSACTION
+  - FK_Payment_Loan → fact.FACT_LOAN_ORIGINATION
+  - FK_Payment_PaymentDate → dim.DimDate
+  - FK_Payment_PaymentMethod → dim.DimPaymentMethod
+  - FK_Payment_PaymentType → dim.DimPaymentType
+  - FK_Payment_ScheduledDate → dim.DimDate
+
+Dimensional tables include entities such as:
+- dim.DimCustomer
+- dim.DimDate
+- dim.DimLoanProduct
+- dim.DimLoanPurpose
+- dim.DimApplicationStatus
+- dim.DimDelinquencyStatus
+- dim.DimPaymentMethod
+- dim.DimPaymentType
+- dim.DimIndustry
+- dim.DimCovenantType
+- dim.DimInteractionChannel
+- dim.DimInteractionType
+- dim.DimStatementType
+- dim.DimCollateralType
+- dim.DimRiskRating
+
+This textual ERD outlines the entities and how fact tables reference dimensional tables by foreign keys. If you want, I can also provide a visualization in Mermaid text format or ready-to-copy SQL queries to explore these joins. Let me know if you want those. For now, the ERD diagram as PNG image cannot be created due to missing module.
+
+ERD textual representation complete.
+

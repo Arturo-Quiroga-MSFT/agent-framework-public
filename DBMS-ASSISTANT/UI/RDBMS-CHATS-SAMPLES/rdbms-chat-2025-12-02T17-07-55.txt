@@ -1,0 +1,52 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 12:07:55 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[12:05:18 PM] USER
+--------------------------------------------------------------------------------
+List the top 10 largest tables
+
+================================================================================
+
+[12:05:41 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Top 10 largest tables by data size in MB and row count in the database "TERADATA-FI" are:
+
+1. fact.FACT_CUSTOMER_INTERACTION: 23,211 rows, 2.07 MB total space, 2.01 MB used
+2. fact.FACT_PAYMENT_TRANSACTION: 6,000 rows, 0.88 MB total space, 0.88 MB used
+3. fact.FACT_LOAN_APPLICATION: 3,000 rows, 0.63 MB total space, 0.53 MB used
+4. fact.FACT_LOAN_ORIGINATION: 1,528 rows, 0.45 MB total space, 0.41 MB used
+5. fact.FACT_LOAN_BALANCE_DAILY: 3,000 rows, 0.38 MB total space, 0.37 MB used
+6. dim.DimCustomer: 1,120 rows, 0.32 MB total space, 0.28 MB used
+7. dim.DimDate: 1,461 rows, 0.26 MB total space, 0.20 MB used
+8. dim.DimDelinquencyStatus: 6 rows, 0.07 MB total space, 0.02 MB used
+9. dim.DimIndustry: 10 rows, 0.07 MB total space, 0.02 MB used
+10. dim.DimInteractionChannel: 5 rows, 0.07 MB total space, 0.02 MB used
+
+Let me know if you need further information or actions on these tables.
+
+================================================================================
+
+[12:06:11 PM] USER
+--------------------------------------------------------------------------------
+show me a sample of # 9
+
+================================================================================
+
+[12:06:39 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Sample data from table dim.DimIndustry (10 rows):
+
+- IndustryKey: 1, IndustryId: IND001, IndustrySector: Manufacturing, IndustryGroup: Industrial, IndustryName: Manufacturing, SICCode: 3300, NAICSCode: 336000, RiskProfile: Medium, DefaultRate_Historical: 0.035, RecoveryRate_Historical: 0.65, IsRegulated: true, IsVolatile: false, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 2, IndustryId: IND002, IndustrySector: Healthcare, IndustryGroup: Healthcare, IndustryName: Healthcare Services, SICCode: 8000, NAICSCode: 621000, RiskProfile: Low, DefaultRate_Historical: 0.012, RecoveryRate_Historical: 0.82, IsRegulated: true, IsVolatile: false, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 3, IndustryId: IND003, IndustrySector: Technology, IndustryGroup: Technology, IndustryName: Software & IT Services, SICCode: 7370, NAICSCode: 541500, RiskProfile: Medium, DefaultRate_Historical: 0.028, RecoveryRate_Historical: 0.75, IsRegulated: false, IsVolatile: true, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 4, IndustryId: IND004, IndustrySector: Retail, IndustryGroup: Retail, IndustryName: Retail Trade, SICCode: 5300, NAICSCode: 445000, RiskProfile: High, DefaultRate_Historical: 0.048, RecoveryRate_Historical: 0.58, IsRegulated: false, IsVolatile: true, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 5, IndustryId: IND005, IndustrySector: Construction, IndustryGroup: Construction, IndustryName: Commercial Construction, SICCode: 1500, NAICSCode: 236000, RiskProfile: High, DefaultRate_Historical: 0.052, RecoveryRate_Historical: 0.55, IsRegulated: false, IsVolatile: true, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 6, IndustryId: IND006, IndustrySector: Real Estate, IndustryGroup: Real Estate, IndustryName: Real Estate Development, SICCode: 6500, NAICSCode: 531000, RiskProfile: Medium, DefaultRate_Historical: 0.038, RecoveryRate_Historical: 0.68, IsRegulated: true, IsVolatile: true, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 7, IndustryId: IND007, IndustrySector: Transportation, IndustryGroup: Transportation, IndustryName: Freight & Logistics, SICCode: 4200, NAICSCode: 484000, RiskProfile: Medium, DefaultRate_Historical: 0.032, RecoveryRate_Historical: 0.62, IsRegulated: false, IsVolatile: false, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 8, IndustryId: IND008, IndustrySector: Hospitality, IndustryGroup: Services, IndustryName: Hotels & Restaurants, SICCode: 7000, NAICSCode: 721000, RiskProfile: High, DefaultRate_Historical: 0.055, RecoveryRate_Historical: 0.52, IsRegulated: false, IsVolatile: true, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 9, IndustryId: IND009, IndustrySector: Professional Services, IndustryGroup: Services, IndustryName: Consulting & Legal, SICCode: 8700, NAICSCode: 541100, RiskProfile: Low, DefaultRate_Historical: 0.018, RecoveryRate_Historical: 0.78, IsRegulated: false, IsVolatile: false, CreatedDate: 2025-10-09T16:30:31.553Z
+- IndustryKey: 10, IndustryId: IND010, IndustrySector: Wholesale, IndustryGroup: Wholesale, IndustryName: Wholesale Distribution, SICCode: 5100, NAICSCode: 424000, RiskProfile: Medium, DefaultRate_Historical: 0.035, RecoveryRate_Historical: 0.65, IsRegulated: false, IsVolatile: false, CreatedDate: 2025-10-09T16:30:31.553Z
+
