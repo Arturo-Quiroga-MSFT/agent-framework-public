@@ -141,14 +141,25 @@ async def run_query():
     if not mcp_server_path.exists():
         return f"Error: MCP server not found at {{mcp_server_path}}"
     
+    # MCP server environment configuration
+    # When SQL_USERNAME and SQL_PASSWORD are empty or not set, the MCP server
+    # will use Azure Active Directory (Entra ID) authentication via DefaultAzureCredential
+    # This requires the user to be logged in with: az login
+    sql_username = os.getenv("SQL_USERNAME", "")
+    sql_password = os.getenv("SQL_PASSWORD", "")
+    
     mcp_env = {{
         "SERVER_NAME": server,
         "DATABASE_NAME": database,
-        "SQL_USERNAME": os.getenv("SQL_USERNAME", ""),
-        "SQL_PASSWORD": os.getenv("SQL_PASSWORD", ""),
+        "SQL_USERNAME": sql_username,
+        "SQL_PASSWORD": sql_password,
         "TRUST_SERVER_CERTIFICATE": os.getenv("TRUST_SERVER_CERTIFICATE", "true"),
         "READONLY": os.getenv("READONLY", "false"),
     }}
+    
+    # Log authentication method being used (without exposing credentials)
+    auth_method = "Azure AD (Entra ID)" if not sql_username else "SQL Authentication"
+    print(f"Using authentication method: {{auth_method}}")
     
     # Previous conversation history
     history = r'''{history}'''
@@ -505,10 +516,17 @@ except Exception as log_err:
         {
             let _ = writeln!(log_file, "[RUST RECEIVED RESULT]");
             let _ = writeln!(log_file, "Result length: {} characters", result.len());
-            let _ = writeln!(log_file, "Result preview (first 200): {}", 
-                if result.len() > 200 { &result[..200] } else { &result });
-            let _ = writeln!(log_file, "Result preview (last 200): {}", 
-                if result.len() > 200 { &result[result.len()-200..] } else { &result });
+            
+            // Safe truncation respecting UTF-8 character boundaries
+            let first_200 = result.chars().take(200).collect::<String>();
+            let last_200 = if result.len() > 200 {
+                result.chars().rev().take(200).collect::<Vec<_>>().iter().rev().collect::<String>()
+            } else {
+                result.clone()
+            };
+            
+            let _ = writeln!(log_file, "Result preview (first 200): {}", first_200);
+            let _ = writeln!(log_file, "Result preview (last 200): {}", last_200);
             let _ = writeln!(log_file, "{}\n", "=".repeat(80));
         }
         

@@ -1,0 +1,175 @@
+RDBMS Assistant - Chat Export
+Export Date: 2025-12-02, 3:47:18 PM
+Server: aqsqlserver001.database.windows.net
+Database: TERADATA-FI
+================================================================================
+
+[3:45:24 PM] USER
+--------------------------------------------------------------------------------
+Show index fragmentation levels
+
+================================================================================
+
+[3:46:00 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Here are the index fragmentation levels for all indexes in 'TERADATA-FI':
+
+Highest fragmentation listed first (above 10% are generally candidates for rebuild/reorganize):
+
+- dim.DimDate - IX_DimDate_Date (NONCLUSTERED): 50%, fragments: 4, pages: 6
+- dim.DimDate - IX_DimDate_FiscalYearQuarter (NONCLUSTERED): 50%, fragments: 4, pages: 6
+- dim.DimDate - IX_DimDate_YearMonth (NONCLUSTERED): 50%, fragments: 4, pages: 6
+- dim.DimDate - UQ__DimDate__77387D07724C6153 (NONCLUSTERED): 50%, fragments: 4, pages: 6
+- dim.DimDate - PK__DimDate__40DF45E34F7DAFA2 (CLUSTERED): 39.13%, fragments: 10, pages: 23
+- dim.DimCustomer - PK__DimCusto__95011E64066341CF (CLUSTERED): 20%, fragments: 8, pages: 35
+- fact.FACT_LOAN_ORIGINATION - UQ__FACT_LOA__4F5AD45607140E72 (NONCLUSTERED): 12.5%, fragments: 3, pages: 8
+- fact.FACT_LOAN_APPLICATION - IX_FACT_LOAN_APPLICATION_CustomerKey_ProductKey_ApplicationStatusKey (NONCLUSTERED): 11.1%, fragments: 2, pages: 9
+- fact.FACT_LOAN_BALANCE_DAILY - IX_FACT_LOAN_BALANCE_DAILY_LoanKey_SnapshotDateKey (NONCLUSTERED): 11.1%, fragments: 2, pages: 9
+
+Lower fragmentation (<10% - generally not a concern for routine maintenance):
+- fact.FACT_LOAN_APPLICATION - UQ__FACT_LOA__C93A4C98C5C1B09B (NONCLUSTERED): 7.14%, fragments: 3, pages: 14
+- fact.FACT_PAYMENT_TRANSACTION - UQ__FACT_PAY__9B556A3920F9704C (NONCLUSTERED): 3.13%, fragments: 6, pages: 32
+- fact.FACT_CUSTOMER_INTERACTION - UQ__FACT_CUS__922C0497D46A215A (NONCLUSTERED): 2.38%, fragments: 7, pages: 42
+- fact.FACT_LOAN_BALANCE_DAILY - PK__FACT_LOA__80FE04B2D125D697 (CLUSTERED): 2.22%, fragments: 4, pages: 45
+- fact.FACT_LOAN_ORIGINATION - PK__FACT_LOA__953729E4CA6ABB05 (CLUSTERED): 1.96%, fragments: 3, pages: 51
+- fact.FACT_PAYMENT_TRANSACTION - PK__FACT_PAY__A7050C0E8B6D8C53 (CLUSTERED): 0.91%, fragments: 6, pages: 110
+
+All other indexes across dim and fact tables show 0% fragmentation.
+
+Recommendations:
+- Rebuild or reorganize the indexes on dim.DimDate and dim.DimCustomer due to significant fragmentation.
+- Review the nonclustered indexes on fact.FACT_LOAN_ORIGINATION, fact.FACT_LOAN_APPLICATION, and fact.FACT_LOAN_BALANCE_DAILY (>10%)—consider maintenance if these tables are performance-sensitive.
+
+If you want a script to rebuild or reorganize these indexes, let me know!
+
+================================================================================
+
+[3:46:25 PM] USER
+--------------------------------------------------------------------------------
+List the top 10 largest tables
+
+================================================================================
+
+[3:46:42 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Here are the top 10 largest tables in the 'TERADATA-FI' database, ordered by data size (KB) and row count:
+
+1. fact.FACT_CUSTOMER_INTERACTION  
+   - RowCounts: 30,948  
+   - DataSpaceKB: 2,376  
+   - UsedSpaceKB: 2,408  
+   - TotalSpaceKB: 2,512  
+
+2. fact.FACT_PAYMENT_TRANSACTION  
+   - RowCounts: 12,000  
+   - DataSpaceKB: 1,136  
+   - UsedSpaceKB: 1,168  
+   - TotalSpaceKB: 1,232  
+
+3. fact.FACT_LOAN_APPLICATION  
+   - RowCounts: 9,000  
+   - DataSpaceKB: 712  
+   - UsedSpaceKB: 760  
+   - TotalSpaceKB: 984  
+
+4. fact.FACT_LOAN_ORIGINATION  
+   - RowCounts: 3,056  
+   - DataSpaceKB: 472  
+   - UsedSpaceKB: 504  
+   - TotalSpaceKB: 592  
+
+5. fact.FACT_LOAN_BALANCE_DAILY  
+   - RowCounts: 6,000  
+   - DataSpaceKB: 432  
+   - UsedSpaceKB: 464  
+   - TotalSpaceKB: 592  
+
+6. dim.DimDate  
+   - RowCounts: 7,305  
+   - DataSpaceKB: 376  
+   - UsedSpaceKB: 456  
+   - TotalSpaceKB: 552  
+
+7. dim.DimCustomer  
+   - RowCounts: 1,120  
+   - DataSpaceKB: 280  
+   - UsedSpaceKB: 296  
+   - TotalSpaceKB: 328  
+
+8. dim.DimIndustry  
+   - RowCounts: 20  
+   - DataSpaceKB: 16  
+   - UsedSpaceKB: 32  
+   - TotalSpaceKB: 144  
+
+9. dim.DimRiskRating  
+   - RowCounts: 20  
+   - DataSpaceKB: 16  
+   - UsedSpaceKB: 32  
+   - TotalSpaceKB: 144  
+
+10. dim.DimLoanProduct  
+    - RowCounts: 16  
+    - DataSpaceKB: 16  
+    - UsedSpaceKB: 32  
+    - TotalSpaceKB: 144  
+
+If you need details on additional tables, table schema, or want actionable recommendations for space management or performance tuning, let me know!
+
+================================================================================
+
+[3:46:54 PM] USER
+--------------------------------------------------------------------------------
+Show me the foreign key relationships
+
+================================================================================
+
+[3:47:12 PM] ASSISTANT
+--------------------------------------------------------------------------------
+Here are the foreign key relationships in the 'TERADATA-FI' database:
+
+- fact.FACT_COVENANT_TEST.CovenantTypeKey → dim.DimCovenantType.CovenantTypeKey
+- fact.FACT_COVENANT_TEST.LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+- fact.FACT_COVENANT_TEST.TestDateKey → dim.DimDate.DateKey
+
+- fact.FACT_CUSTOMER_FINANCIALS.CustomerKey → dim.DimCustomer.CustomerKey
+- fact.FACT_CUSTOMER_FINANCIALS.StatementDateKey → dim.DimDate.DateKey
+- fact.FACT_CUSTOMER_FINANCIALS.StatementTypeKey → dim.DimStatementType.StatementTypeKey
+
+- fact.FACT_CUSTOMER_INTERACTION.InteractionChannelKey → dim.DimInteractionChannel.ChannelKey
+- fact.FACT_CUSTOMER_INTERACTION.CustomerKey → dim.DimCustomer.CustomerKey
+- fact.FACT_CUSTOMER_INTERACTION.FollowUpDateKey → dim.DimDate.DateKey
+- fact.FACT_CUSTOMER_INTERACTION.InteractionDateKey → dim.DimDate.DateKey
+- fact.FACT_CUSTOMER_INTERACTION.InteractionTypeKey → dim.DimInteractionType.InteractionTypeKey
+- fact.FACT_CUSTOMER_INTERACTION.RelatedApplicationKey → fact.FACT_LOAN_APPLICATION.ApplicationKey
+- fact.FACT_CUSTOMER_INTERACTION.RelatedLoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+
+- fact.FACT_LOAN_APPLICATION.ApplicationDateKey → dim.DimDate.DateKey
+- fact.FACT_LOAN_APPLICATION.CustomerKey → dim.DimCustomer.CustomerKey
+- fact.FACT_LOAN_APPLICATION.DecisionDateKey → dim.DimDate.DateKey
+- fact.FACT_LOAN_APPLICATION.ProductKey → dim.DimLoanProduct.ProductKey
+- fact.FACT_LOAN_APPLICATION.PurposeKey → dim.DimLoanPurpose.PurposeKey
+- fact.FACT_LOAN_APPLICATION.ApplicationStatusKey → dim.DimApplicationStatus.StatusKey
+
+- fact.FACT_LOAN_BALANCE_DAILY.DelinquencyStatusKey → dim.DimDelinquencyStatus.DelinquencyStatusKey
+- fact.FACT_LOAN_BALANCE_DAILY.LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+- fact.FACT_LOAN_BALANCE_DAILY.SnapshotDateKey → dim.DimDate.DateKey
+
+- fact.FACT_LOAN_ORIGINATION.CustomerKey → dim.DimCustomer.CustomerKey
+- fact.FACT_LOAN_ORIGINATION.DelinquencyStatusKey → dim.DimDelinquencyStatus.DelinquencyStatusKey
+- fact.FACT_LOAN_ORIGINATION.FirstPaymentDateKey → dim.DimDate.DateKey
+- fact.FACT_LOAN_ORIGINATION.MaturityDateKey → dim.DimDate.DateKey
+- fact.FACT_LOAN_ORIGINATION.OriginationDateKey → dim.DimDate.DateKey
+- fact.FACT_LOAN_ORIGINATION.ProductKey → dim.DimLoanProduct.ProductKey
+- fact.FACT_LOAN_ORIGINATION.PurposeKey → dim.DimLoanPurpose.PurposeKey
+
+- fact.FACT_PAYMENT_TRANSACTION.LoanKey → fact.FACT_LOAN_ORIGINATION.LoanKey
+- fact.FACT_PAYMENT_TRANSACTION.PaymentDateKey → dim.DimDate.DateKey
+- fact.FACT_PAYMENT_TRANSACTION.PaymentMethodKey → dim.DimPaymentMethod.PaymentMethodKey
+- fact.FACT_PAYMENT_TRANSACTION.PaymentTypeKey → dim.DimPaymentType.PaymentTypeKey
+- fact.FACT_PAYMENT_TRANSACTION.ScheduledDateKey → dim.DimDate.DateKey
+
+Each line shows the child table and column, followed by the referenced table and column.
+
+If you need these visualized as an ER diagram in Mermaid format, let me know!
+

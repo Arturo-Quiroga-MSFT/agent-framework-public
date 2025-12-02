@@ -9,9 +9,26 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import * as fs from "fs";
+import * as path from "path";
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Set up file logging to a known location
+const logFile = '/Users/arturoquiroga/GITHUB/agent-framework-public/DBMS-ASSISTANT/mcp_server.log';
+function logToFile(message: string) {
+  const timestamp = new Date().toISOString();
+  try {
+    fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`);
+  } catch (err) {
+    // If file write fails, just continue
+  }
+  console.error(message); // Also log to stderr which is captured
+}
+logToFile('=== MCP Server Starting ===');
+logToFile(`Working directory: ${process.cwd()}`);
+logToFile(`Log file location: ${logFile}`);
 
 // Internal imports
 import { UpdateDataTool } from "./tools/UpdateDataTool.js";
@@ -29,44 +46,76 @@ import { PythonExecuteTool } from "./tools/PythonExecuteTool.js";
 import { DefaultAzureCredential, InteractiveBrowserCredential } from "@azure/identity";
 
 // MSSQL Database connection configuration
-// const credential = new DefaultAzureCredential();
+const credential = new DefaultAzureCredential();
 
 // Globals for connection and token reuse
 let globalSqlPool: sql.ConnectionPool | null = null;
 let globalAccessToken: string | null = null;
 let globalTokenExpiresOn: Date | null = null;
 
-// Function to create SQL config with SQL Server authentication
+// Function to create SQL config with Azure AD or SQL Server authentication
 export async function createSqlConfig(): Promise<{ config: sql.config, token: string, expiresOn: Date }> {
-  // For SQL Authentication - no token needed
-  // const credential = new InteractiveBrowserCredential({
-  //   redirectUri: 'http://localhost'
-  // });
-  // const accessToken = await credential.getToken('https://database.windows.net/.default');
-
   const trustServerCertificate = process.env.TRUST_SERVER_CERTIFICATE?.toLowerCase() === 'true';
   const connectionTimeout = process.env.CONNECTION_TIMEOUT ? parseInt(process.env.CONNECTION_TIMEOUT, 10) : 30;
 
-  return {
-    config: {
-      server: process.env.SERVER_NAME!,
-      database: process.env.DATABASE_NAME!,
-      options: {
-        encrypt: true,
-        trustServerCertificate
-      },
-      authentication: {
-        type: 'default',
+  // Check if SQL credentials are provided
+  const useSqlAuth = process.env.SQL_USERNAME && process.env.SQL_PASSWORD;
+
+  if (useSqlAuth) {
+    // SQL Server Authentication
+    logToFile('[MCP] Using SQL Server authentication');
+    return {
+      config: {
+        server: process.env.SERVER_NAME!,
+        database: process.env.DATABASE_NAME!,
         options: {
-          userName: process.env.SQL_USERNAME!,
-          password: process.env.SQL_PASSWORD!,
+          encrypt: true,
+          trustServerCertificate
         },
+        authentication: {
+          type: 'default',
+          options: {
+            userName: process.env.SQL_USERNAME!,
+            password: process.env.SQL_PASSWORD!,
+          },
+        },
+        connectionTimeout: connectionTimeout * 1000,
       },
-      connectionTimeout: connectionTimeout * 1000, // convert seconds to milliseconds
-    },
-    token: 'not-applicable-for-sql-auth', // SQL auth doesn't use tokens
-    expiresOn: new Date(Date.now() + 24 * 60 * 60 * 1000) // SQL auth doesn't expire like tokens
-  };
+      token: 'not-applicable-for-sql-auth',
+      expiresOn: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    };
+  } else {
+    // Azure AD (Entra ID) Authentication
+    logToFile('[MCP] Using Azure AD (Entra ID) authentication');
+    try {
+      const tokenResponse = await credential.getToken('https://database.windows.net/.default');
+      logToFile(`[MCP] Token acquired successfully, expires: ${tokenResponse.expiresOnTimestamp}`);
+      logToFile(`[MCP] Token length: ${tokenResponse.token.length} characters`);
+      
+      return {
+        config: {
+          server: process.env.SERVER_NAME!,
+          database: process.env.DATABASE_NAME!,
+          options: {
+            encrypt: true,
+            trustServerCertificate
+          },
+          authentication: {
+            type: 'azure-active-directory-access-token' as any,
+            options: {
+              token: tokenResponse.token,
+            },
+          },
+          connectionTimeout: connectionTimeout * 1000,
+        },
+        token: tokenResponse.token,
+        expiresOn: tokenResponse.expiresOnTimestamp ? new Date(tokenResponse.expiresOnTimestamp) : new Date(Date.now() + 60 * 60 * 1000)
+      };
+    } catch (error: any) {
+      logToFile(`[MCP] Failed to acquire Azure AD token: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 const updateDataTool = new UpdateDataTool();
@@ -107,6 +156,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  logToFile(`[MCP] Tool called: ${name}`);
+  logToFile(`[MCP] Tool arguments: ${JSON.stringify(args).substring(0, 200)}`);
   try {
     let result;
     switch (name) {
@@ -200,6 +251,7 @@ runServer().catch((error) => {
 // Connect to SQL only when handling a request
 
 async function ensureSqlConnection() {
+  logToFile('[MCP] ensureSqlConnection() called');
   // If we have a pool and it's connected, and the token is still valid, reuse it
   if (
     globalSqlPool &&
@@ -212,16 +264,32 @@ async function ensureSqlConnection() {
   }
 
   // Otherwise, get a new token and reconnect
-  const { config, token, expiresOn } = await createSqlConfig();
-  globalAccessToken = token;
-  globalTokenExpiresOn = expiresOn;
+  try {
+    const { config, token, expiresOn } = await createSqlConfig();
+    globalAccessToken = token;
+    globalTokenExpiresOn = expiresOn;
 
-  // Close old pool if exists
-  if (globalSqlPool && globalSqlPool.connected) {
-    await globalSqlPool.close();
+    // Close old pool if exists
+    if (globalSqlPool && globalSqlPool.connected) {
+      await globalSqlPool.close();
+    }
+
+    logToFile(`[MCP] Connecting to ${config.server}/${config.database}...`);
+    globalSqlPool = await sql.connect(config);
+    logToFile('[MCP] Database connection established successfully');
+  } catch (error: any) {
+    logToFile(`[MCP] Database connection failed: ${error.message}`);
+    logToFile(`[MCP] Error details: ${JSON.stringify({
+      code: error.code,
+      number: error.number,
+      state: error.state,
+      class: error.class,
+      serverName: error.serverName,
+      procName: error.procName,
+      lineNumber: error.lineNumber
+    })}`);
+    throw error;
   }
-
-  globalSqlPool = await sql.connect(config);
 }
 
 // Patch all tool handlers to ensure SQL connection before running
@@ -233,4 +301,4 @@ function wrapToolRun(tool: { run: (...args: any[]) => Promise<any> }) {
   };
 }
 
-[insertDataTool, readDataTool, updateDataTool, createTableTool, createIndexTool, dropTableTool, listTableTool, describeTableTool].forEach(wrapToolRun);
+[insertDataTool, readDataTool, updateDataTool, createTableTool, createIndexTool, dropTableTool, listTableTool, describeTableTool, runQueryTool, listDatabasesTool, connectDbTool].forEach(wrapToolRun);
