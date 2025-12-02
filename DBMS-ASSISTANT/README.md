@@ -16,6 +16,8 @@ An AI-powered assistant for SQL Database administrators to perform daily adminis
 - **MCP Server**: `@azure/mssql-mcp-server` (official Microsoft implementation)
 - **Authentication**: Azure CLI Credential / Azure Identity
 - **Orchestration**: Azure AI Agent Service
+- **UI Framework**: Tauri 2.0 (Rust + React) with Pyo3 FFI bridge
+- **LLM Models**: GPT-4.1 (primary), GPT-4.1-mini (development/testing)
 
 ### Why AzureAIAgentClient?
 After comparing `AzureAIClient` vs `AzureAIAgentClient`, we selected `AzureAIAgentClient` because:
@@ -29,44 +31,99 @@ After comparing `AzureAIClient` vs `AzureAIAgentClient`, we selected `AzureAIAge
 
 **Reference Sample**: `/maf-upstream/python/samples/getting_started/agents/azure_ai_agent/azure_ai_basic.py`
 
+### Model Selection: GPT-4.1 vs GPT-4.1-mini
+
+After testing both models extensively, **GPT-4.1 (full)** is recommended for production use:
+
+| Aspect | GPT-4.1-mini | GPT-4.1 |
+|--------|--------------|---------|
+| **Response Quality** | Good | Excellent |
+| **Output Structure** | Clean tables | Professional document-style with sections |
+| **Technical Depth** | Provides what | Explains why + what |
+| **Decisiveness** | Follows instructions | Zero hesitation, immediate execution |
+| **Error Handling** | Reports errors | Explains + fixes automatically |
+| **Business Context** | Basic technical | Strong business implications |
+| **Formatting** | Markdown tables | Rich formatting with headers, summaries |
+| **Cost** | Lower | Higher (~10x) |
+| **Speed** | Faster | Slightly slower |
+
+**Key Differences Observed:**
+- **GPT-4.1** provides consultant-grade output with better context understanding
+- **GPT-4.1** handles SQL errors more gracefully (auto-corrects syntax issues)
+- **GPT-4.1** gives more comprehensive recommendations with rationale
+- **GPT-4.1-mini** is suitable for development/testing to reduce costs
+
+**Configuration**: Edit `.env` file:
+```env
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1"  # or "gpt-4.1-mini"
+```
+
 ## Architecture
 
 ```
-┌──────────────────────────┐
-│   Admin Interface        │  (CLI)
-│   - Natural Language     │
-│   - Task Selection       │
-└────────────┬─────────────┘
-             │
-┌────────────▼─────────────┐
-│  Agent Orchestrator      │  (AzureAIAgentClient)
-│  - Task Routing          │
-│  - Safety Validation     │
-│  - Context Management    │
-└────────────┬─────────────┘
-             │
-┌────────────▼─────────────┐
-│  Specialized Agents      │
-│  ├─ Health Monitor       │
-│  ├─ Performance Tuner    │
-│  ├─ Backup Manager       │
-│  └─ Security Auditor     │
-└────────────┬─────────────┘
-             │
-┌────────────▼─────────────┐
-│  MSSQL MCP Server        │  (@azure/mssql-mcp-server)
-│  - mssql_connect         │
-│  - mssql_run_query       │
-│  - mssql_list_*          │
-│  - mssql_show_schema     │
-└────────────┬─────────────┘
-             │
-┌────────────▼─────────────┐
-│  Azure SQL Databases     │
-└──────────────────────────┘
+┌──────────────────────────────────────┐
+│   Tauri Desktop UI (React)           │
+│   - Natural Language Chat            │
+│   - Connection Status                │
+│   - Export Chat History              │
+│   - Quick Question Templates         │
+└────────────┬─────────────────────────┘
+             │ IPC Commands
+┌────────────▼─────────────────────────┐
+│   Rust Backend (src-tauri)           │
+│   - Tauri Commands                   │
+│   - Python FFI Bridge (Pyo3)         │
+│   - Conversation History Tracking    │
+└────────────┬─────────────────────────┘
+             │ Pyo3 FFI
+┌────────────▼─────────────────────────┐
+│  Python Agent (dba_assistant.py)     │
+│  - AzureAIAgentClient                │
+│  - Streaming Response                │
+│  - Context Management                │
+│  - Embedded Instructions             │
+└────────────┬─────────────────────────┘
+             │ MCP Stdio
+┌────────────▼─────────────────────────┐
+│  MSSQL MCP Server (Node.js)          │
+│  - Connection Management             │
+│  - Query Execution                   │
+│  - Schema Discovery                  │
+│  - 11 Specialized Tools              │
+└────────────┬─────────────────────────┘
+             │ SQL Client
+┌────────────▼─────────────────────────┐
+│  Azure SQL Database                  │
+│  - TERADATA-FI (Demo)                │
+│  - Star Schema (dim/fact)            │
+└──────────────────────────────────────┘
 ```
 
 ## Key Components
+
+### Desktop Application Features
+
+**Tauri 2.0 Architecture:**
+- **Frontend**: React 18 with TypeScript
+- **Backend**: Rust with Tauri framework
+- **FFI Bridge**: Pyo3 for Python integration
+- **Agent Execution**: Embedded Python runtime with venv support
+
+**UI Capabilities:**
+- Real-time connection status with 5-second polling
+- Chat history export to downloadable text files
+- Quick question templates for common DBA tasks
+- Markdown table rendering with horizontal scroll
+- Mermaid ERD diagram support
+- Clean, professional dark theme
+
+**Agent Behavioral Features:**
+- **Decisive Execution**: No repeated "do you want me to proceed?" questions
+- **Context Awareness**: Remembers conversation history across queries
+- **Action-Oriented**: Executes plans immediately without asking permission
+- **Schema-First Approach**: Validates table/column names before generating SQL
+- **Mermaid ERD Output**: Generates text-based diagrams (no image file execution)
+- **Comprehensive Responses**: Always shows actual data, not just summaries
 
 ### 1. MSSQL MCP Server Tools
 The official Microsoft MCP server provides these capabilities:
@@ -78,31 +135,38 @@ The official Microsoft MCP server provides these capabilities:
 
 **Reference**: [Microsoft DevBlogs - MSSQL MCP Server](https://devblogs.microsoft.com/azure-sql/introducing-mssql-mcp-server/)
 
-### 2. Specialized Agent Types
+### 2. Agent Capabilities
 
-#### Health Monitor Agent
-- Check database health metrics
-- Monitor index fragmentation
-- Analyze wait statistics
-- Detect blocking sessions
+The DBA assistant agent can perform:
 
-#### Performance Tuner Agent
-- Query execution plan analysis
-- Missing index recommendations
-- Statistics update suggestions
-- Resource utilization monitoring
+**Schema Analysis & Discovery:**
+- Database structure review (tables, schemas, relationships)
+- Foreign key relationship mapping
+- Primary key and index identification
+- Column metadata and data type analysis
 
-#### Backup Manager Agent
-- Backup status verification
-- Recovery model checks
-- Backup scheduling recommendations
-- Point-in-time recovery scenarios
+**Performance Optimization:**
+- Index recommendation and creation
+- Fragmentation analysis
+- Query performance review
+- Missing index identification
 
-#### Security Auditor Agent
-- Permission audits
-- Login reviews
-- Security vulnerability checks
-- Compliance reporting
+**Data Operations:**
+- Schema modification (ALTER TABLE)
+- Synthetic data generation for testing
+- Data quality assessment
+- Row count and statistics
+
+**Visualization:**
+- Mermaid ERD diagram generation
+- Foreign key relationship visualization
+- Schema documentation in markdown
+
+**Recommendations:**
+- Database improvement suggestions
+- Index optimization strategies
+- Data model enhancements
+- Capacity planning insights
 
 ### 3. Safety Mechanisms
 - **Read-only by default**: Exploration and monitoring use read-only connections
@@ -112,29 +176,38 @@ The official Microsoft MCP server provides these capabilities:
 
 ## Development Phases
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation ✅ COMPLETE
 - [x] Architecture design
 - [x] Technology selection (AzureAIAgentClient)
-- [ ] Basic agent setup with MCP server integration
-- [ ] Simple health check operations
+- [x] Basic agent setup with MCP server integration
+- [x] Simple health check operations
+- [x] CLI interface working
 
-### Phase 2: Core Features
-- [ ] Implement all specialized agents
-- [ ] Safety validation framework
-- [ ] Query template library (DMVs, system views)
-- [ ] Basic CLI interface
+### Phase 2: Desktop UI ✅ COMPLETE
+- [x] Tauri 2.0 application framework
+- [x] React frontend with chat interface
+- [x] Rust-Python FFI bridge (Pyo3)
+- [x] Real-time connection status monitoring
+- [x] Chat history export functionality
+- [x] Quick question templates for DBAs
+- [x] Markdown table formatting for results
+- [x] Mermaid ERD diagram generation
 
-### Phase 3: Intelligence Layer
-- [ ] Natural language to admin task mapping
-- [ ] Proactive recommendations
-- [ ] Anomaly detection
-- [ ] Integration with Azure Monitor
+### Phase 3: Intelligence & Capabilities ✅ COMPLETE
+- [x] Natural language to SQL query generation
+- [x] Schema analysis and recommendations
+- [x] Index optimization suggestions
+- [x] Synthetic data generation
+- [x] Database enhancement recommendations
+- [x] Proactive schema improvement analysis
 
-### Phase 4: Production Ready
-- [ ] Web UI (framework TBD)
-- [ ] Multi-database management
+### Phase 4: Production Features (In Progress)
+- [x] Safety validation framework
+- [x] Query execution with tool integration
+- [x] Comprehensive agent instructions
+- [ ] Multi-database connection management
 - [ ] Role-based access control
-- [ ] Comprehensive audit logging
+- [ ] Advanced observability and tracing
 
 ## Integration with Existing Workspace
 
@@ -148,59 +221,138 @@ This project leverages existing capabilities:
 
 ### Prerequisites
 ```bash
-# Install MSSQL MCP Server
-npm install -g @azure/mssql-mcp-server
+# Node.js and npm (for MCP server and Tauri)
+node --version  # v18+ required
+npm --version
+
+# Rust toolchain (for Tauri)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Azure CLI authentication
 az login
 
-# Python environment
-python -m venv .venv
-source .venv/bin/activate
+# Python 3.13+ (for agent framework)
+python3 --version
 ```
 
-### Dependencies (to be added)
+### Build MCP Server
 ```bash
-pip install agent-framework azure-identity mcp httpx pydantic
+cd DBMS-ASSISTANT/MssqlMcp/Node
+npm install
+npm run build
+```
+
+### Setup Python Environment
+```bash
+# From repository root
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r DBMS-ASSISTANT/requirements.txt
+```
+
+### Configure Environment
+Create `DBMS-ASSISTANT/.env` with:
+```env
+# Azure AI Project
+AZURE_AI_PROJECT_ENDPOINT="https://your-project.services.ai.azure.com/api/projects/yourProject"
+AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com/"
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1"
+
+# Database Connection
+SERVER_NAME=your-server.database.windows.net
+DATABASE_NAME=your-database
+SQL_USERNAME=your-username
+SQL_PASSWORD=your-password
+TRUST_SERVER_CERTIFICATE=true
+READONLY=false
+```
+
+### Run Application
+```bash
+cd DBMS-ASSISTANT/UI
+npm install
+npm run tauri dev
 ```
 
 ## Configuration
 
 ### Environment Variables (.env)
+
+The application uses a comprehensive `.env` file in the `DBMS-ASSISTANT` directory:
+
+**Required Settings:**
 ```env
 # Azure AI Service
-AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string>
+AZURE_AI_PROJECT_ENDPOINT="https://your-ai-foundry.services.ai.azure.com/api/projects/yourProject"
+AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com/"
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1"
 
-# Optional: OpenAI for alternative LLM
-OPENAI_API_KEY=<your-key>
-
-# Database Connections (managed via MCP server)
-# Configured in VS Code SQL extension
+# Database Connection
+SERVER_NAME=your-server.database.windows.net
+DATABASE_NAME=your-database
+SQL_USERNAME=your-username
+SQL_PASSWORD=your-password
+TRUST_SERVER_CERTIFICATE=true
+READONLY=false
 ```
 
-## Usage Examples
+**Optional Settings:**
+```env
+# Observability
+APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=..."
+ENABLE_OTEL=true
+ENABLE_DEVUI_TRACING=true
 
-### Basic Health Check
-```python
-async with AzureAIAgentClient(credential).create_agent(
-    name="HealthMonitor",
-    instructions="You check SQL database health and report issues.",
-    tools=[mssql_connect, mssql_run_query],
-) as agent:
-    result = await agent.run("Check index fragmentation on production database")
-    print(result)
+# Safety
+REQUIRE_APPROVAL_FOR_WRITES=true
+DRY_RUN_MODE=false
 ```
 
-### Performance Analysis
-```python
-async with AzureAIAgentClient(credential).create_agent(
-    name="PerformanceTuner",
-    instructions="You analyze query performance and suggest optimizations.",
-    tools=[mssql_connect, mssql_run_query, get_execution_plan],
-) as agent:
-    result = await agent.run("Find the top 5 slowest queries in the last hour")
-    print(result)
+See the complete `.env.example` file for all available options.
+
+## Usage
+
+### Desktop Application
+
+**Start the Tauri UI:**
+```bash
+cd UI
+npm install
+npm run tauri dev
 ```
+
+**Build for production:**
+```bash
+npm run tauri build
+```
+
+The application provides:
+- Natural language chat interface
+- Connection status indicator (server/database info)
+- Quick question templates
+- Chat history export to text files
+- Real-time query execution
+- Mermaid ERD diagram generation
+
+### CLI (Legacy)
+
+**Run the Python CLI:**
+```bash
+cd DBMS-ASSISTANT
+source ../.venv/bin/activate
+python dba_assistant.py
+```
+
+### Example Queries
+
+The agent can handle diverse DBA tasks:
+
+- **Schema Analysis**: "Tell me what kind of DB we have and what can we improve on it"
+- **Index Optimization**: "Check for unused indexes or redundant keys"
+- **Data Enhancement**: "Generate synthetic data to populate new columns"
+- **ERD Generation**: "Generate an ERD diagram" (outputs Mermaid syntax)
+- **Performance Tuning**: "Review if dimension tables have appropriate hierarchies"
+- **Schema Changes**: "Add geographic location columns to DimCustomer"
 
 ## Security Considerations
 
@@ -212,10 +364,26 @@ async with AzureAIAgentClient(credential).create_agent(
 
 ## Roadmap
 
-- **Q4 2024**: Foundation and core features
-- **Q1 2025**: Intelligence layer and recommendations
-- **Q2 2025**: Production deployment and web UI
-- **Q3 2025**: Advanced features (multi-cloud support, ML-based anomaly detection)
+### Completed (Q4 2024)
+- ✅ Foundation architecture with AzureAIAgentClient
+- ✅ MSSQL MCP Server integration
+- ✅ Tauri desktop application with React UI
+- ✅ Rust-Python FFI bridge (Pyo3)
+- ✅ Natural language to SQL capabilities
+- ✅ Mermaid ERD diagram generation
+- ✅ Schema analysis and recommendations
+- ✅ Index optimization features
+- ✅ Synthetic data generation
+
+### Planned Enhancements
+- **Multi-Database Management**: Support multiple concurrent connections
+- **Advanced Observability**: Integration with Azure Monitor and Application Insights
+- **Query History**: Save and replay previous queries
+- **Export Formats**: PDF and Excel export for reports
+- **Saved Templates**: Custom query templates per user
+- **Role-Based Access**: Fine-grained permission control
+- **Backup Management**: Backup status monitoring and recommendations
+- **Performance Dashboards**: Real-time performance metrics visualization
 
 ## References
 
