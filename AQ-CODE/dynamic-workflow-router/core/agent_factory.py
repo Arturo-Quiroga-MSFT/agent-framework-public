@@ -54,7 +54,7 @@ class WorkflowAgentFactory:
             
             # Verify agent still exists in Foundry
             try:
-                await self.project_client.agents.get_agent(agent_id)
+                await self.project_client.agents.get(agent_id)
                 print(f"♻️  Reusing agent: {workflow_id}")
                 return agent_id
             except Exception:
@@ -64,7 +64,7 @@ class WorkflowAgentFactory:
         # Create new agent
         agent_config = workflow_config.get("agent_config", {})
         
-        agent = await self.project_client.agents.create_agent(
+        agent = await self.project_client.agents.create(
             model=agent_config.get("model", "gpt-4o"),
             name=workflow_config.get("name", workflow_id),
             instructions=agent_config.get("instructions", ""),
@@ -134,7 +134,7 @@ class WorkflowAgentFactory:
         agent_id = self._agent_registry[workflow_id]
         
         try:
-            await self.project_client.agents.delete_agent(agent_id)
+            await self.project_client.agents.delete(agent_id)
             del self._agent_registry[workflow_id]
             print(f"🧹 Cleaned up agent: {workflow_id}")
             return True

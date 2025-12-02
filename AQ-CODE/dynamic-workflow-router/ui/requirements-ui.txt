@@ -1,0 +1,6 @@
+# Streamlit UI Requirements
+# Additional dependencies for the web interface
+
+streamlit>=1.40.0
+plotly>=5.24.0
+pandas>=2.2.0

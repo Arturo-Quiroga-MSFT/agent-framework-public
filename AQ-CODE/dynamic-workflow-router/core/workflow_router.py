@@ -93,9 +93,32 @@ class DynamicWorkflowRouter:
             raise ValueError("PROJECT_CONNECTION_STRING is required")
         
         # Initialize Azure AI Project client
-        self._project_client = AIProjectClient.from_connection_string(
-            credential=DefaultAzureCredential(),
-            conn_str=self.project_connection_string
+        # Handle both formats:
+        # 1. Direct URL: https://...
+        # 2. Connection string: key1=value1;key2=value2
+        
+        if self.project_connection_string.startswith('http'):
+            # Direct URL format
+            endpoint = self.project_connection_string
+        else:
+            # Parse connection string format
+            conn_parts = {}
+            for part in self.project_connection_string.split(';'):
+                if '=' in part:
+                    key, value = part.split('=', 1)
+                    conn_parts[key.strip()] = value.strip()
+            
+            # Extract endpoint
+            endpoint = conn_parts.get('endpoint') or conn_parts.get('Endpoint')
+            if not endpoint and 'HostName' in conn_parts:
+                endpoint = f"https://{conn_parts['HostName']}"
+            
+            if not endpoint:
+                raise ValueError("Invalid PROJECT_CONNECTION_STRING format - no endpoint found")
+        
+        self._project_client = AIProjectClient(
+            endpoint=endpoint,
+            credential=DefaultAzureCredential()
         )
         
         # Initialize Cosmos DB loader
