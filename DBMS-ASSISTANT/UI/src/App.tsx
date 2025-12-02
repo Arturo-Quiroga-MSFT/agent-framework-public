@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { Database, Send, Settings, Activity, Trash2, Lightbulb, Download } from "lucide-react";
 import "./App.css";
 
@@ -118,6 +116,8 @@ function App() {
   };
 
   const exportChat = async () => {
+    console.log("Export chat clicked, history length:", chatHistory.length);
+    
     if (chatHistory.length === 0) {
       alert("No conversation to export");
       return;
@@ -144,30 +144,30 @@ function App() {
         }
       });
 
-      console.log("Opening save dialog...");
+      console.log("Creating download blob, content length:", content.length);
+
+      // Create a download link
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
       
-      // Open save dialog
-      const filePath = await save({
-        defaultPath: `rdbms-chat-${timestamp}.txt`,
-        filters: [{
-          name: 'Text Files',
-          extensions: ['txt']
-        }, {
-          name: 'Markdown Files',
-          extensions: ['md']
-        }]
-      });
-
-      console.log("File path selected:", filePath);
-
-      if (filePath) {
-        console.log("Writing to file:", filePath);
-        await writeTextFile(filePath, content);
-        console.log("File written successfully");
-        alert(`Chat history exported successfully to:\n${filePath}`);
-      } else {
-        console.log("User cancelled save dialog");
-      }
+      console.log("Blob created, URL:", url);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rdbms-chat-${timestamp}.txt`;
+      a.style.display = 'none';
+      
+      document.body.appendChild(a);
+      console.log("Triggering download...");
+      a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log("Download complete, cleaned up");
+      }, 100);
+      
     } catch (error) {
       console.error("Export error:", error);
       alert(`Failed to export chat: ${error}`);

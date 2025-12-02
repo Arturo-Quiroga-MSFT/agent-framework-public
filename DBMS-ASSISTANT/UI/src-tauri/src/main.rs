@@ -4,8 +4,6 @@
 mod commands;
 mod python_bridge;
 
-use tauri::Manager;
-
 fn main() {
     // Load .env file from DBMS-ASSISTANT directory
     let mut env_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));

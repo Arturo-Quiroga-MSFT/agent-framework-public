@@ -59,13 +59,6 @@
   "plugins": {
     "shell": {
       "open": true
-    },
-    "dialog": {
-      "save": true,
-      "open": true
-    },
-    "fs": {
-      "scope": ["$HOME/**", "$DESKTOP/**", "$DOCUMENT/**", "$DOWNLOAD/**"]
     }
   }
 }

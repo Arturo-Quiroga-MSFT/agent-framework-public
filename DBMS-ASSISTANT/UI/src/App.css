@@ -287,11 +287,19 @@ body {
 
 .message-content pre {
   margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 0.875rem;
-  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  tab-size: 4;
+}
+
+.assistant-message .message-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .message-timestamp {
