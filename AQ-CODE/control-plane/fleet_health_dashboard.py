@@ -34,7 +34,7 @@ import os
 import sys
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import streamlit as st
 
 # Load environment variables from .env file
@@ -54,7 +54,7 @@ from fleet_health_client import (
 
 # Page configuration
 st.set_page_config(
-    page_title="Fleet Health Dashboard",
+    page_title="Microsoft Foundry Control Plane - Agent Fleet Health",
     page_icon="🎛️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -268,6 +268,284 @@ def render_alerts_summary(summary: FleetHealthSummary):
     
     with col4:
         st.metric("Low", summary.low_alerts)
+
+
+def render_alerts_page(summary: FleetHealthSummary):
+    """Render the full Alerts page with filtering and drill-down."""
+    
+    # Summary cards
+    render_alerts_summary(summary)
+    
+    st.markdown("---")
+    st.markdown("### 📋 Alert Details")
+    
+    # Get alerts from summary
+    alerts = getattr(summary, 'alerts', [])
+    
+    if not alerts:
+        st.info("🎉 No active alerts in the last 24 hours. All systems operating normally.")
+        
+        # Show link to Application Insights for historical data
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.link_button(
+                "🔍 View Historical Alerts in Azure Portal",
+                "https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents",
+                use_container_width=True
+            )
+        return
+    
+    # Filters
+    col1, col2, col3, col4 = st.columns([1.5, 2, 2, 1])
+    
+    with col1:
+        severity_filter = st.multiselect(
+            "Filter by Severity",
+            options=["Critical", "High", "Medium", "Low"],
+            default=["Critical", "High"]
+        )
+    
+    with col2:
+        # Get unique agent names from alerts
+        agent_names = list(set([a.get("agent_name", "Unknown") for a in alerts if a.get("agent_name")]))
+        agent_names.sort()
+        agent_filter = st.multiselect(
+            "Filter by Agent",
+            options=agent_names,
+            default=[]
+        )
+    
+    with col3:
+        source_filter = st.multiselect(
+            "Filter by Source",
+            options=["application_insights", "exceptions"],
+            default=["application_insights", "exceptions"]
+        )
+    
+    with col4:
+        sort_by = st.selectbox(
+            "Sort by",
+            options=["Newest First", "Oldest First", "Severity"]
+        )
+    
+    # Apply filters
+    filtered_alerts = alerts
+    
+    if severity_filter:
+        severity_map = {s.lower(): s for s in severity_filter}
+        filtered_alerts = [a for a in filtered_alerts if a.get("severity", "").lower() in [s.lower() for s in severity_filter]]
+    
+    if agent_filter:
+        filtered_alerts = [a for a in filtered_alerts if a.get("agent_name") in agent_filter]
+    
+    if source_filter:
+        filtered_alerts = [a for a in filtered_alerts if a.get("source") in source_filter]
+    
+    # Sort
+    if sort_by == "Newest First":
+        filtered_alerts.sort(key=lambda a: a.get("timestamp", ""), reverse=True)
+    elif sort_by == "Oldest First":
+        filtered_alerts.sort(key=lambda a: a.get("timestamp", ""))
+    elif sort_by == "Severity":
+        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        filtered_alerts.sort(key=lambda a: severity_order.get(a.get("severity", "low"), 4))
+    
+    # Results count
+    st.markdown(f"**Showing {len(filtered_alerts)} of {len(alerts)} alerts**")
+    
+    if not filtered_alerts:
+        st.info("No alerts match the current filters")
+        return
+    
+    # Render table header
+    cols = st.columns([0.6, 1.5, 3, 1.2, 1])
+    with cols[0]:
+        st.markdown("**Severity**")
+    with cols[1]:
+        st.markdown("**Time**")
+    with cols[2]:
+        st.markdown("**Message**")
+    with cols[3]:
+        st.markdown("**Agent**")
+    with cols[4]:
+        st.markdown("**Source**")
+    
+    st.markdown("---")
+    
+    # Render alerts
+    for idx, alert in enumerate(filtered_alerts[:50]):  # Limit to 50 for performance
+        severity = alert.get("severity", "low")
+        severity_colors = {
+            "critical": "#dc3545",
+            "high": "#fd7e14",
+            "medium": "#ffc107",
+            "low": "#17a2b8"
+        }
+        severity_emoji = {
+            "critical": "🔴",
+            "high": "🟠",
+            "medium": "🟡",
+            "low": "🔵"
+        }
+        
+        cols = st.columns([0.6, 1.5, 3, 1.2, 1])
+        
+        with cols[0]:
+            color = severity_colors.get(severity, "#6c757d")
+            emoji = severity_emoji.get(severity, "⚪")
+            st.markdown(f'{emoji} <span style="color: {color}; font-weight: bold;">{severity.title()}</span>', unsafe_allow_html=True)
+        
+        with cols[1]:
+            timestamp = alert.get("timestamp", "")
+            if hasattr(timestamp, 'strftime'):
+                time_str = timestamp.strftime("%H:%M:%S")
+                date_str = timestamp.strftime("%m/%d")
+            else:
+                time_str = str(timestamp)[:8] if timestamp else "-"
+                date_str = str(timestamp)[5:10] if timestamp else ""
+            st.markdown(f"**{time_str}**  \n{date_str}")
+        
+        with cols[2]:
+            message = alert.get("message", "No message")
+            # Truncate long messages
+            if len(message) > 80:
+                with st.expander(f"{message[:80]}..."):
+                    st.markdown(message)
+                    if alert.get("duration_ms"):
+                        st.markdown(f"**Duration:** {alert['duration_ms']:.0f}ms")
+                    if alert.get("model"):
+                        st.markdown(f"**Model:** {alert['model']}")
+            else:
+                st.markdown(message)
+        
+        with cols[3]:
+            agent_name = alert.get("agent_name", "N/A")
+            if agent_name and agent_name != "N/A":
+                st.markdown(f"🤖 {agent_name}")
+            else:
+                st.markdown("_System_")
+        
+        with cols[4]:
+            source = alert.get("source", "unknown")
+            source_icons = {
+                "application_insights": "📊",
+                "exceptions": "💥",
+                "defender": "🛡️"
+            }
+            st.markdown(f"{source_icons.get(source, '📌')} {source.replace('_', ' ').title()}")
+    
+    if len(filtered_alerts) > 50:
+        st.warning(f"Showing first 50 of {len(filtered_alerts)} alerts. Use filters to narrow results.")
+    
+    # Quick Actions
+    st.markdown("---")
+    st.markdown("### 🔧 Quick Actions")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.link_button(
+            "📈 Application Insights",
+            "https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents",
+            help="View full alert details in Azure Portal",
+            use_container_width=True
+        )
+    
+    with col2:
+        st.link_button(
+            "🛡️ Defender for Cloud",
+            "https://portal.azure.com/#blade/Microsoft_Azure_Security/SecurityMenuBlade/overview",
+            help="View security alerts and recommendations",
+            use_container_width=True
+        )
+    
+    with col3:
+        st.button(
+            "📧 Configure Alert Rules",
+            disabled=True,
+            help="Coming soon: Set up custom alert notifications",
+            use_container_width=True
+        )
+    
+    with col4:
+        st.button(
+            "🔕 Manage Suppressions",
+            disabled=True,
+            help="Coming soon: Suppress known/expected alerts",
+            use_container_width=True
+        )
+    
+    # Alert Analytics
+    st.markdown("---")
+    st.markdown("### 📊 Alert Analytics")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Alerts by severity pie chart
+        import plotly.graph_objects as go
+        
+        severity_counts = {
+            "Critical": summary.critical_alerts,
+            "High": summary.high_alerts,
+            "Medium": summary.medium_alerts,
+            "Low": summary.low_alerts
+        }
+        
+        # Only show non-zero values
+        labels = [k for k, v in severity_counts.items() if v > 0]
+        values = [v for v in severity_counts.values() if v > 0]
+        colors = ["#dc3545", "#fd7e14", "#ffc107", "#17a2b8"][:len(labels)]
+        
+        if values:
+            fig = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.4,
+                marker_colors=colors
+            )])
+            
+            fig.update_layout(
+                title="Alerts by Severity",
+                height=300,
+                margin=dict(t=40, b=20, l=20, r=20),
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No alert data for severity chart")
+    
+    with col2:
+        # Alerts by agent bar chart
+        agent_alert_counts = {}
+        for alert in alerts:
+            agent_name = alert.get("agent_name", "System/Unknown")
+            if not agent_name:
+                agent_name = "System/Unknown"
+            agent_alert_counts[agent_name] = agent_alert_counts.get(agent_name, 0) + 1
+        
+        if agent_alert_counts:
+            # Sort by count and take top 10
+            sorted_agents = sorted(agent_alert_counts.items(), key=lambda x: -x[1])[:10]
+            
+            fig = go.Figure(data=[go.Bar(
+                x=[a[0] for a in sorted_agents],
+                y=[a[1] for a in sorted_agents],
+                marker_color="#dc3545"
+            )])
+            
+            fig.update_layout(
+                title="Top 10 Agents by Alert Count",
+                xaxis_title="Agent",
+                yaxis_title="Alert Count",
+                height=300,
+                margin=dict(t=40, b=40, l=40, r=20)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No agent-specific alert data")
 
 
 def render_compliance_status(summary: FleetHealthSummary):
@@ -513,13 +791,104 @@ def render_agent_details(agent: AgentHealthMetrics):
     foundry_url = "https://ai.azure.com"
     
     with col1:
-        st.link_button("📈 View Traces", app_insights_url, help="Open in Application Insights")
+        st.link_button("📈 Full Traces in Portal", app_insights_url, help="Open in Application Insights")
     with col2:
         st.link_button("🔧 Edit Agent", foundry_url, help="Open in AI Foundry")
     with col3:
         st.button("🧪 Run Evaluation", disabled=True, help="Coming soon: Trigger evaluation run")
     with col4:
         st.button("🛑 Block Agent", disabled=True, help="Coming soon: Block incoming requests")
+    
+    # Traces Section
+    st.markdown("---")
+    st.markdown("### 📊 Recent Traces (24h)")
+    
+    # Fetch traces for this agent
+    traces = fetch_agent_traces(agent.agent_name)
+    
+    if not traces:
+        st.info("No traces found for this agent in the last 24 hours.")
+    else:
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        successful = sum(1 for t in traces if t.get("success"))
+        failed = len(traces) - successful
+        avg_duration = sum(t.get("duration_ms", 0) for t in traces) / len(traces) if traces else 0
+        total_tokens = sum(t.get("total_tokens", 0) for t in traces)
+        
+        with col1:
+            st.metric("Total Runs", len(traces))
+        with col2:
+            st.metric("Successful", successful, delta=None)
+        with col3:
+            st.metric("Avg Duration", f"{avg_duration:.0f}ms")
+        with col4:
+            st.metric("Total Tokens", f"{total_tokens:,}")
+        
+        # Trace table
+        st.markdown("#### Trace Log")
+        
+        # Table header
+        cols = st.columns([0.5, 1.2, 1.2, 1, 1, 0.8])
+        with cols[0]:
+            st.markdown("**Status**")
+        with cols[1]:
+            st.markdown("**Time**")
+        with cols[2]:
+            st.markdown("**Operation**")
+        with cols[3]:
+            st.markdown("**Duration**")
+        with cols[4]:
+            st.markdown("**Model**")
+        with cols[5]:
+            st.markdown("**Tokens**")
+        
+        st.markdown("---")
+        
+        # Trace rows (limit to 20 for display)
+        for trace in traces[:20]:
+            cols = st.columns([0.5, 1.2, 1.2, 1, 1, 0.8])
+            
+            with cols[0]:
+                if trace.get("success"):
+                    st.markdown("✅")
+                else:
+                    st.markdown("❌")
+            
+            with cols[1]:
+                ts = trace.get("timestamp")
+                if hasattr(ts, 'strftime'):
+                    st.markdown(f"{ts.strftime('%H:%M:%S')}  \n{ts.strftime('%m/%d')}")
+                else:
+                    st.markdown(str(ts)[:19] if ts else "-")
+            
+            with cols[2]:
+                st.markdown(f"`{trace.get('operation', 'unknown')}`")
+            
+            with cols[3]:
+                duration = trace.get("duration_ms", 0)
+                color = "#28a745" if duration < 2000 else "#ffc107" if duration < 5000 else "#dc3545"
+                st.markdown(f'<span style="color: {color};">{duration:.0f}ms</span>', unsafe_allow_html=True)
+            
+            with cols[4]:
+                st.markdown(f"`{trace.get('model', '-')}`")
+            
+            with cols[5]:
+                st.markdown(f"{trace.get('total_tokens', 0):,}")
+        
+        if len(traces) > 20:
+            st.info(f"Showing 20 of {len(traces)} traces. View full traces in Application Insights.")
+
+
+def fetch_agent_traces(agent_name: str) -> List[Dict[str, Any]]:
+    """Fetch traces for an agent (sync wrapper)."""
+    try:
+        client = FleetHealthClient()
+        return run_async(client.get_agent_traces(agent_name))
+    except Exception as e:
+        print(f"Error fetching traces: {e}")
+        return []
 
 
 def render_cost_analysis(summary: FleetHealthSummary):
@@ -637,8 +1006,8 @@ def main():
     current_page = render_sidebar()
     
     # Header
-    st.title("🎛️ Fleet Health Dashboard")
-    st.caption("Microsoft Foundry Control Plane Integration")
+    st.title("🎛️ Microsoft Foundry Control Plane")
+    st.caption("Agent Fleet Health Dashboard")
     
     # Check for environment configuration
     if not os.environ.get("AZURE_AI_PROJECT_ENDPOINT"):
@@ -697,9 +1066,7 @@ def main():
         render_agent_inventory(summary)
         
     elif current_page == "Alerts":
-        render_alerts_summary(summary)
-        st.markdown("---")
-        st.info("Detailed alert management coming soon. Use Azure Portal for full alert investigation.")
+        render_alerts_page(summary)
         
     elif current_page == "Compliance":
         render_compliance_status(summary)

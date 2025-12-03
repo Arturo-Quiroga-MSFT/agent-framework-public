@@ -169,6 +169,7 @@ class FleetHealthSummary:
     high_alerts: int = 0
     medium_alerts: int = 0
     low_alerts: int = 0
+    alerts: List[Dict[str, Any]] = field(default_factory=list)  # Full alert details
     
     # Timestamp
     generated_at: datetime = field(default_factory=datetime.now)
@@ -453,7 +454,76 @@ class FleetHealthClient:
             print(f"Error fetching alerts: {e}")
         
         return alerts
-    
+
+    async def get_agent_traces(
+        self,
+        agent_name: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch recent traces for a specific agent.
+        
+        Args:
+            agent_name: Name of the agent to fetch traces for
+            limit: Maximum number of traces to return
+            
+        Returns:
+            List of trace dictionaries with run details
+        """
+        traces = []
+        
+        if not self.logs_client or not self.workspace_id:
+            return traces
+        
+        try:
+            query = f"""
+            AppDependencies
+            | where TimeGenerated >= ago(24h)
+            | where DependencyType == "GenAI | azure_ai_agents"
+            | extend props = parse_json(Properties)
+            | where tostring(props["gen_ai.agent.name"]) == "{agent_name}"
+            | project 
+                TimeGenerated,
+                Name,
+                DurationMs,
+                Success,
+                thread_id = tostring(props["gen_ai.thread.id"]),
+                run_id = tostring(props["gen_ai.thread.run.id"]),
+                model = tostring(props["gen_ai.request.model"]),
+                input_tokens = toint(props["gen_ai.usage.input_tokens"]),
+                output_tokens = toint(props["gen_ai.usage.output_tokens"]),
+                total_tokens = toint(props["gen_ai.usage.total_tokens"])
+            | order by TimeGenerated desc
+            | take {limit}
+            """
+            
+            response = self.logs_client.query_workspace(
+                workspace_id=self.workspace_id,
+                query=query,
+                timespan=timedelta(hours=24)
+            )
+            
+            if _is_query_success(response) and response.tables:
+                table = response.tables[0]
+                for row in table.rows:
+                    traces.append({
+                        "timestamp": row[0],
+                        "operation": row[1],
+                        "duration_ms": row[2],
+                        "success": row[3],
+                        "thread_id": row[4] or None,
+                        "run_id": row[5] or None,
+                        "model": row[6],
+                        "input_tokens": row[7] or 0,
+                        "output_tokens": row[8] or 0,
+                        "total_tokens": row[9] or 0
+                    })
+                    
+        except Exception as e:
+            print(f"Error fetching agent traces: {e}")
+        
+        return traces
+
     async def get_cost_data(
         self,
         time_range_days: int = 7
@@ -725,6 +795,7 @@ class FleetHealthClient:
         
         # Fetch alerts
         alerts = await self.get_fleet_alerts()
+        summary.alerts = alerts  # Store full alert details
         for alert in alerts:
             severity = alert.get("severity", "low")
             if severity == "critical":
