@@ -1,0 +1,52 @@
+# Control Plane Integration Dependencies
+# Install with: pip install -r requirements.txt
+
+# =============================================================================
+# Azure SDKs
+# =============================================================================
+
+# Azure AI Projects SDK - agent management and inventory
+azure-ai-projects>=2.0.0b2
+
+# Azure Identity - authentication
+azure-identity>=1.15.0
+
+# Azure Monitor - logs and metrics queries
+azure-monitor-query>=1.3.0
+
+# Azure Resource Graph - fleet-wide queries
+azure-mgmt-resourcegraph>=8.0.0
+
+# =============================================================================
+# Dashboard Framework
+# =============================================================================
+
+# Streamlit - web dashboard
+streamlit>=1.30.0
+
+# Plotly - interactive charts
+plotly>=5.18.0
+
+# =============================================================================
+# Utilities
+# =============================================================================
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Data handling
+pandas>=2.0.0
+
+# Async HTTP
+aiohttp>=3.9.0
+httpx>=0.26.0
+
+# =============================================================================
+# Optional: Enhanced Tracing
+# =============================================================================
+
+# OpenTelemetry (if using custom instrumentation)
+# opentelemetry-api>=1.22.0
+# opentelemetry-sdk>=1.22.0
+# opentelemetry-instrumentation>=0.43b0
+# azure-monitor-opentelemetry>=1.1.0

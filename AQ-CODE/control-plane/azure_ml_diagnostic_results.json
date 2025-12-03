@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-12-03T14:10:01.929551",
+  "network": {
+    "hostname": "ARTUROs-MBP.cgocable.net",
+    "external_ip": "24.226.125.69",
+    "location": "Burlington, Canada",
+    "isp": "COGECOWAVE"
+  },
+  "results": {
+    "Azure ML Studio": {
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 114.76,
+      "headers": {},
+      "error": null,
+      "cloudflare": false,
+      "final_url": "https://ml.azure.com/"
+    },
+    "Azure ML API": {
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 144.78,
+      "headers": {},
+      "error": null,
+      "cloudflare": false,
+      "final_url": "https://ml.azure.com/api/health"
+    },
+    "Azure Portal": {
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 111.42,
+      "headers": {},
+      "error": null,
+      "cloudflare": false,
+      "final_url": "https://portal.azure.com/"
+    },
+    "Azure Login": {
+      "success": true,
+      "status_code": 200,
+      "response_time_ms": 501.59,
+      "headers": {},
+      "error": null,
+      "cloudflare": false,
+      "final_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6-1d93765276ca&redirect_uri=https%3A%2F%2Fwww.office.com%2Flandingv2&response_type=code%20id_token&scope=openid%20profile%20https%3A%2F%2Fwww.office.com%2Fv2%2FOfficeHome.All&response_mode=form_post&nonce=639003858015526798.NjBmZmUyNmYtYmU0Ni00MWM4LTllMmQtZDA1ZjUwNDQwOTE0MDlmYTljMGItMzIzZS00ZjU2LTgyNDUtMmZjYWQ0MmE4ZGU3&ui_locales=en-US&mkt=en-US&client-request-id=9d4003d2-8956-414b-af5b-fb8a56613912&state=uLbIo4yn5W9dixwXcGIAIxMsMD09-DSZ7Bw1VFX1PbwRVWsjNfwuYp6XEn50kunNGSPhXPA2cCSYxV3KVTG7rfX3LPMJoxcWekjWq8GOyptPn8XWtfbJt8wtnH8mSS1e6ztp_W0amgMQDkXF109Mb7NzVPjsSR8MmECqPmCxk_WbaejhJaM8yiM0VrEKSq7jfUgb29rrKQ4Q5ZaMO2pg3s7QOTVVfUfoTJJzOoNuyzHEfGft-LUnAZYQb-m2cFTKpnH1puw4eG0oZLMG3qgaPYLbneAbDJpYn1I3k23kMvg&x-client-SKU=ID_NET8_0&x-client-ver=8.5.0.0"
+    },
+    "Azure Management": {
+      "success": false,
+      "status_code": 400,
+      "response_time_ms": 92.35,
+      "headers": {},
+      "error": null,
+      "cloudflare": false,
+      "final_url": "https://management.azure.com/",
+      "error_body": {
+        "error": {
+          "code": "MissingApiVersionParameter",
+          "message": "The api-version query parameter (?api-version=) is required for all requests."
+        }
+      }
+    }
+  }
+}

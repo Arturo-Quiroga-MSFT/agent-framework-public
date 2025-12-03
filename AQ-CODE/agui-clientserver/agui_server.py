@@ -11,6 +11,26 @@ import os
 import uuid
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
+# ============================================================================
+# WORKAROUND for azure-ai-projects 2.0.0b2 gzip encoding bug
+# GitHub Issue: https://github.com/microsoft/agent-framework/issues/2457
+# ============================================================================
+import azure.core.pipeline.policies as policies
+_original_on_request = policies.HeadersPolicy.on_request
+def _patched_on_request(self, request):
+    _original_on_request(self, request)
+    request.http_request.headers['Accept-Encoding'] = 'identity'
+policies.HeadersPolicy.on_request = _patched_on_request
+# ============================================================================
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -27,6 +47,11 @@ from azure.core.credentials import AzureKeyCredential
 # Configuration
 # ============================================================================
 
+# Azure AI Foundry Project Endpoint (new format)
+AZURE_AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+AZURE_AI_MODEL_DEPLOYMENT_NAME = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o")
+
+# Legacy configuration (kept for backwards compatibility)
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
@@ -35,7 +60,7 @@ AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 SERVER_HOST = os.getenv("AGUI_SERVER_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("AGUI_SERVER_PORT", "5100"))
 
-# Project client (Azure AI Foundry)
+# Project client (Azure AI Foundry) - Legacy
 PROJECT_CONNECTION_STRING = os.getenv("PROJECT_CONNECTION_STRING")
 
 
@@ -97,22 +122,31 @@ async def startup_event():
     """Initialize Azure AI Project client on startup."""
     global project_client
     
-    print("🚀 Starting AG-UI Server...")
-    print(f"📍 Endpoint: {AZURE_OPENAI_ENDPOINT}")
-    print(f"🤖 Model: {AZURE_OPENAI_DEPLOYMENT_NAME}")
+    model_name = AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME
     
-    # Initialize project client
-    if PROJECT_CONNECTION_STRING:
-        # Using Azure AI Foundry project
+    print("🚀 Starting AG-UI Server...")
+    print(f"📍 Endpoint: {AZURE_AI_PROJECT_ENDPOINT or AZURE_OPENAI_ENDPOINT}")
+    print(f"🤖 Model: {model_name}")
+    
+    # Initialize project client - try new endpoint format first
+    if AZURE_AI_PROJECT_ENDPOINT:
+        # Using Azure AI Foundry project with new endpoint format
+        credential = DefaultAzureCredential()
+        project_client = AIProjectClient(
+            endpoint=AZURE_AI_PROJECT_ENDPOINT,
+            credential=credential
+        )
+        print("✅ Connected to Azure AI Foundry project (endpoint format)")
+    elif PROJECT_CONNECTION_STRING:
+        # Using Azure AI Foundry project with legacy connection string
         project_client = AIProjectClient.from_connection_string(
             credential=DefaultAzureCredential(),
             conn_str=PROJECT_CONNECTION_STRING
         )
-        print("✅ Connected to Azure AI Foundry project")
+        print("✅ Connected to Azure AI Foundry project (connection string)")
     else:
-        print("⚠️  No PROJECT_CONNECTION_STRING found - using direct Azure OpenAI")
-        # Note: For direct Azure OpenAI, you'll need to implement a different client
-        # This example focuses on Azure AI Foundry integration
+        print("⚠️  No AZURE_AI_PROJECT_ENDPOINT or PROJECT_CONNECTION_STRING found")
+        print("   Please set one of these environment variables in .env")
 
 
 @app.on_event("shutdown")
@@ -199,8 +233,9 @@ async def create_or_get_agent(thread_id: str) -> str:
     
     # Create new agent
     if project_client:
+        model_name = AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME
         agent = await project_client.agents.create_agent(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
+            model=model_name,
             name="AGUIAssistant",
             instructions="You are a helpful assistant. Provide clear, accurate, and helpful responses.",
         )
