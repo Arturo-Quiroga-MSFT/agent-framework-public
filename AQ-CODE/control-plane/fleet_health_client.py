@@ -282,19 +282,22 @@ class FleetHealthClient:
             return metrics
         
         try:
-            # Kusto query for agent metrics from Application Insights
-            # Uses OpenTelemetry semantic conventions for GenAI
+            # Query AppDependencies table where OpenTelemetry GenAI spans are stored
+            # Properties is a JSON string containing gen_ai.* attributes
             query = f"""
-            traces
-            | where timestamp >= ago({time_range_hours}h)
-            | where customDimensions['gen_ai.agent.id'] == '{agent_id}' 
-               or customDimensions['gen_ai.agents.id'] == '{agent_id}'
+            AppDependencies
+            | where TimeGenerated >= ago({time_range_hours}h)
+            | where DependencyType == "GenAI | azure_ai_agents"
+            | extend props = parse_json(Properties)
+            | where props["gen_ai.agent.id"] == "{agent_id}" 
+               or props["gen_ai.agent.name"] == "{agent_id}"
             | summarize 
                 total_runs = count(),
-                successful_runs = countif(severityLevel < 3),
-                failed_runs = countif(severityLevel >= 3),
-                avg_latency = avg(todouble(customDimensions['duration_ms'])),
-                total_tokens = sum(toint(customDimensions['gen_ai.usage.total_tokens']))
+                successful_runs = countif(Success == true),
+                failed_runs = countif(Success == false),
+                avg_latency = avg(DurationMs),
+                p95_latency = percentile(DurationMs, 95),
+                total_tokens = sum(toint(props["gen_ai.usage.total_tokens"]))
             """
             
             response = self.logs_client.query_workspace(
@@ -311,19 +314,20 @@ class FleetHealthClient:
                     metrics["successful_runs"] = row[1] or 0
                     metrics["failed_runs"] = row[2] or 0
                     metrics["avg_latency_ms"] = row[3] or 0.0
-                    metrics["total_tokens"] = row[4] or 0
+                    metrics["p95_latency_ms"] = row[4] or 0.0
+                    metrics["total_tokens"] = row[5] or 0
                     
                     if metrics["total_runs"] > 0:
                         metrics["error_rate"] = metrics["failed_runs"] / metrics["total_runs"]
                         
         except Exception as e:
-            print(f"Error fetching agent metrics: {e}")
+            print(f"Error fetching agent metrics for {agent_id}: {e}")
         
         return metrics
     
     async def get_fleet_alerts(self) -> List[Dict[str, Any]]:
         """
-        Fetch active alerts from Application Insights and Defender.
+        Fetch active alerts from Application Insights.
         
         Returns:
             List of alert dictionaries
@@ -334,22 +338,21 @@ class FleetHealthClient:
             return alerts
         
         try:
-            # Query for alerts from Application Insights
+            # Query for errors and exceptions from agent runs
             query = """
-            traces
-            | where timestamp >= ago(24h)
-            | where severityLevel >= 3
-            | where customDimensions has 'gen_ai'
+            AppDependencies
+            | where TimeGenerated >= ago(24h)
+            | where DependencyType == "GenAI | azure_ai_agents"
+            | where Success == false
+            | extend props = parse_json(Properties)
             | project 
-                timestamp,
-                message,
-                severityLevel,
-                agent_id = coalesce(
-                    customDimensions['gen_ai.agent.id'],
-                    customDimensions['gen_ai.agents.id']
-                ),
-                operation_name = customDimensions['operation_name']
-            | order by timestamp desc
+                TimeGenerated,
+                Message = Name,
+                agent_id = tostring(props["gen_ai.agent.id"]),
+                agent_name = tostring(props["gen_ai.agent.name"]),
+                model = tostring(props["gen_ai.request.model"]),
+                DurationMs
+            | order by TimeGenerated desc
             | take 100
             """
             
@@ -362,19 +365,41 @@ class FleetHealthClient:
             if response.status == LogsQueryStatus.SUCCESS and response.tables:
                 table = response.tables[0]
                 for row in table.rows:
-                    severity = "low"
-                    if row[2] >= 4:
-                        severity = "critical"
-                    elif row[2] >= 3:
-                        severity = "high"
-                    
                     alerts.append({
                         "timestamp": row[0],
-                        "message": row[1],
-                        "severity": severity,
-                        "agent_id": row[3],
-                        "operation": row[4],
+                        "message": f"Agent run failed: {row[1]}",
+                        "severity": "high",
+                        "agent_id": row[2] or row[3],
+                        "agent_name": row[3],
+                        "model": row[4],
+                        "duration_ms": row[5],
                         "source": "application_insights"
+                    })
+            
+            # Also check AppExceptions
+            exc_query = """
+            AppExceptions
+            | where TimeGenerated >= ago(24h)
+            | project TimeGenerated, ExceptionType, OuterMessage, InnermostMessage
+            | order by TimeGenerated desc
+            | take 50
+            """
+            
+            exc_response = self.logs_client.query_workspace(
+                workspace_id=self.workspace_id,
+                query=exc_query,
+                timespan=timedelta(hours=24)
+            )
+            
+            if exc_response.status == LogsQueryStatus.SUCCESS and exc_response.tables:
+                table = exc_response.tables[0]
+                for row in table.rows:
+                    alerts.append({
+                        "timestamp": row[0],
+                        "message": f"{row[1]}: {row[2] or row[3]}",
+                        "severity": "critical",
+                        "agent_id": None,
+                        "source": "exceptions"
                     })
                     
         except Exception as e:
