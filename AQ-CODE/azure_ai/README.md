@@ -19,6 +19,8 @@ This folder contains examples demonstrating different ways to create and use age
 | [`azure_ai_with_multiple_tools.py`](azure_ai_with_multiple_tools.py) | Demonstrates how to use multiple tools together with Azure AI agents, including web search, MCP servers, and function tools. Shows coordinated multi-tool interactions and approval workflows. |
 | [`azure_ai_with_openapi_tools.py`](azure_ai_with_openapi_tools.py) | Demonstrates how to use OpenAPI tools with Azure AI agents to integrate external REST APIs. Shows OpenAPI specification loading, anonymous authentication, thread context management, and coordinated multi-API conversations using weather and countries APIs. |
 | [`azure_ai_with_thread.py`](azure_ai_with_thread.py) | Demonstrates thread management with Azure AI agents, including automatic thread creation for stateless conversations and explicit thread management for maintaining conversation context across multiple interactions. |
+| [`azure_ai_with_function_tools_v2.py`](azure_ai_with_function_tools_v2.py) | **V2 API** - Demonstrates function tool integration with real, functional tools (weather, time zones, currency conversion, file system). Shows agent-level, run-level, and mixed tool patterns with streaming support. |
+| [`azure_ai_with_multiple_tools_v2.py`](azure_ai_with_multiple_tools_v2.py) | **V2 API** - Combines multiple tool types: function tools (weather, news, calculations), Hosted MCP (Microsoft Learn), and Web Search (Bing). Includes user approval workflows and conversation threading. |
 
 ## DevUI Gallery (azure_agents/)
 
@@ -132,6 +134,53 @@ export BING_CONNECTION_ID="your-bing-connection-id"  # Optional, only needed for
 ### Optional Variables (for specific examples)
 
 - `BING_CONNECTION_ID`: Your Bing connection ID (required for Bing grounding examples)
-- `OPENWEATHER_API_KEY`: OpenWeatherMap API key (required for weather examples)
+- `OPENWEATHER_API_KEY`: OpenWeatherMap API key (required for weather examples) - Get free at https://openweathermap.org/api
+- `NEWS_API_KEY`: NewsAPI.org API key (for V2 news examples) - Get free at https://newsapi.org/register
 - `FILE_SEARCH_VECTOR_STORE_ID`: Vector store ID for file search RAG examples
 - `AZURE_SEARCH_INDEX_NAME`: Search index name (default: hotels-sample-index) for Azure AI Search examples
+
+## V2 API Examples (New!)
+
+The `*_v2.py` files demonstrate the **Azure AI V2 API** using `AzureAIClient` (not the legacy `AzureAIAgentClient`). These examples use **real, functional tools** that perform actual operations:
+
+### Real Tools Included:
+- ✅ **Weather**: OpenWeatherMap API integration (requires OPENWEATHER_API_KEY)
+- ✅ **News**: NewsAPI.org headlines by category (requires NEWS_API_KEY)
+- ✅ **Currency**: Live exchange rates (no API key needed)
+- ✅ **Time Zones**: Real timezone calculations with zoneinfo
+- ✅ **File System**: Safe, read-only directory listings
+- ✅ **Calculator**: Safe mathematical expression evaluation
+- ✅ **System Info**: Python version, platform details
+
+### Quick Start for V2 Examples:
+
+1. **Get API Keys** (optional but recommended):
+   ```bash
+   # OpenWeatherMap (free tier: 1,000 calls/day)
+   # Visit: https://openweathermap.org/api
+   
+   # NewsAPI (free tier: 100 requests/day)
+   # Visit: https://newsapi.org/register
+   ```
+
+2. **Add to .env**:
+   ```bash
+   OPENWEATHER_API_KEY="your_key_here"
+   NEWS_API_KEY="your_key_here"
+   ```
+
+3. **Run the examples**:
+   ```bash
+   # Function tools with real APIs
+   python azure_ai_with_function_tools_v2.py
+   
+   # Multiple tool types combined
+   python azure_ai_with_multiple_tools_v2.py
+   ```
+
+### What Makes V2 Different:
+- Uses modern `AzureAIClient` API (released Nov 2025)
+- All tools perform real operations (not fake/random data)
+- Better error handling and graceful degradation
+- Supports latest Azure AI features (versioning, structured outputs, etc.)
+- Production-ready patterns and safety features
