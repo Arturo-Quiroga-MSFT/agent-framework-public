@@ -362,7 +362,7 @@ def render_agent_inventory(summary: FleetHealthSummary):
         return
     
     # Header
-    cols = st.columns([0.5, 2, 1, 1, 1, 1, 1, 1])
+    cols = st.columns([0.5, 2, 1.2, 0.6, 1.2, 0.8, 0.8, 0.8, 0.8, 0.8])
     with cols[0]:
         st.markdown("**Status**")
     with cols[1]:
@@ -370,21 +370,25 @@ def render_agent_inventory(summary: FleetHealthSummary):
     with cols[2]:
         st.markdown("**Model**")
     with cols[3]:
-        st.markdown("**Health**")
+        st.markdown("**Ver**")
     with cols[4]:
-        st.markdown("**Runs (24h)**")
+        st.markdown("**Tools**")
     with cols[5]:
-        st.markdown("**Error Rate**")
+        st.markdown("**Health**")
     with cols[6]:
-        st.markdown("**Tokens**")
+        st.markdown("**Runs**")
     with cols[7]:
+        st.markdown("**Err%**")
+    with cols[8]:
+        st.markdown("**Tokens**")
+    with cols[9]:
         st.markdown("**Cost**")
     
     st.markdown("---")
     
     # Rows
     for agent in filtered_agents:
-        cols = st.columns([0.5, 2, 1, 1, 1, 1, 1, 1])
+        cols = st.columns([0.5, 2, 1.2, 0.6, 1.2, 0.8, 0.8, 0.8, 0.8, 0.8])
         
         with cols[0]:
             st.markdown(get_status_emoji(agent.status))
@@ -397,20 +401,27 @@ def render_agent_inventory(summary: FleetHealthSummary):
             st.markdown(f"`{agent.model}`")
         
         with cols[3]:
+            st.markdown(f"v{agent.agent_version}")
+        
+        with cols[4]:
+            tools_str = ", ".join(agent.tools) if agent.tools else "-"
+            st.markdown(f"{tools_str[:20]}" + ("..." if len(tools_str) > 20 else ""))
+        
+        with cols[5]:
             color = get_status_color(agent.status)
             st.markdown(f'<span style="color: {color}; font-weight: bold;">{agent.health_score:.0f}%</span>', unsafe_allow_html=True)
         
-        with cols[4]:
+        with cols[6]:
             st.markdown(f"{agent.total_runs:,}")
         
-        with cols[5]:
+        with cols[7]:
             error_color = "#dc3545" if agent.error_rate > 0.1 else "#ffc107" if agent.error_rate > 0.05 else "#28a745"
             st.markdown(f'<span style="color: {error_color};">{agent.error_rate*100:.1f}%</span>', unsafe_allow_html=True)
         
-        with cols[6]:
+        with cols[8]:
             st.markdown(f"{agent.total_tokens:,}")
         
-        with cols[7]:
+        with cols[9]:
             st.markdown(f"${agent.estimated_cost_usd:.4f}")
 
 
@@ -497,14 +508,18 @@ def render_agent_details(agent: AgentHealthMetrics):
     st.markdown("### Quick Actions")
     col1, col2, col3, col4 = st.columns(4)
     
+    # Build URLs for quick actions
+    app_insights_url = "https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents"
+    foundry_url = "https://ai.azure.com"
+    
     with col1:
-        st.button("📈 View Traces", disabled=True, help="Open in Application Insights")
+        st.link_button("📈 View Traces", app_insights_url, help="Open in Application Insights")
     with col2:
-        st.button("🔧 Edit Agent", disabled=True, help="Open in AI Foundry")
+        st.link_button("🔧 Edit Agent", foundry_url, help="Open in AI Foundry")
     with col3:
-        st.button("🧪 Run Evaluation", disabled=True, help="Trigger evaluation run")
+        st.button("🧪 Run Evaluation", disabled=True, help="Coming soon: Trigger evaluation run")
     with col4:
-        st.button("🛑 Block Agent", disabled=True, help="Block incoming requests")
+        st.button("🛑 Block Agent", disabled=True, help="Coming soon: Block incoming requests")
 
 
 def render_cost_analysis(summary: FleetHealthSummary):

@@ -39,13 +39,37 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
 # Azure Monitor imports (for Application Insights metrics)
-try:
-    from azure.monitor.query import LogsQueryClient, MetricsQueryClient
-    from azure.monitor.query import LogsQueryStatus
-    AZURE_MONITOR_AVAILABLE = True
-except ImportError:
-    AZURE_MONITOR_AVAILABLE = False
-    print("Warning: azure-monitor-query not installed. Install with: pip install azure-monitor-query")
+# Import lazily to avoid caching issues
+LogsQueryClient = None
+MetricsQueryClient = None
+LogsQueryStatus = None
+
+def _init_azure_monitor():
+    """Lazy initialization of Azure Monitor imports."""
+    global LogsQueryClient, MetricsQueryClient, LogsQueryStatus
+    if LogsQueryClient is None:
+        try:
+            from azure.monitor.query import LogsQueryClient as LQC
+            from azure.monitor.query import LogsQueryStatus as LQS
+            LogsQueryClient = LQC
+            LogsQueryStatus = LQS
+            # MetricsQueryClient may not exist in all versions
+            try:
+                from azure.monitor.query import MetricsQueryClient as MQC
+                MetricsQueryClient = MQC
+            except ImportError:
+                pass
+            return True
+        except ImportError as e:
+            print(f"Warning: azure-monitor-query error: {e}")
+            return False
+    return True
+
+def _is_query_success(response) -> bool:
+    """Check if a logs query response was successful."""
+    if LogsQueryStatus is None:
+        return False
+    return response.status == LogsQueryStatus.SUCCESS
 
 # Azure Resource Graph (for fleet-wide queries)
 try:
@@ -83,6 +107,9 @@ class AgentHealthMetrics:
     model: str
     status: HealthStatus
     health_score: float  # 0-100
+    
+    # Agent configuration
+    tools: List[str] = field(default_factory=list)
     
     # Performance metrics
     total_runs: int = 0
@@ -206,14 +233,14 @@ class FleetHealthClient:
     @property
     def logs_client(self):
         """Lazy initialization of Azure Monitor Logs client."""
-        if self._logs_client is None and AZURE_MONITOR_AVAILABLE:
+        if self._logs_client is None and _init_azure_monitor():
             self._logs_client = LogsQueryClient(self.credential)
         return self._logs_client
     
     @property
     def metrics_client(self):
         """Lazy initialization of Azure Monitor Metrics client."""
-        if self._metrics_client is None and AZURE_MONITOR_AVAILABLE:
+        if self._metrics_client is None and _init_azure_monitor():
             self._metrics_client = MetricsQueryClient(self.credential)
         return self._metrics_client
     
@@ -235,13 +262,33 @@ class FleetHealthClient:
         try:
             # List all agents using the SDK
             for agent in self.project_client.agents.list():
+                # Extract model from versions.latest.definition.model (V2 agents)
+                model = "unknown"
+                instructions = ""
+                tools = []
+                version = "1"
+                
+                versions = getattr(agent, 'versions', None)
+                if versions and 'latest' in versions:
+                    latest = versions['latest']
+                    definition = latest.get('definition', {})
+                    model = definition.get('model', 'unknown')
+                    instructions = definition.get('instructions', '')
+                    tools = definition.get('tools', [])
+                    version = latest.get('version', '1')
+                else:
+                    # Fallback for V1 agents
+                    model = getattr(agent, 'model', getattr(agent, 'model_id', 'unknown'))
+                    instructions = getattr(agent, 'instructions', '') or ''
+                    tools = getattr(agent, 'tools', []) or []
+                
                 agents.append({
                     "id": getattr(agent, 'id', getattr(agent, 'name', 'unknown')),
                     "name": getattr(agent, 'name', getattr(agent, 'display_name', 'Unknown Agent')),
-                    "version": getattr(agent, 'version', '1'),
-                    "model": getattr(agent, 'model', getattr(agent, 'model_id', 'unknown')),
-                    "instructions": (getattr(agent, 'instructions', '') or '')[:200],
-                    "tools": [t.type if hasattr(t, 'type') else str(t) for t in getattr(agent, 'tools', []) or []],
+                    "version": version,
+                    "model": model,
+                    "instructions": (instructions or '')[:200],
+                    "tools": [t.get('type', str(t)) if isinstance(t, dict) else (t.type if hasattr(t, 'type') else str(t)) for t in (tools or [])],
                     "created_at": getattr(agent, 'created_at', None),
                     "metadata": getattr(agent, 'metadata', {}) or {},
                     "status": "active"  # Default status
@@ -306,7 +353,7 @@ class FleetHealthClient:
                 timespan=timedelta(hours=time_range_hours)
             )
             
-            if response.status == LogsQueryStatus.SUCCESS and response.tables:
+            if _is_query_success(response) and response.tables:
                 table = response.tables[0]
                 if table.rows:
                     row = table.rows[0]
@@ -362,7 +409,7 @@ class FleetHealthClient:
                 timespan=timedelta(hours=24)
             )
             
-            if response.status == LogsQueryStatus.SUCCESS and response.tables:
+            if _is_query_success(response) and response.tables:
                 table = response.tables[0]
                 for row in table.rows:
                     alerts.append({
@@ -391,7 +438,7 @@ class FleetHealthClient:
                 timespan=timedelta(hours=24)
             )
             
-            if exc_response.status == LogsQueryStatus.SUCCESS and exc_response.tables:
+            if _is_query_success(exc_response) and exc_response.tables:
                 table = exc_response.tables[0]
                 for row in table.rows:
                     alerts.append({
@@ -434,24 +481,21 @@ class FleetHealthClient:
             return cost_data
         
         try:
-            # Query token usage and estimate costs
+            # Query token usage from AppDependencies and estimate costs
             query = f"""
-            traces
-            | where timestamp >= ago({time_range_days}d)
-            | where customDimensions has 'gen_ai.usage'
+            AppDependencies
+            | where TimeGenerated >= ago({time_range_days}d)
+            | where DependencyType == "GenAI | azure_ai_agents"
+            | extend props = parse_json(Properties)
             | extend 
-                agent_id = coalesce(
-                    customDimensions['gen_ai.agent.id'],
-                    customDimensions['gen_ai.agents.id']
-                ),
-                model = customDimensions['gen_ai.request.model'],
-                prompt_tokens = toint(customDimensions['gen_ai.usage.input_tokens']),
-                completion_tokens = toint(customDimensions['gen_ai.usage.output_tokens'])
+                agent_id = tostring(props["gen_ai.agent.id"]),
+                agent_name = tostring(props["gen_ai.agent.name"]),
+                model = tostring(props["gen_ai.request.model"]),
+                total_tokens = toint(props["gen_ai.usage.total_tokens"])
             | summarize 
-                total_prompt = sum(prompt_tokens),
-                total_completion = sum(completion_tokens)
-                by agent_id, model, bin(timestamp, 1d)
-            | order by timestamp asc
+                token_sum = sum(total_tokens)
+                by agent_id, agent_name, model, bin(TimeGenerated, 1d)
+            | order by TimeGenerated asc
             """
             
             response = self.logs_client.query_workspace(
@@ -460,36 +504,37 @@ class FleetHealthClient:
                 timespan=timedelta(days=time_range_days)
             )
             
-            if response.status == LogsQueryStatus.SUCCESS and response.tables:
+            if _is_query_success(response) and response.tables:
                 # Estimated pricing per 1K tokens (adjust based on actual model pricing)
                 pricing = {
-                    "gpt-4o": {"input": 0.005, "output": 0.015},
-                    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
-                    "gpt-4": {"input": 0.03, "output": 0.06},
-                    "default": {"input": 0.002, "output": 0.002}
+                    "gpt-4o": {"per_1k": 0.01},
+                    "gpt-4o-mini": {"per_1k": 0.0004},
+                    "gpt-4.1": {"per_1k": 0.01},
+                    "gpt-4.1-mini": {"per_1k": 0.0004},
+                    "gpt-4": {"per_1k": 0.045},
+                    "default": {"per_1k": 0.002}
                 }
                 
                 table = response.tables[0]
+                # Columns: agent_id, agent_name, model, TimeGenerated, token_sum
                 for row in table.rows:
-                    agent_id = row[0] or "unknown"
-                    model = row[1] or "default"
-                    prompt_tokens = row[2] or 0
-                    completion_tokens = row[3] or 0
+                    agent_id = row[0] or row[1] or "unknown"
+                    agent_name = row[1] or "unknown"
+                    model = row[2] or "default"
+                    # row[3] is TimeGenerated (datetime)
+                    tokens = row[4] or 0  # token_sum is the 5th column (index 4)
                     
                     # Get pricing for model
                     model_pricing = pricing.get(model, pricing["default"])
                     
                     # Calculate cost
-                    cost = (
-                        (prompt_tokens / 1000) * model_pricing["input"] +
-                        (completion_tokens / 1000) * model_pricing["output"]
-                    )
+                    cost = (tokens / 1000) * model_pricing["per_1k"]
                     
                     cost_data["total_cost_usd"] += cost
                     
-                    if agent_id not in cost_data["cost_by_agent"]:
-                        cost_data["cost_by_agent"][agent_id] = 0.0
-                    cost_data["cost_by_agent"][agent_id] += cost
+                    if agent_name not in cost_data["cost_by_agent"]:
+                        cost_data["cost_by_agent"][agent_name] = 0.0
+                    cost_data["cost_by_agent"][agent_name] += cost
                     
                     if model not in cost_data["cost_by_model"]:
                         cost_data["cost_by_model"][model] = 0.0
@@ -647,6 +692,7 @@ class FleetHealthClient:
             model=agent.get("model", "unknown"),
             status=self._get_health_status(health_score),
             health_score=health_score,
+            tools=agent.get("tools", []),
             total_runs=metrics["total_runs"],
             successful_runs=metrics["successful_runs"],
             failed_runs=metrics["failed_runs"],
