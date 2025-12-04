@@ -44,6 +44,26 @@ from azure.core.credentials import AzureKeyCredential
 
 
 # ============================================================================
+# OpenTelemetry & Observability Setup
+# ============================================================================
+
+# Try to import OpenTelemetry - gracefully degrade if not available
+TELEMETRY_ENABLED = False
+try:
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    from opentelemetry import trace
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.trace import Status, StatusCode
+    
+    TELEMETRY_ENABLED = True
+    print("✅ OpenTelemetry libraries loaded")
+except ImportError:
+    print("⚠️  OpenTelemetry not available - telemetry disabled")
+    print("   Install with: pip install -r requirements.txt")
+
+
+# ============================================================================
 # Configuration
 # ============================================================================
 
@@ -59,6 +79,9 @@ AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 # Server configuration
 SERVER_HOST = os.getenv("AGUI_SERVER_HOST", "0.0.0.0")
 SERVER_PORT = int(os.getenv("AGUI_SERVER_PORT", "5100"))
+
+# Observability configuration
+APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 
 # Project client (Azure AI Foundry) - Legacy
 PROJECT_CONNECTION_STRING = os.getenv("PROJECT_CONNECTION_STRING")
@@ -119,7 +142,7 @@ project_client: Optional[AIProjectClient] = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize Azure AI Project client on startup."""
+    """Initialize Azure AI Project client and OpenTelemetry on startup."""
     global project_client
     
     model_name = AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME
@@ -127,6 +150,27 @@ async def startup_event():
     print("🚀 Starting AG-UI Server...")
     print(f"📍 Endpoint: {AZURE_AI_PROJECT_ENDPOINT or AZURE_OPENAI_ENDPOINT}")
     print(f"🤖 Model: {model_name}")
+    
+    # Configure OpenTelemetry if enabled
+    if TELEMETRY_ENABLED and APPLICATIONINSIGHTS_CONNECTION_STRING:
+        try:
+            configure_azure_monitor(
+                connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+                enable_live_metrics=True,
+            )
+            
+            # Instrument FastAPI automatically
+            FastAPIInstrumentor.instrument_app(app)
+            
+            # Instrument httpx for outbound requests
+            HTTPXClientInstrumentor().instrument()
+            
+            print("✅ Application Insights telemetry enabled")
+            print(f"   Connection: {APPLICATIONINSIGHTS_CONNECTION_STRING[:50]}...")
+        except Exception as e:
+            print(f"⚠️  Failed to configure telemetry: {e}")
+    elif not APPLICATIONINSIGHTS_CONNECTION_STRING:
+        print("⚠️  APPLICATIONINSIGHTS_CONNECTION_STRING not set - telemetry disabled")
     
     # Initialize project client - try new endpoint format first
     if AZURE_AI_PROJECT_ENDPOINT:
@@ -269,25 +313,53 @@ async def agui_endpoint(request: AGUIRequest):
     
     Accepts messages and streams agent responses using Server-Sent Events (SSE).
     """
-    if not project_client:
-        raise HTTPException(
-            status_code=503,
-            detail="Server not properly configured. PROJECT_CONNECTION_STRING required."
-        )
+    # Create OpenTelemetry span for this request
+    tracer = trace.get_tracer(__name__) if TELEMETRY_ENABLED else None
+    span = tracer.start_span("agui.request") if tracer else None
     
-    # Generate IDs if not provided
-    thread_id = request.threadId or f"thread_{uuid.uuid4().hex[:8]}"
-    run_id = request.runId or f"run_{uuid.uuid4().hex[:8]}"
-    
-    print(f"📨 New request - Thread: {thread_id}, Run: {run_id}")
-    print(f"💬 Messages: {len(request.messages)}")
-    
-    # Create/get thread and agent
     try:
-        thread_id = await create_or_get_thread(thread_id)
-        agent_id = await create_or_get_agent(thread_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize: {str(e)}")
+        if not project_client:
+            if span:
+                span.set_status(Status(StatusCode.ERROR, "Server not configured"))
+                span.end()
+            raise HTTPException(
+                status_code=503,
+                detail="Server not properly configured. PROJECT_CONNECTION_STRING required."
+            )
+        
+        # Generate IDs if not provided
+        thread_id = request.threadId or f"thread_{uuid.uuid4().hex[:8]}"
+        run_id = request.runId or f"run_{uuid.uuid4().hex[:8]}"
+        
+        # Add span attributes (AG-UI semantic conventions)
+        if span:
+            span.set_attribute("agui.protocol.version", "1.0")
+            span.set_attribute("agui.thread.id", thread_id)
+            span.set_attribute("agui.run.id", run_id)
+            span.set_attribute("agui.messages.count", len(request.messages))
+            span.set_attribute("agui.transport", "sse")
+            user_message = next((msg.content for msg in request.messages if msg.role == "user"), "")
+            if user_message:
+                span.set_attribute("agui.user.prompt", user_message[:500])  # First 500 chars
+        
+        print(f"📨 New request - Thread: {thread_id}, Run: {run_id}")
+        print(f"💬 Messages: {len(request.messages)}")
+        
+        # Create/get thread and agent
+        try:
+            thread_id = await create_or_get_thread(thread_id)
+            agent_id = await create_or_get_agent(thread_id)
+            
+            if span:
+                span.set_attribute("gen_ai.agent.id", agent_id)
+                span.set_attribute("gen_ai.agent.name", "AG-UI Agent")
+                span.set_attribute("gen_ai.request.model", AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME)
+        except Exception as e:
+            if span:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                span.end()
+            raise HTTPException(status_code=500, detail=f"Failed to initialize: {str(e)}")
     
     # Add user messages to thread
     for msg in request.messages:
@@ -305,6 +377,10 @@ async def agui_endpoint(request: AGUIRequest):
     # Stream agent responses as SSE
     async def event_generator():
         """Generate Server-Sent Events from agent stream."""
+        total_tokens = 0
+        response_text = ""
+        start_time = datetime.utcnow()
+        
         try:
             # Send run.created event
             yield format_sse_event("thread.run.created", {
@@ -328,6 +404,7 @@ async def agui_endpoint(request: AGUIRequest):
                         if hasattr(event.data, 'delta') and hasattr(event.data.delta, 'content'):
                             for content in event.data.delta.content:
                                 if hasattr(content, 'text') and hasattr(content.text, 'value'):
+                                    response_text += content.text.value
                                     yield format_sse_event("thread.message.delta", {
                                         "thread_id": thread_id,
                                         "run_id": run_id,
@@ -345,6 +422,12 @@ async def agui_endpoint(request: AGUIRequest):
                         })
                     
                     elif event_type == "thread.run.completed":
+                        # Extract usage information if available
+                        if hasattr(event.data, 'usage'):
+                            usage = event.data.usage
+                            if hasattr(usage, 'total_tokens'):
+                                total_tokens = usage.total_tokens
+                        
                         # Run completed
                         yield format_sse_event("thread.run.completed", {
                             "thread_id": thread_id,
@@ -361,19 +444,52 @@ async def agui_endpoint(request: AGUIRequest):
                             "run_id": run_id,
                             "error": error_msg
                         })
+                        
+                        # Record error in span
+                        if span:
+                            span.set_status(Status(StatusCode.ERROR, error_msg))
                         break
             
-            print(f"✅ Run completed - Thread: {thread_id}, Run: {run_id}")
+            # Calculate duration
+            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Update span with completion metrics
+            if span:
+                span.set_attribute("agui.response.length", len(response_text))
+                span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
+                span.set_attribute("agui.duration_ms", duration_ms)
+                span.set_attribute("agui.status", "completed")
+                span.set_status(Status(StatusCode.OK))
+            
+            print(f"✅ Run completed - Thread: {thread_id}, Run: {run_id}, Tokens: {total_tokens}, Duration: {duration_ms:.0f}ms")
             
         except Exception as e:
             print(f"❌ Error in event generator: {e}")
+            
+            # Record exception in span
+            if span:
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            
             yield format_sse_event("error", {
                 "thread_id": thread_id,
                 "run_id": run_id,
                 "error": str(e)
             })
+        finally:
+            # End the span when generator completes
+            if span:
+                span.end()
     
     return EventSourceResponse(event_generator())
+    
+    except Exception as e:
+        # Handle any outer exceptions
+        if span:
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            span.end()
+        raise
 
 
 @app.get("/threads")

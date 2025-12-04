@@ -265,6 +265,12 @@ class FleetHealthClient:
         try:
             # List all agents using the SDK
             for agent in self.project_client.agents.list():
+                # Get agent name - skip if invalid
+                agent_name = getattr(agent, 'name', getattr(agent, 'display_name', None))
+                if not agent_name or agent_name in ['ONE', 'NONE', '']:
+                    # Skip agents with invalid names
+                    continue
+                
                 # Extract model from versions.latest.definition.model (V2 agents)
                 model = "unknown"
                 instructions = ""
@@ -285,9 +291,13 @@ class FleetHealthClient:
                     instructions = getattr(agent, 'instructions', '') or ''
                     tools = getattr(agent, 'tools', []) or []
                 
+                # Skip agents without a valid model
+                if model == "unknown":
+                    continue
+                
                 agents.append({
                     "id": getattr(agent, 'id', getattr(agent, 'name', 'unknown')),
-                    "name": getattr(agent, 'name', getattr(agent, 'display_name', 'Unknown Agent')),
+                    "name": agent_name,
                     "version": version,
                     "model": model,
                     "instructions": (instructions or '')[:200],
