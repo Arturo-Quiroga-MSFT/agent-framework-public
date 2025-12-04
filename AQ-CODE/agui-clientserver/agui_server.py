@@ -10,7 +10,7 @@ import asyncio
 import os
 import uuid
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -115,116 +115,75 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware for cross-origin requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ============================================================================
-# Global State
-# ============================================================================
-
-# Store active threads (in-memory for demo; use persistent storage in production)
-active_threads: Dict[str, str] = {}  # thread_id -> assistant_id
-
-# Project client instance
-project_client: Optional[AIProjectClient] = None
-
-
-# ============================================================================
-# Startup/Shutdown Events
-# ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize Azure AI Project client and OpenTelemetry on startup."""
-    global project_client
-    
-    model_name = AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME
-    
-    print("🚀 Starting AG-UI Server...")
-    print(f"📍 Endpoint: {AZURE_AI_PROJECT_ENDPOINT or AZURE_OPENAI_ENDPOINT}")
-    print(f"🤖 Model: {model_name}")
-    
-    # Configure OpenTelemetry if enabled
-    if TELEMETRY_ENABLED and APPLICATIONINSIGHTS_CONNECTION_STRING:
-        try:
-            configure_azure_monitor(
-                connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
-                enable_live_metrics=True,
-            )
-            
-            # Instrument FastAPI automatically
-            FastAPIInstrumentor.instrument_app(app)
-            
-            # Instrument httpx for outbound requests
-            HTTPXClientInstrumentor().instrument()
-            
-            print("✅ Application Insights telemetry enabled")
-            print(f"   Connection: {APPLICATIONINSIGHTS_CONNECTION_STRING[:50]}...")
-        except Exception as e:
-            print(f"⚠️  Failed to configure telemetry: {e}")
-    elif not APPLICATIONINSIGHTS_CONNECTION_STRING:
-        print("⚠️  APPLICATIONINSIGHTS_CONNECTION_STRING not set - telemetry disabled")
-    
-    # Initialize project client - try new endpoint format first
-    if AZURE_AI_PROJECT_ENDPOINT:
-        # Using Azure AI Foundry project with new endpoint format
-        credential = DefaultAzureCredential()
-        project_client = AIProjectClient(
-            endpoint=AZURE_AI_PROJECT_ENDPOINT,
-            credential=credential
-        )
-        print("✅ Connected to Azure AI Foundry project (endpoint format)")
-    elif PROJECT_CONNECTION_STRING:
-        # Using Azure AI Foundry project with legacy connection string
-        project_client = AIProjectClient.from_connection_string(
-            credential=DefaultAzureCredential(),
-            conn_str=PROJECT_CONNECTION_STRING
-        )
-        print("✅ Connected to Azure AI Foundry project (connection string)")
-    else:
-        print("⚠️  No AZURE_AI_PROJECT_ENDPOINT or PROJECT_CONNECTION_STRING found")
-        print("   Please set one of these environment variables in .env")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
-    global project_client
-    
-    print("🛑 Shutting down AG-UI Server...")
-    
-    if project_client:
-        await project_client.close()
-        print("✅ Azure AI Project client closed")
-
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
 
 def format_sse_event(event_type: str, data: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Format data as Server-Sent Event.
-    
-    Args:
-        event_type: Type of event (e.g., 'thread.run.created')
-        data: Event data
-        
-    Returns:
-        SSE-formatted event
-    """
+    """Format data as a Server-Sent Event payload."""
     import json
     return {
         "event": event_type,
         "data": json.dumps(data)
     }
+
+
+# ==========================================================================
+# Global State
+# ==========================================================================
+
+active_threads: Dict[str, str] = {}
+project_client: Optional[AIProjectClient] = None
+azure_credential: Optional[DefaultAzureCredential] = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Azure clients and telemetry."""
+    global project_client, azure_credential
+    print("⚙️  Starting AG-UI server...")
+    
+    if TELEMETRY_ENABLED and APPLICATIONINSIGHTS_CONNECTION_STRING:
+        configure_azure_monitor(
+            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+            enable_live_metrics=True
+        )
+        FastAPIInstrumentor.instrument_app(app)
+        HTTPXClientInstrumentor().instrument()
+        print("📡 Azure Monitor telemetry configured")
+    
+    try:
+        if PROJECT_CONNECTION_STRING:
+            project_client = AIProjectClient.from_connection_string(PROJECT_CONNECTION_STRING)
+            print("🔌 Connected to Azure AI Project via connection string")
+        elif AZURE_AI_PROJECT_ENDPOINT and AZURE_OPENAI_API_KEY:
+            project_client = AIProjectClient(
+                endpoint=AZURE_AI_PROJECT_ENDPOINT,
+                credential=AzureKeyCredential(AZURE_OPENAI_API_KEY)
+            )
+            print("🔐 Connected to Azure AI Project via API key")
+        elif AZURE_AI_PROJECT_ENDPOINT:
+            azure_credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+            project_client = AIProjectClient(
+                endpoint=AZURE_AI_PROJECT_ENDPOINT,
+                credential=azure_credential
+            )
+            print("🔑 Connected to Azure AI Project with DefaultAzureCredential")
+        else:
+            print("⚠️  No Azure AI configuration detected. Server will reject requests.")
+    except Exception as exc:
+        project_client = None
+        print(f"❌ Failed to initialize Azure AI Project client: {exc}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown."""
+    global project_client, azure_credential
+    print("🛑 Shutting down AG-UI server...")
+    if project_client:
+        await project_client.close()
+        project_client = None
+    if azure_credential:
+        await azure_credential.close()
+        azure_credential = None
 
 
 async def create_or_get_thread(thread_id: Optional[str]) -> str:
@@ -301,7 +260,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "active_threads": len(active_threads)
     }
 
@@ -360,129 +319,129 @@ async def agui_endpoint(request: AGUIRequest):
                 span.record_exception(e)
                 span.end()
             raise HTTPException(status_code=500, detail=f"Failed to initialize: {str(e)}")
-    
-    # Add user messages to thread
-    for msg in request.messages:
-        if msg.role == "user":
-            try:
-                await project_client.agents.create_message(
-                    thread_id=thread_id,
-                    role="user",
-                    content=msg.content
-                )
-            except Exception as e:
-                print(f"❌ Error creating message: {e}")
-                raise HTTPException(status_code=500, detail=f"Failed to create message: {str(e)}")
-    
-    # Stream agent responses as SSE
-    async def event_generator():
-        """Generate Server-Sent Events from agent stream."""
-        total_tokens = 0
-        response_text = ""
-        start_time = datetime.utcnow()
         
-        try:
-            # Send run.created event
-            yield format_sse_event("thread.run.created", {
-                "thread_id": thread_id,
-                "run_id": run_id,
-                "assistant_id": agent_id,
-                "status": "in_progress"
-            })
+        # Add user messages to thread
+        for msg in request.messages:
+            if msg.role == "user":
+                try:
+                    await project_client.agents.create_message(
+                        thread_id=thread_id,
+                        role="user",
+                        content=msg.content
+                    )
+                except Exception as e:
+                    print(f"❌ Error creating message: {e}")
+                    raise HTTPException(status_code=500, detail=f"Failed to create message: {str(e)}")
+        
+        # Stream agent responses as SSE
+        async def event_generator():
+            """Generate Server-Sent Events from agent stream."""
+            total_tokens = 0
+            response_text = ""
+            start_time = datetime.now(timezone.utc)
+        
+            try:
+                # Send run.created event
+                yield format_sse_event("thread.run.created", {
+                    "thread_id": thread_id,
+                    "run_id": run_id,
+                    "assistant_id": agent_id,
+                    "status": "in_progress"
+                })
             
-            # Stream agent responses
-            async with project_client.agents.create_stream(
-                thread_id=thread_id,
-                assistant_id=agent_id
-            ) as stream:
-                async for event in stream:
-                    event_type = event.event
+                # Stream agent responses
+                async with project_client.agents.create_stream(
+                    thread_id=thread_id,
+                    assistant_id=agent_id
+                ) as stream:
+                    async for event in stream:
+                        event_type = event.event
                     
-                    # Handle different event types
-                    if event_type == "thread.message.delta":
-                        # Text content delta
-                        if hasattr(event.data, 'delta') and hasattr(event.data.delta, 'content'):
-                            for content in event.data.delta.content:
-                                if hasattr(content, 'text') and hasattr(content.text, 'value'):
-                                    response_text += content.text.value
-                                    yield format_sse_event("thread.message.delta", {
-                                        "thread_id": thread_id,
-                                        "run_id": run_id,
-                                        "delta": {
-                                            "content": content.text.value
-                                        }
-                                    })
+                        # Handle different event types
+                        if event_type == "thread.message.delta":
+                            # Text content delta
+                            if hasattr(event.data, 'delta') and hasattr(event.data.delta, 'content'):
+                                for content in event.data.delta.content:
+                                    if hasattr(content, 'text') and hasattr(content.text, 'value'):
+                                        response_text += content.text.value
+                                        yield format_sse_event("thread.message.delta", {
+                                            "thread_id": thread_id,
+                                            "run_id": run_id,
+                                            "delta": {
+                                                "content": content.text.value
+                                            }
+                                        })
                     
-                    elif event_type == "thread.message.completed":
-                        # Message completed
-                        yield format_sse_event("thread.message.completed", {
-                            "thread_id": thread_id,
-                            "run_id": run_id,
-                            "status": "completed"
-                        })
+                        elif event_type == "thread.message.completed":
+                            # Message completed
+                            yield format_sse_event("thread.message.completed", {
+                                "thread_id": thread_id,
+                                "run_id": run_id,
+                                "status": "completed"
+                            })
                     
-                    elif event_type == "thread.run.completed":
-                        # Extract usage information if available
-                        if hasattr(event.data, 'usage'):
-                            usage = event.data.usage
-                            if hasattr(usage, 'total_tokens'):
-                                total_tokens = usage.total_tokens
+                        elif event_type == "thread.run.completed":
+                            # Extract usage information if available
+                            if hasattr(event.data, 'usage'):
+                                usage = event.data.usage
+                                if hasattr(usage, 'total_tokens'):
+                                    total_tokens = usage.total_tokens
                         
-                        # Run completed
-                        yield format_sse_event("thread.run.completed", {
-                            "thread_id": thread_id,
-                            "run_id": run_id,
-                            "status": "completed"
-                        })
-                        break
+                            # Run completed
+                            yield format_sse_event("thread.run.completed", {
+                                "thread_id": thread_id,
+                                "run_id": run_id,
+                                "status": "completed"
+                            })
+                            break
                     
-                    elif event_type == "error":
-                        # Error occurred
-                        error_msg = str(event.data) if hasattr(event, 'data') else "Unknown error"
-                        yield format_sse_event("error", {
-                            "thread_id": thread_id,
-                            "run_id": run_id,
-                            "error": error_msg
-                        })
+                        elif event_type == "error":
+                            # Error occurred
+                            error_msg = str(event.data) if hasattr(event, 'data') else "Unknown error"
+                            yield format_sse_event("error", {
+                                "thread_id": thread_id,
+                                "run_id": run_id,
+                                "error": error_msg
+                            })
                         
-                        # Record error in span
-                        if span:
-                            span.set_status(Status(StatusCode.ERROR, error_msg))
-                        break
+                            # Record error in span
+                            if span:
+                                span.set_status(Status(StatusCode.ERROR, error_msg))
+                            break
             
-            # Calculate duration
-            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+                # Calculate duration
+                duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             
-            # Update span with completion metrics
-            if span:
-                span.set_attribute("agui.response.length", len(response_text))
-                span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
-                span.set_attribute("agui.duration_ms", duration_ms)
-                span.set_attribute("agui.status", "completed")
-                span.set_status(Status(StatusCode.OK))
+                # Update span with completion metrics
+                if span:
+                    span.set_attribute("agui.response.length", len(response_text))
+                    span.set_attribute("gen_ai.usage.total_tokens", total_tokens)
+                    span.set_attribute("agui.duration_ms", duration_ms)
+                    span.set_attribute("agui.status", "completed")
+                    span.set_status(Status(StatusCode.OK))
             
-            print(f"✅ Run completed - Thread: {thread_id}, Run: {run_id}, Tokens: {total_tokens}, Duration: {duration_ms:.0f}ms")
+                print(f"✅ Run completed - Thread: {thread_id}, Run: {run_id}, Tokens: {total_tokens}, Duration: {duration_ms:.0f}ms")
             
-        except Exception as e:
-            print(f"❌ Error in event generator: {e}")
+            except Exception as e:
+                print(f"❌ Error in event generator: {e}")
             
-            # Record exception in span
-            if span:
-                span.record_exception(e)
-                span.set_status(Status(StatusCode.ERROR, str(e)))
+                # Record exception in span
+                if span:
+                    span.record_exception(e)
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
             
-            yield format_sse_event("error", {
-                "thread_id": thread_id,
-                "run_id": run_id,
-                "error": str(e)
-            })
-        finally:
-            # End the span when generator completes
-            if span:
-                span.end()
-    
-    return EventSourceResponse(event_generator())
-    
+                yield format_sse_event("error", {
+                    "thread_id": thread_id,
+                    "run_id": run_id,
+                    "error": str(e)
+                })
+            finally:
+                # End the span when generator completes
+                if span:
+                    span.end()
+        
+        return EventSourceResponse(event_generator())
+        
     except Exception as e:
         # Handle any outer exceptions
         if span:
