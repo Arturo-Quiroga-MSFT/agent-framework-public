@@ -88,7 +88,13 @@ async def fetch_fleet_data() -> Optional[FleetHealthSummary]:
         client = get_client()
         return await client.get_fleet_health_summary()
     except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"ERROR fetching fleet data: {e}")
+        print(f"Full traceback:\n{error_detail}")
         st.error(f"Error fetching fleet data: {e}")
+        with st.expander("Show error details"):
+            st.code(error_detail, language="text")
         return None
 
 
@@ -585,6 +591,162 @@ def render_compliance_status(summary: FleetHealthSummary):
             st.markdown("*Go to Compliance tab for details*")
 
 
+def render_compliance_page(summary: FleetHealthSummary):
+    """Render the full Compliance page with violations and warnings."""
+    
+    # Summary section
+    render_compliance_status(summary)
+    
+    st.markdown("---")
+    
+    # Compliance Rules Overview
+    st.markdown("### 📋 Compliance Rules")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **🔴 Critical Rules (Required):**
+        - **Instructions Required** - All agents must have a system prompt
+        - **Model Governance** - Only approved models allowed
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🟡 Warnings (Recommended):**
+        - **Content Safety** - High-risk tools should have safety instructions
+        - **Metadata** - Agents should have governance metadata
+        """)
+    
+    st.markdown("---")
+    
+    # Violations Section
+    violations = getattr(summary, 'compliance_violations', [])
+    warnings = getattr(summary, 'compliance_warnings', [])
+    
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Agents", summary.total_agents)
+    with col2:
+        st.metric("✅ Compliant", summary.compliant_agents)
+    with col3:
+        st.metric("❌ Violations", len(violations), 
+                  delta=None if len(violations) == 0 else f"{len(violations)} issues",
+                  delta_color="inverse")
+    with col4:
+        st.metric("⚠️ Warnings", len(warnings))
+    
+    st.markdown("---")
+    
+    # Violations Detail
+    if violations:
+        st.markdown("### 🔴 Policy Violations")
+        st.error(f"**{len(violations)} critical violation(s) require immediate attention**")
+        
+        for v in violations:
+            severity_color = "#dc3545" if v.get("severity") == "critical" else "#fd7e14"
+            with st.expander(f"❌ {v.get('agent_name', 'Unknown')} - {v.get('message', 'Violation')}", expanded=True):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.markdown(f"**Rule:** `{v.get('rule', 'unknown')}`")
+                    st.markdown(f"**Severity:** <span style='color: {severity_color}; font-weight: bold;'>{v.get('severity', 'unknown').upper()}</span>", unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"**Issue:** {v.get('message', 'No description')}")
+                    st.info(f"💡 **Recommendation:** {v.get('recommendation', 'Review and fix this issue')}")
+    else:
+        st.success("✅ No policy violations! All agents meet required compliance standards.")
+    
+    st.markdown("---")
+    
+    # Warnings Detail
+    if warnings:
+        st.markdown("### 🟡 Compliance Warnings")
+        st.warning(f"**{len(warnings)} warning(s) - recommended improvements**")
+        
+        # Group warnings by rule type
+        warnings_by_rule = {}
+        for w in warnings:
+            rule = w.get("rule", "other")
+            if rule not in warnings_by_rule:
+                warnings_by_rule[rule] = []
+            warnings_by_rule[rule].append(w)
+        
+        for rule, rule_warnings in warnings_by_rule.items():
+            rule_display = rule.replace("_", " ").title()
+            with st.expander(f"⚠️ {rule_display} ({len(rule_warnings)} agent{'s' if len(rule_warnings) > 1 else ''})"):
+                for w in rule_warnings:
+                    st.markdown(f"**{w.get('agent_name', 'Unknown')}**: {w.get('message', 'Warning')}")
+                
+                # Show recommendation once per rule
+                if rule_warnings:
+                    st.info(f"💡 **Recommendation:** {rule_warnings[0].get('recommendation', 'Review this configuration')}")
+    else:
+        st.info("No additional warnings. All recommended practices are followed.")
+    
+    st.markdown("---")
+    
+    # Approved Models Reference
+    st.markdown("### 📖 Model Governance Reference")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**✅ Approved Models:**")
+        st.code("""
+gpt-4o, gpt-4o-mini
+gpt-4.1, gpt-4.1-mini, gpt-4.1-nano
+gpt-5-chat, gpt-5.1-chat
+o1, o1-mini, o1-preview, o3-mini
+        """)
+    
+    with col2:
+        st.markdown("**❌ Deprecated Models:**")
+        st.markdown(f"```\ngpt-3.5-turbo, gpt-3.5-turbo-16k\ngpt-4-32k, gpt-4-vision-preview\ntext-davinci-003, text-davinci-002\n```")
+
+
+def render_tool_analytics_summary():
+    """Render tool analytics summary section."""
+    st.markdown("### 🔧 Tool Analytics")
+    
+    # Fetch tool analytics
+    analytics = fetch_tool_analytics()
+    
+    if not analytics or not analytics.get("tool_usage"):
+        st.info("No tool data available")
+        return
+    
+    # Tool usage distribution
+    tool_counts = analytics["tool_usage"]
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("**Tool Distribution:**")
+        for tool, count in sorted(tool_counts.items(), key=lambda x: -x[1])[:5]:
+            st.metric(tool.replace("_", " ").title(), f"{count} agent{'s' if count > 1 else ''}")
+    
+    with col2:
+        st.markdown("**High-Risk Tools:**")
+        high_risk = analytics.get("high_risk_tools", [])
+        if high_risk:
+            for hr in high_risk[:5]:
+                st.markdown(f"⚠️ **{hr['agent']}**: `{hr['tool']}`")
+        else:
+            st.success("No high-risk tools in use")
+
+
+def fetch_tool_analytics() -> Dict[str, Any]:
+    """Fetch tool analytics (sync wrapper)."""
+    try:
+        client = FleetHealthClient()
+        return run_async(client.get_tool_analytics())
+    except Exception as e:
+        print(f"Error fetching tool analytics: {e}")
+        return {}
+
+
 def render_agent_inventory(summary: FleetHealthSummary):
     """Render agent inventory table."""
     st.markdown("### 📋 Agent Inventory")
@@ -770,7 +932,32 @@ def render_agent_details(agent: AgentHealthMetrics):
             color="#ffc107"
         )
     
+    # Latency Breakdown
+    st.markdown("---")
+    st.markdown("### ⏱️ Latency Breakdown (24h)")
+    
+    latency_data = fetch_latency_breakdown(agent.agent_name)
+    
+    if latency_data and latency_data.get("avg_latency", 0) > 0:
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        
+        with col1:
+            st.metric("Avg", f"{latency_data['avg_latency']:.0f}ms")
+        with col2:
+            st.metric("P50", f"{latency_data['p50_latency']:.0f}ms")
+        with col3:
+            st.metric("P95", f"{latency_data['p95_latency']:.0f}ms")
+        with col4:
+            st.metric("P99", f"{latency_data['p99_latency']:.0f}ms")
+        with col5:
+            st.metric("Min", f"{latency_data['min_latency']:.0f}ms")
+        with col6:
+            st.metric("Max", f"{latency_data['max_latency']:.0f}ms")
+    else:
+        st.info("No latency data available for the last 24 hours")
+    
     # Compliance
+    st.markdown("---")
     st.markdown("### Compliance Status")
     
     if agent.compliance_status == "compliant":
@@ -889,6 +1076,16 @@ def fetch_agent_traces(agent_name: str) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"Error fetching traces: {e}")
         return []
+
+
+def fetch_latency_breakdown(agent_name: str) -> Dict[str, Any]:
+    """Fetch latency breakdown for an agent (sync wrapper)."""
+    try:
+        client = FleetHealthClient()
+        return run_async(client.get_latency_breakdown(agent_name))
+    except Exception as e:
+        print(f"Error fetching latency breakdown: {e}")
+        return {}
 
 
 def render_cost_analysis(summary: FleetHealthSummary):
@@ -1060,7 +1257,12 @@ def main():
             render_alerts_summary(summary)
         
         st.markdown("---")
-        render_compliance_status(summary)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            render_compliance_status(summary)
+        with col2:
+            render_tool_analytics_summary()
         
     elif current_page == "Agents":
         render_agent_inventory(summary)
@@ -1069,20 +1271,7 @@ def main():
         render_alerts_page(summary)
         
     elif current_page == "Compliance":
-        render_compliance_status(summary)
-        st.markdown("---")
-        
-        if summary.total_policy_violations > 0:
-            st.markdown("### Policy Violations")
-            for agent in summary.agents:
-                if agent.compliance_status != "compliant":
-                    with st.expander(f"⚠️ {agent.agent_name} - {agent.policy_violations} violation(s)"):
-                        st.markdown("**Recommended fixes:**")
-                        st.markdown("- Add comprehensive instructions/system prompt")
-                        st.markdown("- Configure appropriate tools")
-                        st.markdown("- Add metadata for governance tracking")
-        else:
-            st.success("✅ All agents are compliant!")
+        render_compliance_page(summary)
         
     elif current_page == "Cost Analysis":
         render_cost_analysis(summary)

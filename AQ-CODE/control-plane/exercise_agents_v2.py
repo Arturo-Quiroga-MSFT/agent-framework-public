@@ -11,7 +11,7 @@ visible in the Fleet Health Dashboard:
 - Latency metrics
 - Run counts
 
-AGENTS USED (7 existing agents):
+AGENTS USED (9 existing agents):
 - BasicAgent
 - WeatherAgent
 - BasicWeatherAgent
@@ -19,6 +19,8 @@ AGENTS USED (7 existing agents):
 - BingGroundingAgent
 - WebSearchAgent
 - FileSearchAgent
+- DataAnalysisAgent
+- ResearchAgent
 
 Telemetry is sent to Application Insights via OpenTelemetry.
 
@@ -106,7 +108,7 @@ class ExerciseResult:
     tokens_used: int
 
 
-# 7 existing agents to exercise (these already exist in your project)
+# 9 existing agents to exercise (these already exist in your project)
 EXISTING_AGENTS = [
     "BasicAgent",
     "WeatherAgent",
@@ -115,6 +117,8 @@ EXISTING_AGENTS = [
     "BingGroundingAgent",
     "WebSearchAgent",
     "FileSearchAgent",
+    "DataAnalysisAgent",
+    "ResearchAgent",
 ]
 
 # Prompts for exercising agents
@@ -129,6 +133,20 @@ GENERAL_PROMPTS = [
     "What year did World War II end?",
     "Name the largest planet in our solar system.",
     "What is the speed of light?",
+    "Calculate the area of a circle with radius 5.",
+    "Convert 100 degrees Fahrenheit to Celsius.",
+]
+
+# Data Analysis specific prompts
+DATA_ANALYSIS_PROMPTS = [
+    "Analyze this dataset: [12, 15, 18, 22, 25, 28, 30] - calculate mean and standard deviation.",
+    "Create a simple bar chart showing: Product A=50, Product B=75, Product C=60.",
+]
+
+# Research Agent specific prompts
+RESEARCH_PROMPTS = [
+    "What's the current weather in Seattle?",
+    "Who is the current CEO of Microsoft?",
 ]
 
 # Prompts designed to potentially fail
@@ -263,8 +281,18 @@ async def exercise_agents(
                 print(f"\n📍 Iteration {iteration + 1}/{iterations}")
             
             for agent_name in EXISTING_AGENTS:
-                # Pick random prompts for this agent
-                selected_prompts = random.sample(prompts, min(prompts_per_agent, len(prompts)))
+                # Select appropriate prompts based on agent type
+                if agent_name == "DataAnalysisAgent":
+                    # Use data analysis specific prompts + some general ones
+                    available_prompts = DATA_ANALYSIS_PROMPTS + prompts[:4]
+                    selected_prompts = random.sample(available_prompts, min(prompts_per_agent, len(available_prompts)))
+                elif agent_name == "ResearchAgent":
+                    # Use research specific prompts + some general ones
+                    available_prompts = RESEARCH_PROMPTS + prompts[:4]
+                    selected_prompts = random.sample(available_prompts, min(prompts_per_agent, len(available_prompts)))
+                else:
+                    # Use general prompts for other agents
+                    selected_prompts = random.sample(prompts, min(prompts_per_agent, len(prompts)))
                 
                 print(f"\n🤖 {agent_name} (existing)")
                 print(f"   Running {len(selected_prompts)} prompts...")

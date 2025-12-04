@@ -163,6 +163,9 @@ class FleetHealthSummary:
     compliant_agents: int = 0
     non_compliant_agents: int = 0
     total_policy_violations: int = 0
+    total_warnings: int = 0
+    compliance_violations: List[Dict[str, Any]] = field(default_factory=list)
+    compliance_warnings: List[Dict[str, Any]] = field(default_factory=list)
     
     # Alerts
     critical_alerts: int = 0
@@ -176,7 +179,6 @@ class FleetHealthSummary:
     
     # Individual agent data
     agents: List[AgentHealthMetrics] = field(default_factory=list)
-
 
 class FleetHealthClient:
     """
@@ -276,7 +278,7 @@ class FleetHealthClient:
                     model = definition.get('model', 'unknown')
                     instructions = definition.get('instructions', '')
                     tools = definition.get('tools', [])
-                    version = latest.get('version', '1')
+                    version = str(latest.get('version', '1'))  # Ensure version is string
                 else:
                     # Fallback for V1 agents
                     model = getattr(agent, 'model', getattr(agent, 'model_id', 'unknown'))
@@ -358,12 +360,12 @@ class FleetHealthClient:
                 table = response.tables[0]
                 if table.rows:
                     row = table.rows[0]
-                    metrics["total_runs"] = row[0] or 0
-                    metrics["successful_runs"] = row[1] or 0
-                    metrics["failed_runs"] = row[2] or 0
-                    metrics["avg_latency_ms"] = row[3] or 0.0
-                    metrics["p95_latency_ms"] = row[4] or 0.0
-                    metrics["total_tokens"] = row[5] or 0
+                    metrics["total_runs"] = int(row[0] or 0)
+                    metrics["successful_runs"] = int(row[1] or 0)
+                    metrics["failed_runs"] = int(row[2] or 0)
+                    metrics["avg_latency_ms"] = float(row[3] or 0.0)
+                    metrics["p95_latency_ms"] = float(row[4] or 0.0)
+                    metrics["total_tokens"] = int(row[5] or 0)
                     
                     if metrics["total_runs"] > 0:
                         metrics["error_rate"] = metrics["failed_runs"] / metrics["total_runs"]
@@ -524,6 +526,127 @@ class FleetHealthClient:
         
         return traces
 
+    async def get_tool_analytics(self, time_range_hours: int = 24) -> Dict[str, Any]:
+        """
+        Fetch tool analytics across all agents based on agent configurations.
+        
+        Args:
+            time_range_hours: Hours of historical data
+            
+        Returns:
+            Dictionary with tool analytics including:
+            - tool_usage: Agents using each tool type
+            - agents_by_tool: Which agents use which tools
+            - tools_by_agent: Which tools each agent uses
+        """
+        analytics = {
+            "tool_usage": {},  # tool_name -> count of agents
+            "agents_by_tool": {},  # tool_name -> [agent_names]
+            "tools_by_agent": {},  # agent_name -> [tool_names]
+            "high_risk_tools": []  # agents using high-risk tools
+        }
+        
+        try:
+            # Get all agents and analyze their tool configurations
+            agents = await self.get_all_agents()
+            
+            for agent in agents:
+                agent_name = agent["name"]
+                tools = agent.get("tools", [])
+                
+                analytics["tools_by_agent"][agent_name] = tools
+                
+                for tool in tools:
+                    # Count agents per tool
+                    if tool not in analytics["tool_usage"]:
+                        analytics["tool_usage"][tool] = 0
+                        analytics["agents_by_tool"][tool] = []
+                    
+                    analytics["tool_usage"][tool] += 1
+                    analytics["agents_by_tool"][tool].append(agent_name)
+                    
+                    # Track high-risk tools
+                    if tool in self.HIGH_RISK_TOOLS:
+                        analytics["high_risk_tools"].append({
+                            "agent": agent_name,
+                            "tool": tool
+                        })
+                        
+        except Exception as e:
+            print(f"Error fetching tool analytics: {e}")
+        
+        return analytics
+
+    async def get_latency_breakdown(
+        self,
+        agent_name: str,
+        time_range_hours: int = 24
+    ) -> Dict[str, Any]:
+        """
+        Fetch latency breakdown for a specific agent.
+        
+        Args:
+            agent_name: Name of the agent
+            time_range_hours: Hours of historical data
+            
+        Returns:
+            Dictionary with latency breakdown:
+            - avg_latency: Average latency
+            - p50_latency: Median latency
+            - p95_latency: P95 latency
+            - p99_latency: P99 latency
+            - min_latency: Minimum latency
+            - max_latency: Maximum latency
+        """
+        breakdown = {
+            "avg_latency": 0.0,
+            "p50_latency": 0.0,
+            "p95_latency": 0.0,
+            "p99_latency": 0.0,
+            "min_latency": 0.0,
+            "max_latency": 0.0
+        }
+        
+        if not self.logs_client or not self.workspace_id:
+            return breakdown
+        
+        try:
+            # Query for latency percentiles
+            query = f"""
+            AppDependencies
+            | where TimeGenerated >= ago({time_range_hours}h)
+            | where DependencyType == "GenAI | azure_ai_agents"
+            | extend props = parse_json(Properties)
+            | where tostring(props["gen_ai.agent.name"]) == "{agent_name}"
+            | summarize 
+                avg_latency = avg(DurationMs),
+                p50 = percentile(DurationMs, 50),
+                p95 = percentile(DurationMs, 95),
+                p99 = percentile(DurationMs, 99),
+                min_latency = min(DurationMs),
+                max_latency = max(DurationMs)
+            """
+            
+            response = self.logs_client.query_workspace(
+                workspace_id=self.workspace_id,
+                query=query,
+                timespan=timedelta(hours=time_range_hours)
+            )
+            
+            if _is_query_success(response) and response.tables and response.tables[0].rows:
+                row = response.tables[0].rows[0]
+                breakdown["avg_latency"] = float(row[0] or 0.0)
+                breakdown["p50_latency"] = float(row[1] or 0.0)
+                breakdown["p95_latency"] = float(row[2] or 0.0)
+                breakdown["p99_latency"] = float(row[3] or 0.0)
+                breakdown["min_latency"] = float(row[4] or 0.0)
+                breakdown["max_latency"] = float(row[5] or 0.0)
+                        
+        except Exception as e:
+            print(f"Error fetching latency breakdown: {e}")
+        
+        return breakdown
+
     async def get_cost_data(
         self,
         time_range_days: int = 7
@@ -615,12 +738,37 @@ class FleetHealthClient:
         
         return cost_data
     
+    # Approved models list for governance
+    APPROVED_MODELS = [
+        "gpt-4o", "gpt-4o-mini",
+        "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+        "gpt-5-chat", "gpt-5.1-chat",
+        "o1", "o1-mini", "o1-preview", "o3-mini",
+    ]
+    
+    # Deprecated/restricted models
+    DEPRECATED_MODELS = [
+        "gpt-3.5-turbo", "gpt-3.5-turbo-16k",
+        "gpt-4-32k", "gpt-4-vision-preview",
+        "text-davinci-003", "text-davinci-002",
+    ]
+    
+    # High-risk tools that require content safety review
+    HIGH_RISK_TOOLS = [
+        "code_interpreter",  # Can execute arbitrary code
+        "web_search",        # Can retrieve external content
+        "bing_grounding",    # Can retrieve external content
+    ]
+
     async def get_compliance_status(self) -> Dict[str, Any]:
         """
         Fetch compliance status for agents.
         
-        Note: Full compliance data requires Azure Policy integration.
-        This provides a basic compliance check based on guardrail configurations.
+        Checks include:
+        - Instructions/system prompt defined
+        - Model governance (approved models only)
+        - Content safety (high-risk tools flagged)
+        - Metadata for governance tracking
         
         Returns:
             Dictionary with compliance metrics
@@ -630,48 +778,120 @@ class FleetHealthClient:
             "compliant": 0,
             "non_compliant": 0,
             "violations": [],
+            "warnings": [],
             "agents_status": {}
         }
         
         try:
-            # Get all agents and check for basic compliance indicators
+            # Get all agents and check for compliance indicators
             agents = await self.get_all_agents()
             compliance["total_agents"] = len(agents)
             
             for agent in agents:
                 agent_id = agent["id"]
+                agent_name = agent["name"]
+                model = agent.get("model", "unknown")
+                tools = agent.get("tools", [])
                 
-                # Basic compliance checks
+                # Track violations (hard failures) and warnings (recommendations)
                 is_compliant = True
                 violations = []
+                warnings = []
                 
-                # Check 1: Has instructions defined
+                # ===========================================
+                # Check 1: Has instructions defined (REQUIRED)
+                # ===========================================
                 if not agent.get("instructions"):
                     is_compliant = False
-                    violations.append("Missing instructions/system prompt")
+                    violations.append({
+                        "rule": "missing_instructions",
+                        "severity": "critical",
+                        "message": "Missing instructions/system prompt",
+                        "recommendation": "Add clear instructions to define agent behavior and boundaries"
+                    })
                 
-                # Check 2: Has metadata for tracking
+                # ===========================================
+                # Check 2: Model Governance (REQUIRED)
+                # ===========================================
+                model_lower = model.lower() if model else ""
+                
+                # Check for deprecated models
+                if any(dep in model_lower for dep in [m.lower() for m in self.DEPRECATED_MODELS]):
+                    is_compliant = False
+                    violations.append({
+                        "rule": "deprecated_model",
+                        "severity": "critical",
+                        "message": f"Using deprecated model: {model}",
+                        "recommendation": "Migrate to an approved model (gpt-4o, gpt-4.1, gpt-5-chat, etc.)"
+                    })
+                # Check for unapproved models
+                elif not any(approved in model_lower for approved in [m.lower() for m in self.APPROVED_MODELS]):
+                    warnings.append({
+                        "rule": "unapproved_model",
+                        "severity": "medium",
+                        "message": f"Using non-standard model: {model}",
+                        "recommendation": "Consider using an officially approved model for production"
+                    })
+                
+                # ===========================================
+                # Check 3: Content Safety - High-risk tools
+                # ===========================================
+                high_risk_tools_used = [t for t in tools if t in self.HIGH_RISK_TOOLS]
+                
+                if high_risk_tools_used:
+                    # Check if instructions mention safety/boundaries
+                    instructions = agent.get("instructions", "").lower()
+                    safety_keywords = ["safe", "security", "restrict", "forbidden", "not allowed", 
+                                      "do not", "must not", "refuse", "harmful", "appropriate"]
+                    has_safety_instructions = any(kw in instructions for kw in safety_keywords)
+                    
+                    if not has_safety_instructions:
+                        warnings.append({
+                            "rule": "high_risk_tools_no_safety",
+                            "severity": "high",
+                            "message": f"High-risk tools ({', '.join(high_risk_tools_used)}) without explicit safety instructions",
+                            "recommendation": "Add safety guidelines in instructions for tools that can execute code or access external content"
+                        })
+                
+                # ===========================================
+                # Check 4: Metadata for governance (WARNING)
+                # ===========================================
                 if not agent.get("metadata"):
-                    violations.append("Missing metadata (recommended for governance)")
+                    warnings.append({
+                        "rule": "missing_metadata",
+                        "severity": "low",
+                        "message": "Missing metadata for governance tracking",
+                        "recommendation": "Add metadata (owner, team, environment, etc.) for better governance"
+                    })
                 
-                # Check 3: Tools configured
-                if not agent.get("tools"):
-                    violations.append("No tools configured")
-                
+                # Store agent status
                 compliance["agents_status"][agent_id] = {
-                    "name": agent["name"],
+                    "name": agent_name,
+                    "model": model,
+                    "tools": tools,
                     "compliant": is_compliant,
-                    "violations": violations
+                    "violations": violations,
+                    "warnings": warnings
                 }
                 
                 if is_compliant:
                     compliance["compliant"] += 1
                 else:
                     compliance["non_compliant"] += 1
-                    compliance["violations"].extend([
-                        {"agent_id": agent_id, "agent_name": agent["name"], "violation": v}
-                        for v in violations
-                    ])
+                
+                # Add to global lists
+                for v in violations:
+                    compliance["violations"].append({
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
+                        **v
+                    })
+                for w in warnings:
+                    compliance["warnings"].append({
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
+                        **w
+                    })
                     
         except Exception as e:
             print(f"Error checking compliance: {e}")
@@ -816,6 +1036,9 @@ class FleetHealthClient:
         summary.compliant_agents = compliance["compliant"]
         summary.non_compliant_agents = compliance["non_compliant"]
         summary.total_policy_violations = len(compliance["violations"])
+        summary.total_warnings = len(compliance.get("warnings", []))
+        summary.compliance_violations = compliance["violations"]
+        summary.compliance_warnings = compliance.get("warnings", [])
         
         # Process each agent
         total_health_score = 0.0
