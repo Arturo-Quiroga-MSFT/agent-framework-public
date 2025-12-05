@@ -394,7 +394,71 @@ Agent Identity Blueprint (1:N)
 └──────────────────┘
 ```
 
-## 6. Agent Identity in the Registry
+## 6. Azure AI Foundry: Identity Creation Pattern
+
+When you publish an agent in **Azure AI Foundry**, the platform automatically provisions service principal identities in Microsoft Entra ID.
+
+### Key Discovery: Dual Identity Creation
+
+Publishing a single agent creates **two service principals**:
+
+```
+Agent Publishing Event
+├── Service Principal 1 (Infrastructure) - Platform internal use
+└── Service Principal 2 (Agent Identity) - Your agent's identity ⭐
+```
+
+### Identity Naming Convention
+
+Azure AI Foundry identities follow this naming pattern:
+```
+{foundry-resource-name}/agents/{agent-name}
+```
+
+Examples:
+- `aq-ai-foundry-Sweden-Central/agents/WebSearchAgent`
+- `aq-ai-foundry-Sweden-Central/agents/DataAnalysisAgent`
+
+### Identification Algorithm
+
+When multiple agents are published, their identities can be correlated using the **"every 2nd identity"** pattern:
+
+1. Query all service principals with the Foundry resource prefix
+2. Sort by `createdDateTime` ascending
+3. Extract every 2nd identity (index 1, 3, 5, 7...) - these are the agent identities
+4. Match with agents in publish order
+
+```python
+# Simplified algorithm
+all_identities = get_identities_sorted_by_creation_time()
+agent_identities = [all_identities[i] for i in range(1, len(all_identities), 2)]
+# agent_identities[0] = first published agent
+# agent_identities[1] = second published agent
+# ...
+```
+
+### Example: Published Agents Mapping
+
+| Publish Order | Agent Name | Object ID |
+|---------------|------------|-----------|
+| 1 | WebSearchAgent | `38c14420-a914-4370-a0f8-1b014598c1d0` |
+| 2 | BasicWeatherAgent | `966ccc07-512a-4698-bafb-4d5686973d27` |
+| 3 | ResearchAgent | `9350dda6-b732-4b1c-a111-c5d8c4ffc64a` |
+| 4 | DataAnalysisAgent | `a3be091d-da7b-4696-b0f6-b7f41f5cca84` |
+| 5 | CodeInterpreterAgent | `d73547cc-9f5f-4de5-8f3b-97e14f882016` |
+
+### Automation Tool
+
+The [auto_mapper.py](scripts/auto_mapper.py) script automates this mapping process:
+
+```bash
+cd MICROSOFT-ENTRA-AGENT-ID/scripts
+python auto_mapper.py
+```
+
+See [scripts/README.md](scripts/README.md) for detailed documentation.
+
+## 7. Agent Identity in the Registry
 
 Agent identities are registered in the **Agent Registry** with rich metadata:
 
@@ -442,8 +506,9 @@ Agent identities are registered in the **Agent Registry** with rich metadata:
 1. **Agent Identity**: The fundamental identity construct (1:1 with agent instances)
 2. **Blueprint**: Reusable template for deploying multiple agents (1:N)
 3. **Agent User**: Enables user context preservation in delegated scenarios
-4. **Lifecycle**: Managed through standard Entra governance workflows
-5. **Registry**: Provides discoverability and metadata management
+5. **Lifecycle**: Managed through standard Entra governance workflows
+6. **Azure AI Foundry Pattern**: Dual identity creation when publishing agents
+7. **Registry**: Provides discoverability and metadata management
 
 ## Best Practices
 

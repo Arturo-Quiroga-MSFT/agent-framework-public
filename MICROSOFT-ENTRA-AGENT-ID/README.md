@@ -101,7 +101,70 @@ Examples and sample implementations are located in:
   - `azure-foundry/` - Azure AI Foundry integration
   - `dbms-assistant/` - Database agent with identity
 
-## 🔒 Security Considerations
+- **[scripts/](scripts/)** - Utility scripts for agent identity management
+  - `auto_mapper.py` - **Automatic agent-to-identity mapping** ⭐
+  - `agent_identity_mapping_complete.json` - Verified mapping for 9 agents
+  - See [scripts/README.md](scripts/README.md) for full documentation
+
+## 🔧 Agent Identity Mapping Tool
+
+The `auto_mapper.py` script automatically maps Azure AI Foundry agents to their Entra ID identities:
+
+```bash
+cd MICROSOFT-ENTRA-AGENT-ID/scripts
+python auto_mapper.py
+```
+
+**Key Discovery**: When you publish an agent in Azure AI Foundry, it creates **2 service principals** in Entra ID. The script extracts every 2nd identity (the actual agent identity) and correlates them with your published agents.
+
+### Current Verified Mapping (December 4, 2025)
+
+| Agent | Object ID |
+|-------|-----------|
+| WebSearchAgent | `38c14420-a914-4370-a0f8-1b014598c1d0` |
+| BasicWeatherAgent | `966ccc07-512a-4698-bafb-4d5686973d27` |
+| ResearchAgent | `9350dda6-b732-4b1c-a111-c5d8c4ffc64a` |
+| DataAnalysisAgent | `a3be091d-da7b-4696-b0f6-b7f41f5cca84` |
+| CodeInterpreterAgent | `d73547cc-9f5f-4de5-8f3b-97e14f882016` |
+| FileSearchAgent | `0e1584e6-f309-4e4b-9909-3200e3bca7a5` |
+| BasicAgent | `bde46d80-de73-4bd9-9416-4515799ae72d` |
+| WeatherAgent | `ff55957a-bbf1-4be8-9e41-0046b2b2494c` |
+| BingGroundingAgent | `420c8552-5d64-4c44-869c-037ad07ef351` |
+
+## � Technical Discovery: Identity Creation Pattern
+
+When you **publish** an agent in Azure AI Foundry, the platform creates **2 service principals** in Entra ID:
+
+1. **Infrastructure identity** (odd index when sorted by creation time) - Used internally by the platform
+2. **Agent identity** (even index) - The actual identity for your agent ⭐
+
+This is why `auto_mapper.py` extracts every 2nd identity when correlating agents to their Entra ID Object IDs.
+
+### Identity Naming Convention
+
+All Foundry agent identities follow this pattern:
+```
+{foundry-resource-name}/agents/{agent-name}
+```
+Example: `aq-ai-foundry-Sweden-Central/agents/WebSearchAgent`
+
+### Practical RBAC Workflow
+
+1. **Publish agents** in Azure AI Foundry (note the order you publish them)
+2. **Run auto_mapper.py** to extract identities
+3. **Apply RBAC** using generated commands
+4. **Use Object IDs** for fine-grained access control
+
+```bash
+# Example: Grant agent access to Cosmos DB
+az role assignment create \
+    --role "Cosmos DB Built-in Data Contributor" \
+    --assignee-object-id 38c14420-a914-4370-a0f8-1b014598c1d0 \
+    --assignee-principal-type ServicePrincipal \
+    --scope /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.DocumentDB/databaseAccounts/{account}
+```
+
+## �🔒 Security Considerations
 
 Microsoft Entra Agent ID implements **Zero Trust** principles:
 - ✅ Identity verification required before any access
@@ -185,6 +248,7 @@ When adding new documentation or examples:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | December 4, 2025 | Added auto_mapper.py tool, identity creation pattern discovery, verified mapping for 9 agents |
 | 1.0 | December 4, 2025 | Initial documentation structure |
 
 ---

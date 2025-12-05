@@ -445,6 +445,59 @@ scopes = [
 - Assign owner-level permissions
 - Skip permission documentation
 
+## Azure Service Token Audiences
+
+When acquiring tokens for Azure services, use the correct audience for each service:
+
+### Common Azure Service Audiences
+
+| Service | Audience/Scope |
+|---------|----------------|
+| **Microsoft Graph** | `https://graph.microsoft.com/.default` |
+| **Azure AI Foundry** | `https://ai.azure.com/.default` |
+| **Azure Cognitive Services** | `https://cognitiveservices.azure.com/.default` |
+| **Azure Storage** | `https://storage.azure.com/.default` |
+| **Azure Key Vault** | `https://vault.azure.net/.default` |
+| **Azure Cosmos DB** | `https://cosmos.azure.com/.default` |
+| **Azure Resource Management** | `https://management.azure.com/.default` |
+
+### Example: Acquiring Tokens for Multiple Services
+
+```python
+from azure.identity import DefaultAzureCredential
+
+credential = DefaultAzureCredential()
+
+# Token for Microsoft Graph API (list service principals)
+graph_token = credential.get_token("https://graph.microsoft.com/.default")
+
+# Token for Azure AI Foundry (list agents)
+foundry_token = credential.get_token("https://ai.azure.com/.default")
+
+# Token for Azure Storage (read blobs)
+storage_token = credential.get_token("https://storage.azure.com/.default")
+```
+
+### Azure AI Foundry SDK Alternative
+
+Instead of manually acquiring tokens, use the Azure AI Projects SDK:
+
+```python
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+# SDK handles token acquisition automatically
+client = AIProjectClient(
+    credential=DefaultAzureCredential(),
+    endpoint="https://your-foundry-resource.services.ai.azure.com/api/projects/yourProject"
+)
+
+# List agents - SDK uses correct token audience internally
+agents = client.agents.list()
+for agent in agents:
+    print(f"Agent: {agent.name}, ID: {agent.id}")
+```
+
 ## Token Validation
 
 ### Validating Access Tokens
