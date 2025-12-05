@@ -263,8 +263,11 @@ class FleetHealthClient:
         """
         agents = []
         try:
-            # List all agents using the SDK
-            for agent in self.project_client.agents.list():
+            # List all agents using the SDK - use list_agents() method
+            agent_list = self.project_client.agents.list_agents()
+            
+            # The response might be paginated, iterate through all pages
+            for agent in agent_list:
                 # Get agent name - skip if invalid
                 agent_name = getattr(agent, 'name', getattr(agent, 'display_name', None))
                 if not agent_name or agent_name in ['ONE', 'NONE', '']:

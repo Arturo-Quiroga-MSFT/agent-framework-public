@@ -24,7 +24,11 @@ azure-mgmt-resourcegraph>=8.0.0
 # Streamlit - web dashboard
 streamlit>=1.30.0
 
-# Plotly - interactive charts
+# Dash - sophisticated web dashboard (alternative to Streamlit)
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
+
+# Plotly - interactive charts (used by both Streamlit and Dash)
 plotly>=5.18.0
 
 # =============================================================================

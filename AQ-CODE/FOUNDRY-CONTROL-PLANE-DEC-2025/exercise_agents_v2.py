@@ -2,25 +2,26 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Agent Exercise Script V2 - Uses EXISTING agents (no new agents created)
+Agent Exercise Script V2 - Exercises all 10 agents in your fleet
 
-This script runs prompts against existing agents to generate telemetry data
+This script runs prompts against all agents to generate telemetry data
 visible in the Fleet Health Dashboard:
 - Success/failure rates
 - Token usage and costs
 - Latency metrics
 - Run counts
 
-AGENTS USED (9 existing agents):
-- BasicAgent
-- WeatherAgent
-- BasicWeatherAgent
-- CodeInterpreterAgent
-- BingGroundingAgent
-- WebSearchAgent
-- FileSearchAgent
-- DataAnalysisAgent
-- ResearchAgent
+AGENTS USED (10 agents total):
+- BingSearchAgent (existing)
+- CodeInterpreterAgent (existing)
+- DataAnalysisAgent (new)
+- ResearchAgent (new)
+- CustomerSupportAgent (new)
+- FinancialAnalystAgent (new)
+- TechnicalWriterAgent (new)
+- HRAssistantAgent (new)
+- MarketingStrategistAgent (new)
+- ProjectManagerAgent (new)
 
 Telemetry is sent to Application Insights via OpenTelemetry.
 
@@ -32,6 +33,7 @@ USAGE:
 PREREQUISITES:
     - Azure CLI authenticated: az login
     - .env file configured
+    - Run deploy_new_agents.py first to create the 8 new agents
 """
 
 import os
@@ -108,20 +110,23 @@ class ExerciseResult:
     tokens_used: int
 
 
-# 9 existing agents to exercise (these already exist in your project)
+# 10 agents to exercise (2 existing + 8 newly created)
 EXISTING_AGENTS = [
-    "BasicAgent",
-    "WeatherAgent",
-    "BasicWeatherAgent",
+    # Original existing agents
+    "BingSearchAgent",
     "CodeInterpreterAgent",
-    "BingGroundingAgent",
-    "WebSearchAgent",
-    "FileSearchAgent",
+    # Newly created agents
     "DataAnalysisAgent",
     "ResearchAgent",
+    "CustomerSupportAgent",
+    "FinancialAnalystAgent",
+    "TechnicalWriterAgent",
+    "HRAssistantAgent",
+    "MarketingStrategistAgent",
+    "ProjectManagerAgent",
 ]
 
-# Prompts for exercising agents
+# Prompts for exercising agents - general purpose
 GENERAL_PROMPTS = [
     "Hello! What can you help me with?",
     "Give me a brief summary of your capabilities.",
@@ -141,12 +146,63 @@ GENERAL_PROMPTS = [
 DATA_ANALYSIS_PROMPTS = [
     "Analyze this dataset: [12, 15, 18, 22, 25, 28, 30] - calculate mean and standard deviation.",
     "Create a simple bar chart showing: Product A=50, Product B=75, Product C=60.",
+    "What statistical test should I use to compare two groups?",
+    "Explain the difference between correlation and causation.",
 ]
 
 # Research Agent specific prompts
 RESEARCH_PROMPTS = [
-    "What's the current weather in Seattle?",
-    "Who is the current CEO of Microsoft?",
+    "Summarize the key benefits of cloud computing.",
+    "What are the main differences between REST and GraphQL?",
+    "List 5 best practices for API design.",
+]
+
+# Customer Support specific prompts
+CUSTOMER_SUPPORT_PROMPTS = [
+    "How do I reset my password?",
+    "I'm having trouble logging into my account.",
+    "What are your business hours?",
+    "I'd like to request a refund.",
+]
+
+# Financial Analyst specific prompts
+FINANCIAL_PROMPTS = [
+    "Calculate the ROI for an investment of $10,000 that returns $12,500 after one year.",
+    "What is EBITDA and why is it important?",
+    "Explain the difference between gross margin and net margin.",
+    "Calculate the compound interest on $5,000 at 5% for 3 years.",
+]
+
+# Technical Writer specific prompts
+TECHNICAL_WRITER_PROMPTS = [
+    "Write a brief README introduction for a Python library.",
+    "What are the key sections of good API documentation?",
+    "How should I document a REST endpoint?",
+    "Write a brief changelog entry for a bug fix.",
+]
+
+# HR Assistant specific prompts
+HR_PROMPTS = [
+    "What is the company's PTO policy?",
+    "How do I enroll in benefits?",
+    "What's the process for requesting time off?",
+    "Who do I contact about payroll questions?",
+]
+
+# Marketing Strategist specific prompts
+MARKETING_PROMPTS = [
+    "Suggest 3 content ideas for a B2B software blog.",
+    "What are the key metrics for measuring social media success?",
+    "How should I structure an A/B test for email subject lines?",
+    "What's the difference between SEO and SEM?",
+]
+
+# Project Manager specific prompts
+PROJECT_MANAGER_PROMPTS = [
+    "Create a simple project timeline for a 3-month software project.",
+    "What should be included in a project kickoff meeting?",
+    "How do I handle scope creep?",
+    "What's the difference between Agile and Waterfall?",
 ]
 
 # Prompts designed to potentially fail
@@ -254,7 +310,7 @@ async def exercise_agents(
         delay_between_calls: Seconds to wait between API calls
         prompts_per_agent: Number of prompts per agent per iteration
     """
-    print(f"\n🏋️ Exercising {len(EXISTING_AGENTS)} EXISTING agents for {iterations} iteration(s)")
+    print(f"\n🏋️ Exercising {len(EXISTING_AGENTS)} agents in your fleet for {iterations} iteration(s)")
     print(f"   Agents: {', '.join(EXISTING_AGENTS)}")
     print("=" * 70)
     
@@ -283,16 +339,39 @@ async def exercise_agents(
             for agent_name in EXISTING_AGENTS:
                 # Select appropriate prompts based on agent type
                 if agent_name == "DataAnalysisAgent":
-                    # Use data analysis specific prompts + some general ones
-                    available_prompts = DATA_ANALYSIS_PROMPTS + prompts[:4]
-                    selected_prompts = random.sample(available_prompts, min(prompts_per_agent, len(available_prompts)))
+                    available_prompts = DATA_ANALYSIS_PROMPTS + prompts[:3]
                 elif agent_name == "ResearchAgent":
-                    # Use research specific prompts + some general ones
-                    available_prompts = RESEARCH_PROMPTS + prompts[:4]
-                    selected_prompts = random.sample(available_prompts, min(prompts_per_agent, len(available_prompts)))
+                    available_prompts = RESEARCH_PROMPTS + prompts[:3]
+                elif agent_name == "CustomerSupportAgent":
+                    available_prompts = CUSTOMER_SUPPORT_PROMPTS + prompts[:2]
+                elif agent_name == "FinancialAnalystAgent":
+                    available_prompts = FINANCIAL_PROMPTS + prompts[:2]
+                elif agent_name == "TechnicalWriterAgent":
+                    available_prompts = TECHNICAL_WRITER_PROMPTS + prompts[:2]
+                elif agent_name == "HRAssistantAgent":
+                    available_prompts = HR_PROMPTS + prompts[:2]
+                elif agent_name == "MarketingStrategistAgent":
+                    available_prompts = MARKETING_PROMPTS + prompts[:2]
+                elif agent_name == "ProjectManagerAgent":
+                    available_prompts = PROJECT_MANAGER_PROMPTS + prompts[:2]
+                elif agent_name == "CodeInterpreterAgent":
+                    # Code-focused prompts
+                    available_prompts = [
+                        "Calculate the factorial of 10.",
+                        "Generate a list of the first 10 Fibonacci numbers.",
+                        "What is 15% of 250?",
+                    ] + prompts[:2]
+                elif agent_name == "BingSearchAgent":
+                    # Search-focused prompts
+                    available_prompts = [
+                        "What are the latest tech news headlines?",
+                        "Find information about Azure AI services.",
+                    ] + prompts[:2]
                 else:
                     # Use general prompts for other agents
-                    selected_prompts = random.sample(prompts, min(prompts_per_agent, len(prompts)))
+                    available_prompts = prompts
+                
+                selected_prompts = random.sample(available_prompts, min(prompts_per_agent, len(available_prompts)))
                 
                 print(f"\n🤖 {agent_name} (existing)")
                 print(f"   Running {len(selected_prompts)} prompts...")
@@ -322,7 +401,7 @@ async def exercise_agents(
     print("\n" + "=" * 70)
     print("📊 EXERCISE SUMMARY")
     print("=" * 70)
-    print(f"   Agents exercised: {len(EXISTING_AGENTS)} (EXISTING - no new agents created)")
+    print(f"   Agents exercised: {len(EXISTING_AGENTS)} (your full fleet)")
     print(f"   Total calls:      {total_calls}")
     print(f"   Successful:       {successful_calls}")
     print(f"   Failed:           {total_calls - successful_calls}")
@@ -339,7 +418,7 @@ async def exercise_agents(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Exercise EXISTING AI agents to generate metrics (no new agents created)"
+        description="Exercise all 10 AI agents in your fleet to generate metrics"
     )
     parser.add_argument(
         "--iterations", 
@@ -374,7 +453,7 @@ def main():
         print("   Make sure your .env file is configured")
         return
     
-    print("🎛️ Agent Exercise Script V2 (using EXISTING agents)")
+    print("🎛️ Agent Exercise Script V2 (exercising all 10 fleet agents)")
     print(f"   Endpoint: {endpoint[:50]}...")
     
     # Run exercise
