@@ -1,0 +1,69 @@
+{
+  "generated_at": "2025-12-04T19:12:02.593651",
+  "mapping_method": "automatic_publish_order_correlation",
+  "agents": [
+    {
+      "agent_name": "WebSearchAgent",
+      "object_id": "38c14420-a914-4370-a0f8-1b014598c1d0",
+      "identity_created": "2025-12-04T21:29:49Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BasicWeatherAgent",
+      "object_id": "966ccc07-512a-4698-bafb-4d5686973d27",
+      "identity_created": "2025-12-04T21:31:45Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "ResearchAgent",
+      "object_id": "9350dda6-b732-4b1c-a111-c5d8c4ffc64a",
+      "identity_created": "2025-12-04T21:37:14Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "DataAnalysisAgent",
+      "object_id": "a3be091d-da7b-4696-b0f6-b7f41f5cca84",
+      "identity_created": "2025-12-04T21:37:38Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "CodeInterpreterAgent",
+      "object_id": "d73547cc-9f5f-4de5-8f3b-97e14f882016",
+      "identity_created": "2025-12-04T21:37:59Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "FileSearchAgent",
+      "object_id": "0e1584e6-f309-4e4b-9909-3200e3bca7a5",
+      "identity_created": "2025-12-04T21:38:30Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BasicAgent",
+      "object_id": "bde46d80-de73-4bd9-9416-4515799ae72d",
+      "identity_created": "2025-12-04T21:38:50Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "WeatherAgent",
+      "object_id": "ff55957a-bbf1-4be8-9e41-0046b2b2494c",
+      "identity_created": "2025-12-04T21:39:13Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BingGroundingAgent",
+      "object_id": "420c8552-5d64-4c44-869c-037ad07ef351",
+      "identity_created": "2025-12-04T21:39:28Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "generated_at": "2025-12-04T18:45:37.119390",
+  "mapping_method": "automatic_timestamp_correlation",
+  "workspace": {
+    "subscription_id": "7a28b21e-0d3e-4435-a686-d92889d4ee96",
+    "resource_group": "ai-foundry-rg",
+    "workspace_name": "aq-ai-foundry-Sweden-Central"
+  },
+  "agents": [
+    {
+      "agent_name": "WebSearchAgent",
+      "agent_id": "WebSearchAgent",
+      "object_id": "80b14aa6-5c71-44b8-a40c-6a1979c0c5e4",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentityBlueprint",
+      "identity_created": "2025-11-18T17:51:34Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BasicWeatherAgent",
+      "agent_id": "BasicWeatherAgent",
+      "object_id": "92df62aa-fdf0-40d0-807a-a0c2a0344c14",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentity",
+      "identity_created": "2025-11-18T17:52:06Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "ResearchAgent",
+      "agent_id": "ResearchAgent",
+      "object_id": "572ae8df-2c9b-4d17-96e9-4ae90a47f0f8",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentityBlueprint",
+      "identity_created": "2025-12-04T21:29:31Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "ONE",
+      "agent_id": "ONE",
+      "object_id": "38c14420-a914-4370-a0f8-1b014598c1d0",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentity",
+      "identity_created": "2025-12-04T21:29:49Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "DataAnalysisAgent",
+      "agent_id": "DataAnalysisAgent",
+      "object_id": "12cc612a-12c1-42fb-a280-bc553bb9bc9d",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentityBlueprint",
+      "identity_created": "2025-12-04T21:31:41Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "CodeInterpreterAgent",
+      "agent_id": "CodeInterpreterAgent",
+      "object_id": "966ccc07-512a-4698-bafb-4d5686973d27",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentity",
+      "identity_created": "2025-12-04T21:31:45Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "FileSearchAgent",
+      "agent_id": "FileSearchAgent",
+      "object_id": "d61f8b42-983e-4f17-bba0-5aa47ec704b1",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentityBlueprint",
+      "identity_created": "2025-12-04T21:36:55Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BasicAgent",
+      "agent_id": "BasicAgent",
+      "object_id": "9350dda6-b732-4b1c-a111-c5d8c4ffc64a",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentity",
+      "identity_created": "2025-12-04T21:37:14Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "WeatherAgent",
+      "agent_id": "WeatherAgent",
+      "object_id": "44fd75be-6a00-493d-a1c6-204e2e4e6881",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentityBlueprint",
+      "identity_created": "2025-12-04T21:37:34Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    },
+    {
+      "agent_name": "BingGroundingAgent",
+      "agent_id": "BingGroundingAgent",
+      "object_id": "a3be091d-da7b-4696-b0f6-b7f41f5cca84",
+      "identity_display_name": "aq-ai-foundry-Sweden-Central-firstProject-AgentIdentity",
+      "identity_created": "2025-12-04T21:37:38Z",
+      "status": "Published with Identity",
+      "confidence": "High"
+    }
+  ]
+}

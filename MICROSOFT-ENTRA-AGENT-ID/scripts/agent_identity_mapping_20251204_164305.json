@@ -1,0 +1,96 @@
+{
+  "generated_at": "2025-12-04T16:43:05.761622",
+  "shared_project_identity": null,
+  "agents": [
+    {
+      "agent_name": "WebSearchAgent",
+      "agent_id": "WebSearchAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "BasicWeatherAgent",
+      "agent_id": "BasicWeatherAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "ResearchAgent",
+      "agent_id": "ResearchAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "ONE",
+      "agent_id": "ONE",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "DataAnalysisAgent",
+      "agent_id": "DataAnalysisAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "CodeInterpreterAgent",
+      "agent_id": "CodeInterpreterAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "FileSearchAgent",
+      "agent_id": "FileSearchAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "BasicAgent",
+      "agent_id": "BasicAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "WeatherAgent",
+      "agent_id": "WeatherAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    },
+    {
+      "agent_name": "BingGroundingAgent",
+      "agent_id": "BingGroundingAgent",
+      "model": "N/A",
+      "created_at": "N/A",
+      "agent_identity_id": null,
+      "object_id": null,
+      "status": "Draft (Shared Identity)"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "generated_at": "2025-12-04T16:50:00.000000",
+  "mapping_method": "visual_correlation_diagonal",
+  "description": "Agent identities mapped by correlating Entra ID portal (reverse order) with Foundry portal agent list",
+  "agents": [
+    {
+      "agent_name": "WebSearchAgent",
+      "object_id": "38c14420-a914-4370-a0f8-1b014598c1d0",
+      "status": "Published with Identity",
+      "created": "2025-12-04, 11:42:35 a.m.",
+      "version": "7"
+    },
+    {
+      "agent_name": "BasicWeatherAgent",
+      "object_id": "966ccc07-512a-4698-bafb-4d5686973d27",
+      "status": "Published with Identity",
+      "created": "2025-12-04, 11:39:33 a.m.",
+      "version": "10"
+    },
+    {
+      "agent_name": "ResearchAgent",
+      "object_id": "9350dda6-b732-4b1c-a111-c5d8c4ffc64a",
+      "status": "Published with Identity",
+      "created": "2025-12-04, 11:38:59 a.m.",
+      "version": "3"
+    },
+    {
+      "agent_name": "DataAnalysisAgent",
+      "object_id": "a3be091d-da7b-4696-b0f6-b7f41f5cca84",
+      "status": "Published with Identity",
+      "created": "2025-12-04, 9:02:48 a.m.",
+      "version": "2"
+    },
+    {
+      "agent_name": "CodeInterpreterAgent",
+      "object_id": "d73547cc-9f5f-4de5-8f3b-97e14f882016",
+      "status": "Published with Identity",
+      "created": "2025-12-03, 2:38:41 p.m.",
+      "version": "3"
+    },
+    {
+      "agent_name": "FileSearchAgent",
+      "object_id": "0e1584e6-f309-4e4b-9909-3200e3bca7a5",
+      "status": "Published with Identity",
+      "created": "2025-12-03, 2:35:05 p.m.",
+      "version": "2"
+    },
+    {
+      "agent_name": "BasicAgent",
+      "object_id": "bde46d80-de73-4bd9-9416-4515799ae72d",
+      "status": "Published with Identity",
+      "created": "2025-12-03, 2:34:46 p.m.",
+      "version": "3"
+    },
+    {
+      "agent_name": "WeatherAgent",
+      "object_id": "ff55957a-bbf1-4be8-9e41-0046b2b2494c",
+      "status": "Published with Identity",
+      "created": "2025-11-24, 10:12:19 a.m.",
+      "version": "1"
+    },
+    {
+      "agent_name": "BingGroundingAgent",
+      "object_id": "420c8552-5d64-4c44-869c-037ad07ef351",
+      "status": "Published with Identity",
+      "created": "2025-11-23, 3:29:27 p.m.",
+      "version": "1"
+    }
+  ],
+  "summary": {
+    "total_agents": 9,
+    "mapped_agents": 9,
+    "unmapped_agents": 0
+  }
+}
