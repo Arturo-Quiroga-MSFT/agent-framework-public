@@ -15,26 +15,35 @@ The MCP Tools that have **direct connection** allow you to have more control ove
     - MCP server can be hosted privately with no public access
     - Auth tokens are not sent and stored in Azure AI Foundry Service
 
-```code
-Direct Connection Flow:
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  Your App   │    │ Agent Framework  │    │ Your MCP Server │
-│             │    │                  │    │                 │
-│ • User      │───▶│ • MCP Client     │───▶│ • Tool Logic    │
-│   Input     │    │ • Tool Discovery │    │ • Auth Handler  │
-│ • Response  │◄───│ • Function Calls │◄───│ • Response      │
-│   Display   │    │ • Error Handling │    │   Generation    │
-└─────────────┘    └──────────────────┘    └─────────────────┘
+### Direct Connection Flow
 
-HostedMCPTool Flow:
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Your App   │    │ Agent Framework  │    │ Azure AI Service│    │ Your MCP Server │
-│             │    │                  │    │                 │    │                 │
-│ • User      │───▶│ • Config Manager │───▶│ • MCP Client    │───▶│ • Tool Logic    │
-│   Input     │    │ • Orchestration  │    │ • Tool Discovery│    │ • Auth Handler  │
-│ • Response  │◄───│ • Error Handling │◄───│ • Function Calls│◄───│ • Response      │
-│   Display   │    │                  │    │ • Approval Mgmt │    │   Generation    │
-└─────────────┘    └──────────────────┘    └─────────────────┘    └─────────────────┘
+```mermaid
+graph LR
+    A[Your App<br/>• User Input<br/>• Response Display] -->|User Query| B[Agent Framework<br/>• MCP Client<br/>• Tool Discovery<br/>• Function Calls<br/>• Error Handling]
+    B -->|Tool Call| C[Your MCP Server<br/>• Tool Logic<br/>• Auth Handler<br/>• Response Generation]
+    C -->|Tool Result| B
+    B -->|Final Response| A
+    
+    style A fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style C fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+```
+
+### HostedMCPTool Flow
+
+```mermaid
+graph LR
+    A[Your App<br/>• User Input<br/>• Response Display] -->|User Query| B[Agent Framework<br/>• Config Manager<br/>• Orchestration<br/>• Error Handling]
+    B -->|Config & Query| C[Azure AI Service<br/>• MCP Client<br/>• Tool Discovery<br/>• Function Calls<br/>• Approval Mgmt]
+    C -->|Tool Call| D[Your MCP Server<br/>• Tool Logic<br/>• Auth Handler<br/>• Response Generation]
+    D -->|Tool Result| C
+    C -->|Final Response| B
+    B -->|Response| A
+    
+    style A fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
 ```
 
 **Direct Connection Tools:**
@@ -97,23 +106,31 @@ self.functions.append(func)
 ```
 ### Detailed Execution Flow
 
-1. **User Query** → **Agent Framework**
-2. **Agent Framework** → **Agent** (with function definitions from MCP)
-3. **Agent** decides to call a function and responds:
- ```json
-{
-  "function_call": {
- "name": "get_weather",
- "arguments": {"location": "Seattle"}
-  }
-}
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant AF as Agent Framework
+    participant A as Azure AI Agent
+    participant MCP as Your MCP Server
+
+    U->>AF: 1. User Query
+    AF->>A: 2. Query + Function Definitions from MCP
+    Note over A: 3. Decides to call function
+    A->>AF: function_call: get_weather<br/>{location: "Seattle"}
+    Note over AF: 4. Receives function call request
+    AF->>MCP: 5. call_tool (with auth headers)
+    MCP->>AF: 6. Weather data
+    AF->>A: 7. Function result
+    Note over A: 8. Processes result
+    A->>AF: Final response with weather info
+    AF->>U: 9. Final answer
+
+    rect rgb(200, 220, 240)
+        Note over AF,MCP: Direct Connection<br/>Auth tokens never leave your infrastructure
+    end
 ```
-4. **Agent Framework** receives the function call request
-5. **Agent Framework** → **Your MCP Server** (with your auth headers): [call_tool](https://github.com/microsoft/agent-framework/blob/main/python/packages/core/agent_framework/_mcp.py#L540)
-6. **Your MCP Server** → **Agent Framework** (weather data)
-7. **Agent Framework** → **Agent** (function result)
-8. **Agent** → **Agent Framework** (final response with weather info)
-9. **Agent Framework** → **User** (final answer)
+
+[call_tool implementation](https://github.com/microsoft/agent-framework/blob/main/python/packages/core/agent_framework/_mcp.py#L540)
 
 ## HostedMCPTool (Service Managed Tool)
 #HostedMCPTool
@@ -126,8 +143,31 @@ When the tool configuration is processed, Azure AI Service discovers the availab
 
 ### Detailed Execution Flow
 
-1. **User Query** → **Agent Framework**
-2. **Agent Framework** → **Agent** (with MCP tool configuration):
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant AF as Agent Framework
+    participant Azure as Azure AI Service
+    participant MCP as Your MCP Server
+
+    U->>AF: 1. User Query
+    AF->>Azure: 2. Query + MCP Tool Configuration
+    Note over AF,Azure: Config: server_url, headers,<br/>allowed_tools, etc.
+    Note over Azure: 3. Decides to call function
+    Azure->>Azure: function_call: get_weather<br/>{location: "Seattle"}
+    Note over Azure: 4. Establishes MCP connection<br/>(if not already connected)
+    Azure->>MCP: 5. Direct call with auth headers
+    MCP->>Azure: 6. Weather data
+    Note over Azure: 7. Incorporates tool result<br/>and generates final response
+    Azure->>AF: 8. Final response
+    AF->>U: 9. Final answer
+
+    rect rgb(240, 220, 240)
+        Note over Azure,MCP: Hosted Connection<br/>Auth tokens stored by Azure AI Service
+    end
+```
+
+**MCP Tool Configuration sent to Azure:**
 ```json
 {
   "messages": [{"role": "user", "content": "What's the weather in Seattle?"}],
@@ -140,18 +180,3 @@ When the tool configuration is processed, Azure AI Service discovers the availab
   }]
 }
 ```
-3. **Agent** decides to call a function and responds:
- ```json
-{
-  "function_call": {
- "name": "get_weather",
- "arguments": {"location": "Seattle"}
-  }
-}
-```
-4. **Agent** establishes MCP connection (if not already connected)
-5. **Agent** → **Your MCP Server** (direct call with your auth headers):
-6. **Your MCP Server** → **Agent** (weather data):
-7. **Agent** incorporates tool result and generates final response
-8. **Azure** → **Agent Framework** (final response):
-9. **Agent Framework** → **User** (final answer)
