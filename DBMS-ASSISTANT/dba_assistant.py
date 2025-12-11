@@ -13,11 +13,14 @@ Features:
 - Performance analysis and tuning recommendations
 - Health monitoring and diagnostics
 - Maintenance task guidance
+- Full observability with OpenTelemetry and Application Insights
 """
 
 import asyncio
 import os
+import logging
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file in the same directory
@@ -31,64 +34,108 @@ else:
 
 from agent_framework import MCPStdioTool
 from agent_framework.azure import AzureAIAgentClient
+from agent_framework.observability import setup_observability, get_tracer
 from azure.identity.aio import AzureCliCredential
+from azure.ai.projects.aio import AIProjectClient
+from azure.core.exceptions import ResourceNotFoundError
+from opentelemetry.trace import SpanKind
+from opentelemetry.trace.span import format_trace_id
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-async def run_interactive_session() -> None:
+async def setup_azure_ai_observability(
+    project_client: AIProjectClient, 
+    enable_sensitive_data: bool = True
+) -> str | None:
+    """Setup tracing using Application Insights from Azure AI Project.
+    
+    This retrieves the connection string from the AIProjectClient and configures
+    OpenTelemetry to send traces to Application Insights.
+    
+    Returns:
+        Connection string if successful, None otherwise.
     """
-    Interactive DBA assistant session with natural language interface.
+    try:
+        conn_string = await project_client.telemetry.get_application_insights_connection_string()
+        logger.info("✓ Application Insights connection string retrieved from Azure AI Project")
+        
+        setup_observability(
+            applicationinsights_connection_string=conn_string, 
+            enable_sensitive_data=enable_sensitive_data
+        )
+        logger.info("✓ Observability configured - telemetry will be sent to Application Insights")
+        return conn_string
+    except ResourceNotFoundError:
+        logger.warning("✗ No Application Insights found for Azure AI Project - using fallback")
+        return None
+    except Exception as e:
+        logger.warning(f"✗ Error setting up Azure AI observability: {e}")
+        return None
+
+
+def setup_local_observability() -> None:
+    """Setup observability using environment variables.
+    
+    Supports multiple tracing backends:
+    - Application Insights (via APPLICATIONINSIGHTS_CONNECTION_STRING)
+    - OTLP endpoint (via OTLP_ENDPOINT)
+    - Console tracing (via ENABLE_CONSOLE_TRACING)
+    - DevUI tracing (via ENABLE_DEVUI_TRACING)
     """
-    print(f"\n{'='*80}")
-    print("INTERACTIVE DBA ASSISTANT")
-    print("Ask questions about your databases in natural language")
-    print("Type 'exit' to quit")
-    print(f"{'='*80}\n")
+    enable_otel = os.getenv("ENABLE_OTEL", "true").lower() == "true"
+    enable_sensitive_data = os.getenv("ENABLE_SENSITIVE_DATA", "true").lower() == "true"
     
-    # Get server name and database from environment
-    server = os.getenv("SERVER_NAME", "localhost")
-    database = os.getenv("DATABASE_NAME", "master")
-    
-    print(f"📡 Using server: {server}")
-    print(f"📊 Database: {database}")
-    print(f"⏳ Starting MCP server...\n")
-    
-    # Path to our enhanced MCP server with DBA tools
-    mcp_server_path = Path(__file__).parent / "MssqlMcp" / "Node" / "dist" / "index.js"
-    
-    if not mcp_server_path.exists():
-        print(f"❌ MCP server not found at: {mcp_server_path}")
-        print("Please build the MCP server first:")
-        print("  cd MssqlMcp/Node")
-        print("  npm install")
-        print("  npm run build")
+    if not enable_otel:
+        logger.info("📊 OpenTelemetry disabled (ENABLE_OTEL=false)")
         return
     
-    # Create MCP tool with environment variables for SQL authentication
-    mcp_env = {
-        "SERVER_NAME": server,
-        "DATABASE_NAME": database,
-        "SQL_USERNAME": os.getenv("SQL_USERNAME", ""),
-        "SQL_PASSWORD": os.getenv("SQL_PASSWORD", ""),
-        "TRUST_SERVER_CERTIFICATE": os.getenv("TRUST_SERVER_CERTIFICATE", "true"),
-        "READONLY": os.getenv("READONLY", "false"),
-    }
+    # Try Application Insights connection string from environment
+    ai_conn_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    otlp_endpoint = os.getenv("OTLP_ENDPOINT")
+    enable_devui = os.getenv("ENABLE_DEVUI_TRACING", "false").lower() == "true"
+    enable_console = os.getenv("ENABLE_CONSOLE_TRACING", "false").lower() == "true"
     
-    async with (
-        AzureCliCredential() as credential,
-        MCPStdioTool(
-            name="mssql",
-            command="node",
-            args=[str(mcp_server_path)],
-            env=mcp_env,
-            description="Microsoft SQL Server database operations and management tools",
-        ) as mcp_tool,
-        AzureAIAgentClient(async_credential=credential).create_agent(
-            name="InteractiveDBA",
-            instructions=f"""You are a helpful SQL Server DBA assistant for server '{server}' and database '{database}'.
+    if ai_conn_string:
+        setup_observability(
+            applicationinsights_connection_string=ai_conn_string,
+            enable_sensitive_data=enable_sensitive_data
+        )
+        logger.info("✓ Observability configured with Application Insights")
+    elif otlp_endpoint:
+        setup_observability(
+            otlp_endpoint=otlp_endpoint,
+            enable_sensitive_data=enable_sensitive_data
+        )
+        logger.info(f"✓ Observability configured with OTLP endpoint: {otlp_endpoint}")
+    elif enable_devui:
+        setup_observability(enable_sensitive_data=enable_sensitive_data)
+        logger.info("✓ Observability configured for DevUI tracing")
+    elif enable_console:
+        setup_observability(enable_sensitive_data=enable_sensitive_data)
+        logger.info("✓ Observability configured with console tracing")
+    else:
+        # Default: enable basic observability
+        setup_observability(enable_sensitive_data=enable_sensitive_data)
+        logger.info("✓ Observability configured with default settings")
+
+
+def get_dba_instructions(server: str, database: str) -> str:
+    """Generate the DBA assistant instructions.
+    
+    Separated into a function to avoid f-string issues with backticks.
+    """
+    # Using regular string concatenation to avoid backtick issues in f-strings
+    backtick = "`"
+    triple_backtick = "```"
+    
+    return f"""You are a helpful SQL Server DBA assistant for server '{server}' and database '{database}'.
 
 ⚠️ **CRITICAL: ERD DIAGRAMS MUST USE MERMAID TEXT FORMAT ONLY** ⚠️
 NEVER execute Python code to generate diagrams. NEVER use graphviz, networkx, matplotlib, or any image generation libraries.
-ALWAYS output Mermaid erDiagram syntax as plain text in a ```mermaid code block.
+ALWAYS output Mermaid erDiagram syntax as plain text in a {triple_backtick}mermaid code block.
 This is NON-NEGOTIABLE. See ERD section below for exact format.
 
 You help database administrators with:
@@ -183,12 +230,12 @@ Just execute and deliver results. DBAs want action, not conversation.
    - Align columns properly for readability
    
    Example:
-   ```
+   {triple_backtick}
    | Schema | Table Name | Row Count | Size MB |
    |--------|-----------|-----------|---------|
    | dbo    | Customers | 150000    | 245.2   |
    | dbo    | Orders    | 500000    | 890.5   |
-   ```
+   {triple_backtick}
 
 2. **Use consistent column widths** - align data for easy scanning
 
@@ -217,48 +264,48 @@ When asked to generate an ERD (Entity Relationship Diagram), you MUST:
 2. **Output Mermaid syntax directly** - DO NOT execute any Python code
 3. **Use this exact format:**
 
-```mermaid
+{triple_backtick}mermaid
 erDiagram
-    FACT_LOAN_ORIGINATION {
+    FACT_LOAN_ORIGINATION {{{{
         int LoanKey PK
         int CustomerKey FK
         int ProductKey FK
         int OriginationDateKey FK
         decimal OriginalAmount
         decimal InterestRate
-    }
-    DimCustomer {
+    }}}}
+    DimCustomer {{{{
         int CustomerKey PK
         string CompanyName
         string CustomerType
         string CreditRating
-    }
-    DimLoanProduct {
+    }}}}
+    DimLoanProduct {{{{
         int ProductKey PK
         string ProductName
         string ProductType
-    }
-    DimDate {
+    }}}}
+    DimDate {{{{
         int DateKey PK
         date FullDate
         int Year
         int Quarter
-    }
+    }}}}
     
-    FACT_LOAN_ORIGINATION }o--|| DimCustomer : "customer"
-    FACT_LOAN_ORIGINATION }o--|| DimLoanProduct : "product"
-    FACT_LOAN_ORIGINATION }o--|| DimDate : "originated_on"
-```
+    FACT_LOAN_ORIGINATION }}}}o--|| DimCustomer : "customer"
+    FACT_LOAN_ORIGINATION }}}}o--|| DimLoanProduct : "product"
+    FACT_LOAN_ORIGINATION }}}}o--|| DimDate : "originated_on"
+{triple_backtick}
 
 **Relationship Syntax:**
-- `}o--||` : Many to one (FK relationship)
-- `||--o{` : One to many
-- `||--||` : One to one
-- `}o--o{` : Many to many
+- {backtick}}}}}o--||{backtick} : Many to one (FK relationship)
+- {backtick}||--o{{{{{backtick} : One to many
+- {backtick}||--||{backtick} : One to one
+- {backtick}}}}}o--o{{{{{backtick} : Many to many
 
 **FORBIDDEN ACTIONS:**
-❌ NEVER write: `import graphviz`, `import networkx`, `import matplotlib`
-❌ NEVER write: `plt.savefig()`, `graph.render()`, any file creation code
+❌ NEVER write: {backtick}import graphviz{backtick}, {backtick}import networkx{backtick}, {backtick}import matplotlib{backtick}
+❌ NEVER write: {backtick}plt.savefig(){backtick}, {backtick}graph.render(){backtick}, any file creation code
 ❌ NEVER attempt to execute Python code for diagram generation
 ❌ NEVER try to create PNG, SVG, or any image files
 
@@ -266,7 +313,7 @@ erDiagram
 1. Query: "Let me get the foreign key relationships..."
 2. Show FK table
 3. Output: "Here's the Mermaid ERD diagram:"
-4. Provide ```mermaid code block
+4. Provide {triple_backtick}mermaid code block
 5. DONE - no further questions about format
 
 **User can visualize by pasting into:**
@@ -276,27 +323,83 @@ erDiagram
 - Pasting in GitHub/GitLab markdown
 
 **Available visualization libraries in this environment:**
-- ✅ `graphviz` - Use this for ERD generation (creates .dot files and renders to PNG/SVG)
-- ✅ `matplotlib` - Available for charts and plots
-- ✅ `pandas` - Available for data manipulation
-- ❌ `pygraphviz` - NOT INSTALLED - Do not attempt to use
-- ❌ `networkx` - NOT INSTALLED - Do not attempt to use
+- ✅ {backtick}graphviz{backtick} - Use this for ERD generation (creates .dot files and renders to PNG/SVG)
+- ✅ {backtick}matplotlib{backtick} - Available for charts and plots
+- ✅ {backtick}pandas{backtick} - Available for data manipulation
+- ❌ {backtick}pygraphviz{backtick} - NOT INSTALLED - Do not attempt to use
+- ❌ {backtick}networkx{backtick} - NOT INSTALLED - Do not attempt to use
 
 **CRITICAL: When generating ERD diagrams:**
-1. ONLY use `from graphviz import Digraph`
+1. ONLY use {backtick}from graphviz import Digraph{backtick}
 2. DO NOT import networkx, pygraphviz, or any other graph libraries
 3. If you attempt to use unavailable libraries, the diagram generation will fail
 4. The graphviz package is the ONLY graph visualization library available
 
 Always explain your findings clearly and provide actionable recommendations.
-When suggesting SQL queries, ensure they are safe and read-only unless explicitly asked for changes.""",
+When suggesting SQL queries, ensure they are safe and read-only unless explicitly asked for changes."""
+
+
+async def run_interactive_session(trace_id: str | None = None) -> None:
+    """
+    Interactive DBA assistant session with natural language interface.
+    """
+    print(f"\n{'='*80}")
+    print("INTERACTIVE DBA ASSISTANT")
+    print("Ask questions about your databases in natural language")
+    print("Type 'exit' to quit")
+    print(f"{'='*80}\n")
+    
+    # Get server name and database from environment
+    server = os.getenv("SERVER_NAME", "localhost")
+    database = os.getenv("DATABASE_NAME", "master")
+    
+    print(f"📡 Using server: {server}")
+    print(f"📊 Database: {database}")
+    print(f"⏳ Starting MCP server...\n")
+    
+    # Path to our enhanced MCP server with DBA tools
+    mcp_server_path = Path(__file__).parent / "MssqlMcp" / "Node" / "dist" / "index.js"
+    
+    if not mcp_server_path.exists():
+        print(f"❌ MCP server not found at: {mcp_server_path}")
+        print("Please build the MCP server first:")
+        print("  cd MssqlMcp/Node")
+        print("  npm install")
+        print("  npm run build")
+        return
+    
+    # Create MCP tool with environment variables for SQL authentication
+    mcp_env = {
+        "SERVER_NAME": server,
+        "DATABASE_NAME": database,
+        "SQL_USERNAME": os.getenv("SQL_USERNAME", ""),
+        "SQL_PASSWORD": os.getenv("SQL_PASSWORD", ""),
+        "TRUST_SERVER_CERTIFICATE": os.getenv("TRUST_SERVER_CERTIFICATE", "true"),
+        "READONLY": os.getenv("READONLY", "false"),
+    }
+    
+    async with (
+        AzureCliCredential() as credential,
+        MCPStdioTool(
+            name="mssql",
+            command="node",
+            args=[str(mcp_server_path)],
+            env=mcp_env,
+            description="Microsoft SQL Server database operations and management tools",
+        ) as mcp_tool,
+        AzureAIAgentClient(async_credential=credential).create_agent(
+            name="InteractiveDBA",
+            instructions=get_dba_instructions(server, database),
             tools=mcp_tool,
         ) as agent,
     ):
         print(f"✅ MCP server started")
         print(f"✅ Agent ready")
+        if trace_id:
+            print(f"📊 Trace ID: {trace_id}")
         print("💬 You can now ask questions...\n")
         
+        query_count = 0
         while True:
             try:
                 user_input = input("DBA> ").strip()
@@ -308,12 +411,32 @@ When suggesting SQL queries, ensure they are safe and read-only unless explicitl
                     print("👋 Goodbye!")
                     break
                 
-                print("\n🤖 Agent: ", end="", flush=True)
+                query_count += 1
                 
-                # Stream the response
-                async for chunk in agent.run_stream(user_input):
-                    if chunk.text:
-                        print(chunk.text, end="", flush=True)
+                # Create a span for each query
+                with get_tracer().start_as_current_span(
+                    f"DBA Query #{query_count}",
+                    kind=SpanKind.CLIENT
+                ) as query_span:
+                    query_span.set_attribute("dba.query.text", user_input)
+                    query_span.set_attribute("dba.query.number", query_count)
+                    query_span.set_attribute("dba.database.server", os.getenv("SERVER_NAME", "unknown"))
+                    query_span.set_attribute("dba.database.name", os.getenv("DATABASE_NAME", "unknown"))
+                    
+                    print("\n🤖 Agent: ", end="", flush=True)
+                    
+                    response_text = ""
+                    start_time = datetime.now()
+                    
+                    # Stream the response
+                    async for chunk in agent.run_stream(user_input):
+                        if chunk.text:
+                            print(chunk.text, end="", flush=True)
+                            response_text += chunk.text
+                    
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    query_span.set_attribute("dba.response.length", len(response_text))
+                    query_span.set_attribute("dba.response.elapsed_seconds", elapsed)
                 
                 print("\n")
                 
@@ -321,28 +444,61 @@ When suggesting SQL queries, ensure they are safe and read-only unless explicitl
                 print("\n\n👋 Session interrupted. Goodbye!")
                 break
             except Exception as e:
+                logger.error(f"Query error: {e}")
                 print(f"\n❌ Error: {e}\n")
 
 
 
 async def main() -> None:
-    """Main entry point - starts the interactive DBA assistant."""
+    """Main entry point - starts the interactive DBA assistant with observability."""
     print("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                       Interactive DBA Assistant                              ║
 ║                   Powered by Microsoft Agent Framework                       ║
 ║                         & MSSQL MCP Server                                   ║
+║                      with OpenTelemetry Observability                        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """)
     
     # Check if Azure credentials are configured
-    if not os.getenv("AZURE_AI_PROJECT_ENDPOINT"):
+    endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    if not endpoint:
         print("⚠️  Warning: AZURE_AI_PROJECT_ENDPOINT not set")
         print("   Create a .env file with your Azure AI project endpoint")
         print("   Copy .env.template to .env and fill in your values\n")
     
-    # Start interactive session directly
-    await run_interactive_session()
+    # Setup observability
+    print("📊 Setting up observability...")
+    
+    enable_azure_ai_tracing = os.getenv("ENABLE_AZURE_AI_TRACING", "false").lower() == "true"
+    
+    if enable_azure_ai_tracing and endpoint:
+        # Use Azure AI Project's Application Insights
+        async with AzureCliCredential() as credential:
+            async with AIProjectClient(endpoint=endpoint, credential=credential) as project_client:
+                await setup_azure_ai_observability(project_client)
+    else:
+        # Use local configuration from environment variables
+        setup_local_observability()
+    
+    # Create a parent span for the entire session
+    with get_tracer().start_as_current_span(
+        "DBA Assistant Session",
+        kind=SpanKind.SERVER
+    ) as session_span:
+        trace_id = format_trace_id(session_span.get_span_context().trace_id)
+        session_span.set_attribute("dba.session.start_time", datetime.now().isoformat())
+        session_span.set_attribute("dba.database.server", os.getenv("SERVER_NAME", "unknown"))
+        session_span.set_attribute("dba.database.name", os.getenv("DATABASE_NAME", "unknown"))
+        session_span.set_attribute("dba.model", os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "unknown"))
+        
+        print(f"📊 Session Trace ID: {trace_id}")
+        print(f"   Use this to find traces in Azure Portal > Application Insights\n")
+        
+        # Start interactive session with trace ID
+        await run_interactive_session(trace_id=trace_id)
+        
+        session_span.set_attribute("dba.session.end_time", datetime.now().isoformat())
 
 
 if __name__ == "__main__":

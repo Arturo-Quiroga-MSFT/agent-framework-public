@@ -205,9 +205,68 @@ The DBA assistant agent can perform:
 - [x] Safety validation framework
 - [x] Query execution with tool integration
 - [x] Comprehensive agent instructions
+- [x] **Advanced observability and tracing** ✅ NEW
 - [ ] Multi-database connection management
 - [ ] Role-based access control
-- [ ] Advanced observability and tracing
+
+## Observability & Tracing
+
+The DBA Assistant now includes full observability support with OpenTelemetry and Azure Application Insights.
+
+### Tracing Features
+
+| Feature | Description |
+|---------|-------------|
+| **Session Tracing** | Each DBA session gets a unique Trace ID for end-to-end tracking |
+| **Query Spans** | Every user query is traced with timing and metadata |
+| **Application Insights** | Automatic telemetry to Azure Monitor |
+| **OTLP Export** | Support for Jaeger, Zipkin, and other collectors |
+| **DevUI Integration** | View traces in agent-framework DevUI |
+
+### Configuration Options
+
+Configure tracing in your `.env` file:
+
+```env
+# Enable OpenTelemetry
+ENABLE_OTEL=true
+ENABLE_SENSITIVE_DATA=true
+
+# Option 1: Application Insights (recommended for production)
+APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=...;..."
+
+# Option 2: Azure AI Project's Application Insights
+ENABLE_AZURE_AI_TRACING=true
+
+# Option 3: OTLP endpoint (Jaeger, Zipkin, etc.)
+OTLP_ENDPOINT=http://localhost:4317
+
+# Option 4: DevUI tracing
+ENABLE_DEVUI_TRACING=true
+```
+
+### Viewing Traces
+
+**Azure Portal:**
+1. Navigate to **Application Insights** → **Transaction Search**
+2. Copy the Trace ID from console output
+3. Paste into search box
+4. Wait 2-5 minutes for ingestion
+
+**DevUI:**
+1. Set `ENABLE_DEVUI_TRACING=true`
+2. Run the assistant
+3. Open DevUI at the displayed URL
+
+### Trace Attributes
+
+Each query span includes:
+- `dba.query.text` - The user's question
+- `dba.query.number` - Query sequence number
+- `dba.database.server` - Target SQL Server
+- `dba.database.name` - Target database
+- `dba.response.length` - Response character count
+- `dba.response.elapsed_seconds` - Query processing time
 
 ## Integration with Existing Workspace
 

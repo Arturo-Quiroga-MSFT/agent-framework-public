@@ -16,14 +16,14 @@ The Control Plane integration enables:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Fleet Health Dashboard                        │
-│                     (fleet_health_dashboard.py)                  │
+│                    Fleet Health Dashboard                       │
+│                     (fleet_health_dashboard.py)                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      FleetHealthClient                           │
-│                     (fleet_health_client.py)                     │
+│                      FleetHealthClient                          │
+│                     (fleet_health_client.py)                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  • get_all_agents()        - Agent inventory from AI Projects   │
 │  • get_agent_metrics()     - Performance data from App Insights │
