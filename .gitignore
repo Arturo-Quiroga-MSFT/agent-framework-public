@@ -164,6 +164,10 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# Type stubs (auto-generated)
+.stubs/
+*.pyi.stub-info
+
 # Cython debug symbols
 cython_debug/
 
