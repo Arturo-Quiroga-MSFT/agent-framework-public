@@ -1,6 +1,7 @@
 # Profisee Aisey: Semantic Kernel to Agent Framework Migration Guide
 
 **Prepared for:** Profisee (Jayla Ellis)  
+**Prepared by:** Arturo Quiroga, Sr. Partner Solutions Architect  
 **Date:** December 17, 2025  
 **Migration Scope:** Aisey product - SK to MAF migration
 
@@ -986,11 +987,12 @@ public class AiseyService
 - **General Migration Guide:** `/AQ-PROFISEE/PROFISEE-SK-TO-AF-MIGRATION-GUIDE-CSHARP.md`
 
 ### Contact
-**Jason Virtuae**  
-Microsoft Agent Framework Team  
+**Arturo Quiroga**  
+Sr Partner Solutions Architect  
+Microsoft - EPS America 
 
 ---
 
 **Document Version:** 1.0  
 **Last Updated:** December 17, 2025  
-**Prepared by:** Microsoft Agent Framework Team for Profisee
+**Author:** Arturo Quiroga
