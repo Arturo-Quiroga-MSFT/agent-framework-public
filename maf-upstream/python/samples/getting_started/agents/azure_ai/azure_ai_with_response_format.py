@@ -6,7 +6,6 @@ from agent_framework.azure import AzureAIClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import BaseModel, ConfigDict
 
-
 """
 Azure AI Agent Response Format Example
 
@@ -30,7 +29,7 @@ async def main() -> None:
     # authentication option.
     async with (
         AzureCliCredential() as credential,
-        AzureAIClient(async_credential=credential).create_agent(
+        AzureAIClient(credential=credential).create_agent(
             name="ProductMarketerAgent",
             instructions="Return launch briefs as structured JSON.",
         ) as agent,

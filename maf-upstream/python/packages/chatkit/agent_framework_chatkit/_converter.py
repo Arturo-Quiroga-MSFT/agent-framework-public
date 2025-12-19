@@ -25,8 +25,10 @@ from chatkit.types import (
     Attachment,
     ClientToolCallItem,
     EndOfTurnItem,
+    GeneratedImageItem,
     HiddenContextItem,
     ImageAttachment,
+    SDKHiddenContextItem,
     TaskItem,
     ThreadItem,
     UserMessageItem,
@@ -180,8 +182,10 @@ class ThreadItemConverter:
         # Subclasses can override this method to provide custom handling
         return None
 
-    def hidden_context_to_input(self, item: HiddenContextItem) -> ChatMessage | list[ChatMessage] | None:
-        """Convert a ChatKit HiddenContextItem to Agent Framework ChatMessage(s).
+    def hidden_context_to_input(
+        self, item: HiddenContextItem | SDKHiddenContextItem
+    ) -> ChatMessage | list[ChatMessage] | None:
+        """Convert a ChatKit HiddenContextItem or SDKHiddenContextItem to Agent Framework ChatMessage(s).
 
         This method is called internally by `to_agent_input()`. Override this method
         to customize how hidden context is converted.
@@ -522,6 +526,12 @@ class ThreadItemConverter:
             case HiddenContextItem():
                 out = self.hidden_context_to_input(item) or []
                 return out if isinstance(out, list) else [out]
+            case SDKHiddenContextItem():
+                out = self.hidden_context_to_input(item) or []
+                return out if isinstance(out, list) else [out]
+            case GeneratedImageItem():
+                # TODO(evmattso): Implement generated image handling in a future PR
+                return []
             case _:
                 assert_never(item)
 

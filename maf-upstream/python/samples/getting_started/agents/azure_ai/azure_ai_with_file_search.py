@@ -3,13 +3,6 @@
 import asyncio
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
-local_env_path = Path(__file__).parent / ".env"
-parent_env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=local_env_path)  # Load local first
-load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
 
 from agent_framework import ChatAgent, HostedFileSearchTool, HostedVectorStoreContent
 from agent_framework.azure import AzureAIClient
@@ -39,7 +32,7 @@ async def main() -> None:
     async with (
         AzureCliCredential() as credential,
         AgentsClient(endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"], credential=credential) as agents_client,
-        AzureAIClient(async_credential=credential) as client,
+        AzureAIClient(credential=credential) as client,
     ):
         try:
             # 1. Upload file and create vector store

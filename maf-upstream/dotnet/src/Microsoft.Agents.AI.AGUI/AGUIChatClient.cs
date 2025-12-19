@@ -82,7 +82,7 @@ public sealed class AGUIChatClient : DelegatingChatClient
             .ToChatResponseAsync(cancellationToken);
 
     /// <inheritdoc />
-    public async override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+    public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -220,7 +220,11 @@ public sealed class AGUIChatClient : DelegatingChatClient
             if (options?.Tools is { Count: > 0 })
             {
                 input.Tools = options.Tools.AsAGUITools();
-                this._logger.LogDebug("[AGUIChatClient] Tool count: {ToolCount}", options.Tools.Count);
+
+                if (this._logger.IsEnabled(LogLevel.Debug))
+                {
+                    this._logger.LogDebug("[AGUIChatClient] Tool count: {ToolCount}", options.Tools.Count);
+                }
             }
 
             var clientToolSet = new HashSet<string>();

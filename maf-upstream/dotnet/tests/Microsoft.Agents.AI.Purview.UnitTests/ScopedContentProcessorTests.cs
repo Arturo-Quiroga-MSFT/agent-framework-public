@@ -56,18 +56,18 @@ public sealed class ScopedContentProcessorTests
 
         var psResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new ("microsoft.graph.policyLocationApplication", "app-123")
-                    },
+                    ],
                     ExecutionMode = ExecutionMode.EvaluateInline
                 }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
@@ -76,10 +76,10 @@ public sealed class ScopedContentProcessorTests
 
         var pcResponse = new ProcessContentResponse
         {
-            PolicyActions = new List<DlpActionInfo>
-            {
+            PolicyActions =
+            [
                 new() { Action = DlpAction.BlockAccess }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.ProcessContentAsync(
@@ -115,18 +115,18 @@ public sealed class ScopedContentProcessorTests
 
         var psResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new ("microsoft.graph.policyLocationApplication", "app-123")
-                    },
+                    ],
                     ExecutionMode = ExecutionMode.EvaluateInline
                 }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
@@ -135,10 +135,10 @@ public sealed class ScopedContentProcessorTests
 
         var pcResponse = new ProcessContentResponse
         {
-            PolicyActions = new List<DlpActionInfo>
-            {
+            PolicyActions =
+            [
                 new() { RestrictionAction = RestrictionAction.Block }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.ProcessContentAsync(
@@ -174,18 +174,18 @@ public sealed class ScopedContentProcessorTests
 
         var psResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new("microsoft.graph.policyLocationApplication", "app-123")
-                    },
+                    ],
                     ExecutionMode = ExecutionMode.EvaluateInline
                 }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
@@ -194,10 +194,10 @@ public sealed class ScopedContentProcessorTests
 
         var pcResponse = new ProcessContentResponse
         {
-            PolicyActions = new List<DlpActionInfo>
-            {
+            PolicyActions =
+            [
                 new() { Action = DlpAction.NotifyUser }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.ProcessContentAsync(
@@ -229,18 +229,18 @@ public sealed class ScopedContentProcessorTests
 
         var cachedPsResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new ("microsoft.graph.policyLocationApplication", "app-123")
-                    },
+                    ],
                     ExecutionMode = ExecutionMode.EvaluateInline
                 }
-            }
+            ]
         };
 
         this._mockCacheProvider.Setup(x => x.GetAsync<ProtectionScopesCacheKey, ProtectionScopesResponse>(
@@ -249,7 +249,7 @@ public sealed class ScopedContentProcessorTests
 
         var pcResponse = new ProcessContentResponse
         {
-            PolicyActions = new List<DlpActionInfo>()
+            PolicyActions = []
         };
 
         this._mockPurviewClient.Setup(x => x.ProcessContentAsync(
@@ -285,18 +285,18 @@ public sealed class ScopedContentProcessorTests
 
         var psResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new ("microsoft.graph.policyLocationApplication", "app-123")
-                    },
+                    ],
                     ExecutionMode = ExecutionMode.EvaluateInline
                 }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
@@ -306,7 +306,7 @@ public sealed class ScopedContentProcessorTests
         var pcResponse = new ProcessContentResponse
         {
             ProtectionScopeState = ProtectionScopeState.Modified,
-            PolicyActions = new List<DlpActionInfo>()
+            PolicyActions = []
         };
 
         this._mockPurviewClient.Setup(x => x.ProcessContentAsync(
@@ -342,17 +342,17 @@ public sealed class ScopedContentProcessorTests
 
         var psResponse = new ProtectionScopesResponse
         {
-            Scopes = new List<PolicyScopeBase>
-            {
+            Scopes =
+            [
                 new()
                 {
                     Activities = ProtectionScopeActivities.UploadText,
-                    Locations = new List<PolicyLocation>
-                    {
+                    Locations =
+                    [
                         new ("microsoft.graph.policyLocationApplication", "app-456")
-                    }
+                    ]
                 }
-            }
+            ]
         };
 
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
@@ -436,7 +436,7 @@ public sealed class ScopedContentProcessorTests
             It.IsAny<ProtectionScopesCacheKey>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProtectionScopesResponse?)null);
 
-        var psResponse = new ProtectionScopesResponse { Scopes = new List<PolicyScopeBase>() };
+        var psResponse = new ProtectionScopesResponse { Scopes = [] };
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
             It.IsAny<ProtectionScopesRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(psResponse);
@@ -471,7 +471,7 @@ public sealed class ScopedContentProcessorTests
             It.IsAny<ProtectionScopesCacheKey>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProtectionScopesResponse?)null);
 
-        var psResponse = new ProtectionScopesResponse { Scopes = new List<PolicyScopeBase>() };
+        var psResponse = new ProtectionScopesResponse { Scopes = [] };
         this._mockPurviewClient.Setup(x => x.GetProtectionScopesAsync(
             It.IsAny<ProtectionScopesRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(psResponse);

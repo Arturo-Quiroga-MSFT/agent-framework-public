@@ -1,24 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
-
 import asyncio
 from pathlib import Path
 
 import aiofiles
 from agent_framework import DataContent
 from agent_framework.azure import AzureAIClient
-from azure.ai.projects.models import ImageGenTool
 from azure.identity.aio import AzureCliCredential
-from dotenv import load_dotenv
-
-# Load environment variables from local azure_ai/.env first, then fall back to getting_started/.env
-local_env_path = Path(__file__).parent / ".env"
-parent_env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=local_env_path)  # Load local first
-load_dotenv(dotenv_path=parent_env_path)  # Then parent (won't override existing vars)
-
 
 """
-Azure AI Agent With Image Generation
+Azure AI Agent with Image Generation Example
 
 This sample demonstrates basic usage of AzureAIClient to create an agent
 that can generate images based on user requirements.
@@ -35,10 +25,17 @@ async def main() -> None:
     # authentication option.
     async with (
         AzureCliCredential() as credential,
-        AzureAIClient(async_credential=credential).create_agent(
+        AzureAIClient(credential=credential).create_agent(
             name="ImageGenAgent",
             instructions="Generate images based on user requirements.",
-            tools=[ImageGenTool(quality="low", size="1024x1024")],
+            tools=[
+                {
+                    "type": "image_generation",
+                    "model": "gpt-image-1-mini",
+                    "quality": "low",
+                    "size": "1024x1024",
+                }
+            ],
         ) as agent,
     ):
         query = "Generate an image of Microsoft logo."
@@ -47,7 +44,7 @@ async def main() -> None:
             query,
             # These additional options are required for image generation
             additional_chat_options={
-                "extra_headers": {"x-ms-oai-image-generation-deployment": "gpt-image-1"},
+                "extra_headers": {"x-ms-oai-image-generation-deployment": "gpt-image-1-mini"},
             },
         )
         print(f"Agent: {result}\n")

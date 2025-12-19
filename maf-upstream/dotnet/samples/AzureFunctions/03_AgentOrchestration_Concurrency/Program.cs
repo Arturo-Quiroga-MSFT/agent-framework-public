@@ -7,7 +7,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting.AzureFunctions;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.Hosting;
-using OpenAI;
+using OpenAI.Chat;
 
 // Get the Azure OpenAI endpoint and deployment name from environment variables.
 string endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT")
@@ -36,8 +36,9 @@ using IHost app = FunctionsApplication
     .ConfigureFunctionsWebApplication()
     .ConfigureDurableAgents(options =>
     {
-        options.AddAIAgent(physicistAgent);
-        options.AddAIAgent(chemistAgent);
+        options
+            .AddAIAgent(physicistAgent)
+            .AddAIAgent(chemistAgent);
     })
     .Build();
 

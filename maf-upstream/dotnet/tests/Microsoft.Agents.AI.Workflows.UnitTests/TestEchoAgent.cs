@@ -13,12 +13,12 @@ namespace Microsoft.Agents.AI.Workflows.UnitTests;
 
 internal class TestEchoAgent(string? id = null, string? name = null, string? prefix = null) : AIAgent
 {
-    public override string Id => id ?? base.Id;
+    protected override string? IdCore => id;
     public override string? Name => name ?? base.Name;
 
     public override AgentThread DeserializeThread(JsonElement serializedThread, JsonSerializerOptions? jsonSerializerOptions = null)
     {
-        return JsonSerializer.Deserialize<EchoAgentThread>(serializedThread, jsonSerializerOptions) ?? this.GetNewThread();
+        return serializedThread.Deserialize<EchoAgentThread>(jsonSerializerOptions) ?? this.GetNewThread();
     }
 
     public override AgentThread GetNewThread()
@@ -47,7 +47,7 @@ internal class TestEchoAgent(string? id = null, string? name = null, string? pre
               select
                     UpdateThread(new ChatMessage(ChatRole.Assistant, $"{prefix}{message.Text}")
                     {
-                        AuthorName = this.DisplayName,
+                        AuthorName = this.Name ?? this.Id,
                         CreatedAt = DateTimeOffset.Now,
                         MessageId = Guid.NewGuid().ToString("N")
                     }, thread as InMemoryAgentThread);
@@ -57,7 +57,7 @@ internal class TestEchoAgent(string? id = null, string? name = null, string? pre
 
     protected virtual IEnumerable<ChatMessage> GetEpilogueMessages(AgentRunOptions? options = null)
     {
-        return Enumerable.Empty<ChatMessage>();
+        return [];
     }
 
     public override Task<AgentRunResponse> RunAsync(IEnumerable<ChatMessage> messages, AgentThread? thread = null, AgentRunOptions? options = null, CancellationToken cancellationToken = default)
@@ -91,7 +91,5 @@ internal class TestEchoAgent(string? id = null, string? name = null, string? pre
         }
     }
 
-    private sealed class EchoAgentThread : InMemoryAgentThread
-    {
-    }
+    private sealed class EchoAgentThread : InMemoryAgentThread;
 }

@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 import sys
-from collections.abc import MutableSequence
+from collections.abc import Mapping, MutableSequence
 from typing import Any, ClassVar, TypeVar
 
 from agent_framework import (
@@ -14,22 +14,20 @@ from agent_framework import (
     use_chat_middleware,
     use_function_invocation,
 )
-from agent_framework.exceptions import ServiceInitializationError
-from agent_framework.observability import use_observability
+from agent_framework.exceptions import ServiceInitializationError, ServiceInvalidRequestError
+from agent_framework.observability import use_instrumentation
 from agent_framework.openai._responses_client import OpenAIBaseResponsesClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (
     MCPTool,
     PromptAgentDefinition,
     PromptAgentDefinitionText,
+    ResponseTextFormatConfigurationJsonObject,
     ResponseTextFormatConfigurationJsonSchema,
+    ResponseTextFormatConfigurationText,
 )
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.exceptions import ResourceNotFoundError
-from openai.types.responses.parsed_response import (
-    ParsedResponse,
-)
-from openai.types.responses.response import Response as OpenAIResponse
 from pydantic import BaseModel, ValidationError
 
 from ._shared import AzureAISettings
@@ -39,6 +37,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self  # pragma: no cover
 
+if sys.version_info >= (3, 12):
+    from typing import override  # type: ignore # pragma: no cover
+else:
+    from typing_extensions import override  # type: ignore[import] # pragma: no cover
+
 
 logger = get_logger("agent_framework.azure")
 
@@ -47,7 +50,7 @@ TAzureAIClient = TypeVar("TAzureAIClient", bound="AzureAIClient")
 
 
 @use_function_invocation
-@use_observability
+@use_instrumentation
 @use_chat_middleware
 class AzureAIClient(OpenAIBaseResponsesClient):
     """Azure AI Agent client."""
@@ -60,10 +63,11 @@ class AzureAIClient(OpenAIBaseResponsesClient):
         project_client: AIProjectClient | None = None,
         agent_name: str | None = None,
         agent_version: str | None = None,
+        agent_description: str | None = None,
         conversation_id: str | None = None,
         project_endpoint: str | None = None,
         model_deployment_name: str | None = None,
-        async_credential: AsyncTokenCredential | None = None,
+        credential: AsyncTokenCredential | None = None,
         use_latest_version: bool | None = None,
         env_file_path: str | None = None,
         env_file_encoding: str | None = None,
@@ -75,6 +79,7 @@ class AzureAIClient(OpenAIBaseResponsesClient):
             project_client: An existing AIProjectClient to use. If not provided, one will be created.
             agent_name: The name to use when creating new agents or using existing agents.
             agent_version: The version of the agent to use.
+            agent_description: The description to use when creating new agents.
             conversation_id: Default conversation ID to use for conversations. Can be overridden by
                 conversation_id property when making a request.
             project_endpoint: The Azure AI Project endpoint URL.
@@ -82,7 +87,7 @@ class AzureAIClient(OpenAIBaseResponsesClient):
                 Ignored when a project_client is passed.
             model_deployment_name: The model deployment name to use for agent creation.
                 Can also be set via environment variable AZURE_AI_MODEL_DEPLOYMENT_NAME.
-            async_credential: Azure async credential to use for authentication.
+            credential: Azure async credential to use for authentication.
             use_latest_version: Boolean flag that indicates whether to use latest agent version
                 if it exists in the service.
             env_file_path: Path to environment file for loading settings.
@@ -99,17 +104,17 @@ class AzureAIClient(OpenAIBaseResponsesClient):
                 # Set AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com
                 # Set AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
                 credential = DefaultAzureCredential()
-                client = AzureAIClient(async_credential=credential)
+                client = AzureAIClient(credential=credential)
 
                 # Or passing parameters directly
                 client = AzureAIClient(
                     project_endpoint="https://your-project.cognitiveservices.azure.com",
                     model_deployment_name="gpt-4",
-                    async_credential=credential,
+                    credential=credential,
                 )
 
                 # Or loading from a .env file
-                client = AzureAIClient(async_credential=credential, env_file_path="path/to/.env")
+                client = AzureAIClient(credential=credential, env_file_path="path/to/.env")
         """
         try:
             azure_ai_settings = AzureAISettings(
@@ -131,11 +136,11 @@ class AzureAIClient(OpenAIBaseResponsesClient):
                 )
 
             # Use provided credential
-            if not async_credential:
+            if not credential:
                 raise ServiceInitializationError("Azure credential is required when project_client is not provided.")
             project_client = AIProjectClient(
                 endpoint=azure_ai_settings.project_endpoint,
-                credential=async_credential,
+                credential=credential,
                 user_agent=AGENT_FRAMEWORK_USER_AGENT,
             )
             should_close_client = True
@@ -148,33 +153,105 @@ class AzureAIClient(OpenAIBaseResponsesClient):
         # Initialize instance variables
         self.agent_name = agent_name
         self.agent_version = agent_version
+        self.agent_description = agent_description
         self.use_latest_version = use_latest_version
         self.project_client = project_client
-        self.credential = async_credential
+        self.credential = credential
         self.model_id = azure_ai_settings.model_deployment_name
         self.conversation_id = conversation_id
-        self._should_close_client = should_close_client  # Track whether we should close client connection
 
-    async def setup_azure_ai_observability(self, enable_sensitive_data: bool | None = None) -> None:
-        """Use this method to setup tracing in your Azure AI Project.
+        # Track whether the application endpoint is used
+        self._is_application_endpoint = "/applications/" in project_client._config.endpoint  # type: ignore
+        # Track whether we should close client connection
+        self._should_close_client = should_close_client
 
-        This will take the connection string from the project project_client.
-        It will override any connection string that is set in the environment variables.
-        It will disable any OTLP endpoint that might have been set.
+    async def configure_azure_monitor(
+        self,
+        enable_sensitive_data: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Setup observability with Azure Monitor (Azure AI Foundry integration).
+
+        This method configures Azure Monitor for telemetry collection using the
+        connection string from the Azure AI project client.
+
+        Args:
+            enable_sensitive_data: Enable sensitive data logging (prompts, responses).
+                Should only be enabled in development/test environments. Default is False.
+            **kwargs: Additional arguments passed to configure_azure_monitor().
+                Common options include:
+                - enable_live_metrics (bool): Enable Azure Monitor Live Metrics
+                - credential (TokenCredential): Azure credential for Entra ID auth
+                - resource (Resource): Custom OpenTelemetry resource
+                See https://learn.microsoft.com/python/api/azure-monitor-opentelemetry/azure.monitor.opentelemetry.configure_azure_monitor
+                for full list of options.
+
+        Raises:
+            ImportError: If azure-monitor-opentelemetry-exporter is not installed.
+
+        Examples:
+            .. code-block:: python
+
+                from agent_framework.azure import AzureAIClient
+                from azure.ai.projects.aio import AIProjectClient
+                from azure.identity.aio import DefaultAzureCredential
+
+                async with (
+                    DefaultAzureCredential() as credential,
+                    AIProjectClient(
+                        endpoint="https://your-project.api.azureml.ms", credential=credential
+                    ) as project_client,
+                    AzureAIClient(project_client=project_client) as client,
+                ):
+                    # Setup observability with defaults
+                    await client.configure_azure_monitor()
+
+                    # With live metrics enabled
+                    await client.configure_azure_monitor(enable_live_metrics=True)
+
+                    # With sensitive data logging (dev/test only)
+                    await client.configure_azure_monitor(enable_sensitive_data=True)
+
+        Note:
+            This method retrieves the Application Insights connection string from the
+            Azure AI project client automatically. You must have Application Insights
+            configured in your Azure AI project for this to work.
         """
+        # Get connection string from project client
         try:
             conn_string = await self.project_client.telemetry.get_application_insights_connection_string()
         except ResourceNotFoundError:
             logger.warning(
-                "No Application Insights connection string found for the Azure AI Project, "
-                "please call setup_observability() manually."
+                "No Application Insights connection string found for the Azure AI Project. "
+                "Please ensure Application Insights is configured in your Azure AI project, "
+                "or call configure_otel_providers() manually with custom exporters."
             )
             return
-        from agent_framework.observability import setup_observability
 
-        setup_observability(
-            applicationinsights_connection_string=conn_string, enable_sensitive_data=enable_sensitive_data
+        # Import Azure Monitor with proper error handling
+        try:
+            from azure.monitor.opentelemetry import configure_azure_monitor
+        except ImportError as exc:
+            raise ImportError(
+                "azure-monitor-opentelemetry is required for Azure Monitor integration. "
+                "Install it with: pip install azure-monitor-opentelemetry"
+            ) from exc
+
+        from agent_framework.observability import create_metric_views, create_resource, enable_instrumentation
+
+        # Create resource if not provided in kwargs
+        if "resource" not in kwargs:
+            kwargs["resource"] = create_resource()
+
+        # Configure Azure Monitor with connection string and kwargs
+        configure_azure_monitor(
+            connection_string=conn_string,
+            views=create_metric_views(),
+            **kwargs,
         )
+
+        # Complete setup with core observability
+        enable_instrumentation(enable_sensitive_data=enable_sensitive_data)
 
     async def __aenter__(self) -> "Self":
         """Async context manager entry."""
@@ -187,6 +264,40 @@ class AzureAIClient(OpenAIBaseResponsesClient):
     async def close(self) -> None:
         """Close the project_client."""
         await self._close_client_if_needed()
+
+    def _create_text_format_config(
+        self, response_format: Any
+    ) -> (
+        ResponseTextFormatConfigurationJsonSchema
+        | ResponseTextFormatConfigurationJsonObject
+        | ResponseTextFormatConfigurationText
+    ):
+        """Convert response_format into Azure text format configuration."""
+        if isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            return ResponseTextFormatConfigurationJsonSchema(
+                name=response_format.__name__,
+                schema=response_format.model_json_schema(),
+            )
+
+        if isinstance(response_format, Mapping):
+            format_config = self._convert_response_format(response_format)
+            format_type = format_config.get("type")
+            if format_type == "json_schema":
+                config_kwargs: dict[str, Any] = {
+                    "name": format_config.get("name") or "response",
+                    "schema": format_config["schema"],
+                }
+                if "strict" in format_config:
+                    config_kwargs["strict"] = format_config["strict"]
+                if "description" in format_config:
+                    config_kwargs["description"] = format_config["description"]
+                return ResponseTextFormatConfigurationJsonSchema(**config_kwargs)
+            if format_type == "json_object":
+                return ResponseTextFormatConfigurationJsonObject()
+            if format_type == "text":
+                return ResponseTextFormatConfigurationText()
+
+        raise ServiceInvalidRequestError("response_format must be a Pydantic model or mapping.")
 
     async def _get_agent_reference_or_create(
         self, run_options: dict[str, Any], messages_instructions: str | None
@@ -225,15 +336,14 @@ class AzureAIClient(OpenAIBaseResponsesClient):
 
             if "tools" in run_options:
                 args["tools"] = run_options["tools"]
+            if "temperature" in run_options:
+                args["temperature"] = run_options["temperature"]
+            if "top_p" in run_options:
+                args["top_p"] = run_options["top_p"]
 
             if "response_format" in run_options:
                 response_format = run_options["response_format"]
-                args["text"] = PromptAgentDefinitionText(
-                    format=ResponseTextFormatConfigurationJsonSchema(
-                        name=response_format.__name__,
-                        schema=response_format.model_json_schema(),
-                    )
-                )
+                args["text"] = PromptAgentDefinitionText(format=self._create_text_format_config(response_format))
 
             # Combine instructions from messages and options
             combined_instructions = [
@@ -245,7 +355,9 @@ class AzureAIClient(OpenAIBaseResponsesClient):
                 args["instructions"] = "".join(combined_instructions)
 
             created_agent = await self.project_client.agents.create_version(
-                agent_name=self.agent_name, definition=PromptAgentDefinition(**args)
+                agent_name=self.agent_name,
+                definition=PromptAgentDefinition(**args),
+                description=self.agent_description,
             )
 
             self.agent_version = created_agent.version
@@ -257,7 +369,38 @@ class AzureAIClient(OpenAIBaseResponsesClient):
         if self._should_close_client:
             await self.project_client.close()
 
-    def _prepare_input(self, messages: MutableSequence[ChatMessage]) -> tuple[list[ChatMessage], str | None]:
+    @override
+    async def _prepare_options(
+        self,
+        messages: MutableSequence[ChatMessage],
+        chat_options: ChatOptions,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Take ChatOptions and create the specific options for Azure AI."""
+        prepared_messages, instructions = self._prepare_messages_for_azure_ai(messages)
+        run_options = await super()._prepare_options(prepared_messages, chat_options, **kwargs)
+        if not self._is_application_endpoint:
+            # Application-scoped response APIs do not support "agent" property.
+            agent_reference = await self._get_agent_reference_or_create(run_options, instructions)
+            run_options["extra_body"] = {"agent": agent_reference}
+
+        # Remove properties that are not supported on request level
+        # but were configured on agent level
+        exclude = ["model", "tools", "response_format", "temperature", "top_p"]
+
+        for property in exclude:
+            run_options.pop(property, None)
+
+        return run_options
+
+    @override
+    def _get_current_conversation_id(self, chat_options: ChatOptions, **kwargs: Any) -> str | None:
+        """Get the current conversation ID from chat options or kwargs."""
+        return chat_options.conversation_id or kwargs.get("conversation_id") or self.conversation_id
+
+    def _prepare_messages_for_azure_ai(
+        self, messages: MutableSequence[ChatMessage]
+    ) -> tuple[list[ChatMessage], str | None]:
         """Prepare input from messages and convert system/developer messages to instructions."""
         result: list[ChatMessage] = []
         instructions_list: list[str] = []
@@ -276,55 +419,26 @@ class AzureAIClient(OpenAIBaseResponsesClient):
 
         return result, instructions
 
-    async def prepare_options(
-        self, messages: MutableSequence[ChatMessage], chat_options: ChatOptions
-    ) -> dict[str, Any]:
-        """Take ChatOptions and create the specific options for Azure AI."""
-        chat_options.store = bool(chat_options.store or chat_options.store is None)
-        prepared_messages, instructions = self._prepare_input(messages)
-        run_options = await super().prepare_options(prepared_messages, chat_options)
-        agent_reference = await self._get_agent_reference_or_create(run_options, instructions)
-
-        run_options["extra_body"] = {"agent": agent_reference}
-
-        conversation_id = chat_options.conversation_id or self.conversation_id
-
-        # Handle different conversation ID formats
-        if conversation_id:
-            if conversation_id.startswith("resp_"):
-                # For response IDs, set previous_response_id and remove conversation property
-                run_options.pop("conversation", None)
-                run_options["previous_response_id"] = conversation_id
-            elif conversation_id.startswith("conv_"):
-                # For conversation IDs, set conversation and remove previous_response_id property
-                run_options.pop("previous_response_id", None)
-                run_options["conversation"] = conversation_id
-
-        # Remove properties that are not supported on request level
-        # but were configured on agent level
-        exclude = ["model", "tools", "response_format"]
-
-        for property in exclude:
-            run_options.pop(property, None)
-
-        return run_options
-
-    async def initialize_client(self) -> None:
+    async def _initialize_client(self) -> None:
         """Initialize OpenAI client."""
         self.client = self.project_client.get_openai_client()  # type: ignore
 
-    def _update_agent_name(self, agent_name: str | None) -> None:
+    def _update_agent_name_and_description(self, agent_name: str | None, description: str | None = None) -> None:
         """Update the agent name in the chat client.
 
         Args:
             agent_name: The new name for the agent.
+            description: The new description for the agent.
         """
         # This is a no-op in the base class, but can be overridden by subclasses
         # to update the agent name in the client.
         if agent_name and not self.agent_name:
             self.agent_name = agent_name
+        if description and not self.agent_description:
+            self.agent_description = description
 
-    def get_mcp_tool(self, tool: HostedMCPTool) -> Any:
+    @staticmethod
+    def _prepare_mcp_tool(tool: HostedMCPTool) -> MCPTool:  # type: ignore[override]
         """Get MCP tool from HostedMCPTool."""
         mcp = MCPTool(server_label=tool.name.replace(" ", "_"), server_url=str(tool.url))
 
@@ -342,17 +456,3 @@ class AzureAIClient(OpenAIBaseResponsesClient):
                         mcp["require_approval"] = {"never": {"tool_names": list(never_require_approvals)}}
 
         return mcp
-
-    def get_conversation_id(
-        self, response: OpenAIResponse | ParsedResponse[BaseModel], store: bool | None
-    ) -> str | None:
-        """Get the conversation ID from the response if store is True."""
-        if store:
-            # If conversation ID exists, it means that we operate with conversation
-            # so we use conversation ID as input and output.
-            if response.conversation and response.conversation.id:
-                return response.conversation.id
-            # If conversation ID doesn't exist, we operate with responses
-            # so we use response ID as input and output.
-            return response.id
-        return None
