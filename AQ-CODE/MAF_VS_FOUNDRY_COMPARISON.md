@@ -1,24 +1,25 @@
-# Microsoft Agent Framework vs Foundry Agent Service: Comprehensive Comparison
+# Microsoft Agent Framework vs Hosted Agents: Comprehensive Comparison
 
-**Last Updated:** December 9, 2025
+**Last Updated:** December 20, 2025
 
 ## Table of Contents
 1. [Overview](#overview)
 2. [Microsoft Agent Framework (MAF)](#microsoft-agent-framework-maf)
-3. [Microsoft Foundry Agent Service](#microsoft-foundry-agent-service)
-4. [Key Differences](#key-differences)
-5. [Decision Guide](#decision-guide)
-6. [References](#references)
+3. [Hosted Agents](#hosted-agents)
+4. [How MAF and Hosted Agents Work Together](#how-maf-and-hosted-agents-work-together)
+5. [Key Differences](#key-differences)
+6. [Decision Guide](#decision-guide)
+7. [References](#references)
 
 ---
 
 ## Overview
 
-This document provides a comprehensive comparison between Microsoft's two primary offerings for building AI agents:
+This document provides a comprehensive comparison between Microsoft's two complementary offerings for the AI agent lifecycle:
 - **Microsoft Agent Framework (MAF)**: An open-source SDK for building custom AI agents
-- **Microsoft Foundry Agent Service**: A managed enterprise platform for deploying production agents
+- **Hosted Agents**: A managed Azure service for deploying and running agents built with MAF or other frameworks
 
-Both are Microsoft products but serve different purposes in the AI agent development lifecycle.
+These are **not alternatives** but work together: MAF is the development layer, Hosted Agents is the deployment layer.
 
 ---
 
@@ -116,18 +117,22 @@ MAF provides migration guides for:
 
 ---
 
-## Microsoft Foundry Agent Service
+## Hosted Agents
 
-### What is Foundry Agent Service?
+### What is Hosted Agents?
 
-A production-ready, managed platform for deploying intelligent agents in enterprise environments. It serves as the runtime and orchestration layer that connects models, tools, frameworks, and governance into a unified system.
+Hosted Agents is an Azure AI Foundry managed service that containerizes and deploys agents built with frameworks like MAF or LangGraph. It provides production-grade infrastructure, scaling, and enterprise features for running agents in production.
+
+**Key Concept**: Hosted Agents is **not a framework**—it's a deployment platform. You build agents using MAF (or LangGraph), then deploy them to Hosted Agents for production hosting.
 
 **Platform:** Azure AI Foundry  
-**Documentation:** https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview
+**Documentation:** https://learn.microsoft.com/azure/ai-studio/agents/agents-overview  
+**Hosting Adapter Package (Python):** `azure-ai-agentserver-agentframework`  
+**Hosting Adapter Package (.NET):** `Azure.AI.AgentServer.AgentFramework`
 
-### The "Agent Factory" Model
+### The Deployment Platform Model
 
-Foundry operates as an assembly line for building production agents:
+Hosted Agents provides managed infrastructure for agents built with frameworks:
 
 #### 1. Models
 Select from LLM catalog:
@@ -167,7 +172,7 @@ Enterprise-grade security:
 - Encryption at rest and in transit
 - Network isolation (VNet support)
 
-### Agent Types in Foundry
+### Agent Types in Hosted Agents
 
 #### 1. Declarative Agents
 
@@ -181,10 +186,11 @@ Enterprise-grade security:
 - Multi-agent orchestration
 - Event-triggered actions
 
-#### 2. Hosted Agents
-- Containerized agents
-- Code-based creation and deployment
-- Foundry-managed hosting
+#### 2. Code-Based Agents (MAF/LangGraph)
+- Built using MAF or LangGraph frameworks
+- Containerized using hosting adapter
+- Deployed and scaled by Azure
+- Full programmatic control with managed hosting
 
 ### Enterprise Features
 
@@ -201,13 +207,13 @@ Enterprise-grade security:
 
 ### Business Continuity & Disaster Recovery (BCDR)
 
-Foundry relies on customer-provisioned Azure Cosmos DB for resilience:
+Hosted Agents uses Azure Cosmos DB for agent state persistence and resilience:
 - **Single-tenant account**: Customer-managed
 - **Agent state preservation**: All history stored in Cosmos DB
 - **Automatic failover**: Agent available in secondary region
 - **Seamless continuity**: Minimal disruption during outages
 
-### When to Use Foundry Agent Service
+### When to Use Hosted Agents
 
 ✅ **Best Use Cases:**
 - **Production Enterprise Deployments**: Governance and compliance requirements
@@ -227,11 +233,72 @@ Foundry relies on customer-provisioned Azure Cosmos DB for resilience:
 
 ---
 
+## How MAF and Hosted Agents Work Together
+
+### The Two-Layer Stack
+
+```
+┌─────────────────────────────────────────────┐
+│  LAYER 2: Hosted Agents (Azure Platform)   │
+│  • Containerization & deployment            │
+│  • Autoscaling & load balancing             │
+│  • Monitoring & logging                     │
+│  • Enterprise security & compliance         │
+└─────────────────────────────────────────────┘
+                     ↑
+              Hosting Adapter
+      from_agentframework(agent).run()
+                     ↓
+┌─────────────────────────────────────────────┐
+│  LAYER 1: MAF (Development Framework)       │
+│  • Agent creation & logic                   │
+│  • Workflow orchestration                   │
+│  • Tool integration (MCP)                   │
+│  • Local development & testing              │
+└─────────────────────────────────────────────┘
+```
+
+### Development → Production Flow
+
+1. **Build with MAF** (Layer 1)
+   - Write agent code in Python or .NET
+   - Test locally with DevUI
+   - Integrate tools via MCP
+
+2. **Add Hosting Adapter** (Bridge)
+   ```python
+   # Python
+   from azure.ai.agentserver.agentframework import from_agentframework
+   from_agentframework(agent).run()  # One line!
+   ```
+   ```csharp
+   // C#/.NET
+   AgentServerAdapter.FromAgentFramework(agent).Run();
+   ```
+
+3. **Deploy to Hosted Agents** (Layer 2)
+   ```bash
+   azd up  # Azure Developer CLI
+   ```
+
+4. **Azure Manages**
+   - Containers, scaling, monitoring, security
+
+### Why This Matters
+
+- **MAF alone**: You build agents, you manage infrastructure
+- **Hosted Agents alone**: Doesn't work—needs a framework (MAF or LangGraph)
+- **MAF + Hosted Agents**: You build agents, Azure manages infrastructure
+
+**Analogy**: MAF is like Django (web framework), Hosted Agents is like Azure App Service (hosting platform), and the hosting adapter is like WSGI (the bridge).
+
+---
+
 ## Key Differences
 
 ### Side-by-Side Comparison
 
-| Aspect | Microsoft Agent Framework (MAF) | Foundry Agent Service |
+| Aspect | Microsoft Agent Framework (MAF) | Hosted Agents |
 |--------|--------------------------------|----------------------|
 | **Nature** | Open-source SDK/Framework | Managed Cloud Service |
 | **Deployment** | Self-managed, anywhere | Azure-hosted |
@@ -253,12 +320,17 @@ Foundry relies on customer-provisioned Azure Cosmos DB for resilience:
 
 ### Development Lifecycle Comparison
 
-**MAF Workflow:**
+**MAF Standalone Workflow:**
 ```
 Local Development → Testing → Custom Deployment → Self-Managed Operations
 ```
 
-**Foundry Workflow:**
+**MAF + Hosted Agents Workflow:**
+```
+Build with MAF → Add Hosting Adapter → azd up → Azure-Managed Operations
+```
+
+**Declarative Agent Workflow (Hosted Agents):**
 ```
 Portal Configuration → Testing → Managed Deployment → Platform Operations
 ```
@@ -299,7 +371,7 @@ Portal Configuration → Testing → Managed Deployment → Platform Operations
    - Integration with non-Azure services
    - Vendor independence
 
-### Choose Foundry Agent Service When:
+### Choose Hosted Agents When:
 
 1. **Enterprise Production**
    - Deploying agents to production
@@ -331,22 +403,23 @@ Portal Configuration → Testing → Managed Deployment → Platform Operations
    - Pre-built security features
    - Reduced operational overhead
 
-### Hybrid Approach: Use Both
+### Recommended Approach: Use Both Together
 
-Many organizations use a hybrid strategy:
+The recommended pattern for most production scenarios:
 
-**Development Phase:**
-- Use MAF for building and testing agents locally
-- Iterate quickly with full control
-- Experiment with different patterns
+**Development Phase (MAF):**
+- Build agents locally with full control
+- Test with DevUI and local debugging
+- Iterate quickly with Python/.NET
+- Integrate tools via MCP
 
-**Production Phase:**
-- Deploy to Foundry Agent Service for enterprise features
-- Leverage managed infrastructure
-- Benefit from built-in governance
+**Production Phase (Hosted Agents):**
+- Add one line: `from_agentframework(agent).run()`
+- Deploy with `azd up`
+- Azure manages containers, scaling, monitoring
+- Enterprise security and compliance built-in
 
-**Integration:**
-MAF agents can be adapted to run on Foundry's runtime, enabling a smooth transition from development to production.
+**This is the intended workflow**: MAF for development, Hosted Agents for production. They're designed to work together, not as alternatives.
 
 ---
 
@@ -366,11 +439,12 @@ MAF builds on AutoGen's agent abstractions:
 - Conversation management
 - **Plus**: Type safety, middleware, enterprise observability
 
-### MAF to Foundry
-While not a direct migration, agents built with MAF can be adapted for Foundry:
-- Extract agent logic and tools
-- Configure in Foundry portal
-- Deploy with enterprise features
+### MAF to Hosted Agents
+Agents built with MAF deploy to Hosted Agents with minimal changes:
+- Install hosting adapter package: `pip install azure-ai-agentserver-agentframework`
+- Add one line: `from_agentframework(agent).run()`
+- Deploy with Azure Developer CLI: `azd up`
+- No rewrite needed—MAF code runs as-is
 
 ---
 
@@ -378,43 +452,43 @@ While not a direct migration, agents built with MAF can be adapted for Foundry:
 
 ### Customer Support
 
-| Requirement | MAF | Foundry | Recommendation |
-|-------------|-----|---------|----------------|
-| Basic chatbot | ✅ | ✅ | MAF for cost |
+| Requirement | MAF Standalone | MAF + Hosted Agents | Recommendation |
+|-------------|----------------|---------------------|----------------|
+| Basic chatbot | ✅ | ✅ | MAF standalone for cost |
 | Multi-modal (text/voice/image) | ✅ | ✅ | Either |
-| Enterprise compliance | ⚠️ | ✅ | Foundry |
-| Custom CRM integration | ✅ | ⚠️ | MAF |
-| 24/7 high availability | ⚠️ | ✅ | Foundry |
+| Enterprise compliance | ⚠️ | ✅ | MAF + Hosted Agents |
+| Custom CRM integration | ✅ | ✅ | Either (MAF for both) |
+| 24/7 high availability | ⚠️ | ✅ | MAF + Hosted Agents |
 
 ### Code Generation
 
-| Requirement | MAF | Foundry | Recommendation |
-|-------------|-----|---------|----------------|
-| IDE integration | ✅ | ⚠️ | MAF |
+| Requirement | MAF Standalone | MAF + Hosted Agents | Recommendation |
+|-------------|----------------|---------------------|----------------|
+| IDE integration | ✅ | ⚠️ | MAF standalone |
 | Code review automation | ✅ | ✅ | Either |
-| Enterprise code policies | ⚠️ | ✅ | Foundry |
-| Custom language support | ✅ | ⚠️ | MAF |
+| Enterprise code policies | ⚠️ | ✅ | MAF + Hosted Agents |
+| Custom language support | ✅ | ✅ | MAF (either deployment) |
 | Multi-developer teams | ✅ | ✅ | Either |
 
 ### Document Processing
 
-| Requirement | MAF | Foundry | Recommendation |
-|-------------|-----|---------|----------------|
-| Invoice processing | ✅ | ✅ | Foundry for scale |
-| Custom document types | ✅ | ⚠️ | MAF |
-| Compliance requirements | ⚠️ | ✅ | Foundry |
-| On-premises processing | ✅ | ❌ | MAF |
-| Azure AI Search integration | ✅ | ✅ | Foundry |
+| Requirement | MAF Standalone | MAF + Hosted Agents | Recommendation |
+|-------------|----------------|---------------------|----------------|
+| Invoice processing | ✅ | ✅ | MAF + Hosted Agents for scale |
+| Custom document types | ✅ | ✅ | Either (MAF for both) |
+| Compliance requirements | ⚠️ | ✅ | MAF + Hosted Agents |
+| On-premises processing | ✅ | ❌ | MAF standalone |
+| Azure AI Search integration | ✅ | ✅ | MAF + Hosted Agents |
 
 ### Research & Analysis
 
-| Requirement | MAF | Foundry | Recommendation |
-|-------------|-----|---------|----------------|
-| Web scraping | ✅ | ⚠️ | MAF |
+| Requirement | MAF Standalone | MAF + Hosted Agents | Recommendation |
+|-------------|----------------|---------------------|----------------|
+| Web scraping | ✅ | ✅ | MAF (either deployment) |
 | Multi-source synthesis | ✅ | ✅ | Either |
-| Academic institutions | ✅ | ⚠️ | MAF (cost) |
-| Enterprise research | ⚠️ | ✅ | Foundry |
-| Custom data sources | ✅ | ⚠️ | MAF |
+| Academic institutions | ✅ | ⚠️ | MAF standalone (cost) |
+| Enterprise research | ✅ | ✅ | MAF + Hosted Agents |
+| Custom data sources | ✅ | ✅ | MAF (either deployment) |
 
 Legend:
 - ✅ Well-supported
@@ -448,13 +522,13 @@ Legend:
 └─────────────────────────────────────────────┘
 ```
 
-### Foundry Architecture
+### Hosted Agents Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
 │         User Applications / APIs            │
 ├─────────────────────────────────────────────┤
-│       Foundry Agent Service (Managed)       │
+│       Hosted Agents Service (Managed)       │
 │   ┌────────────────────────────────────┐   │
 │   │     Agent Runtime & Orchestration  │   │
 │   ├────────────────────────────────────┤   │
@@ -475,7 +549,7 @@ Legend:
 
 ## Cost Considerations
 
-### MAF Cost Model
+### MAF Standalone Cost Model
 
 **Costs:**
 - Compute resources (VMs, containers, serverless)
@@ -496,10 +570,10 @@ Legend:
 - Storage: $10-50
 - **Total: $160-750/month**
 
-### Foundry Cost Model
+### Hosted Agents Cost Model
 
 **Costs:**
-- Foundry Agent Service fees
+- Hosted Agents service fees
 - Model API calls
 - Azure Cosmos DB (customer-provisioned)
 - Azure AI Search (if used)
@@ -513,13 +587,13 @@ Legend:
 - Enterprise SLA
 
 **Typical Monthly Cost (Small Project):**
-- Agent Service: $200-500
+- Hosted Agents Service: $200-500
 - Model APIs: $100-500
 - Cosmos DB: $100-300
 - Observability: $50-100
 - **Total: $450-1400/month**
 
-**Note:** Enterprise features and reduced operational overhead often justify higher costs for production deployments.
+**Note:** Enterprise features and reduced operational overhead often justify higher costs for production deployments. Using MAF + Hosted Agents eliminates infrastructure management costs.
 
 ---
 
@@ -536,7 +610,7 @@ Legend:
 7. **Tool Design**: Keep tools focused and well-documented
 8. **Error Handling**: Implement middleware for consistent error management
 
-### For Foundry Deployment
+### For Hosted Agents Deployment
 
 1. **Plan BCDR**: Configure Cosmos DB with appropriate backup policies
 2. **Identity First**: Set up Microsoft Entra integration early
@@ -558,12 +632,13 @@ Legend:
 - Community contributions
 - Integration with more MCP servers
 
-### Foundry Agent Service
+### Hosted Agents Service
 - Additional Azure service integrations
 - Advanced agent coordination patterns
 - Enhanced observability features
-- More deployment options
+- Improved MAF/LangGraph integration
 - Expanded regional availability
+- Streamlined deployment experience
 
 ---
 
@@ -579,11 +654,12 @@ Legend:
 - Migration from Semantic Kernel: https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-semantic-kernel
 - Migration from AutoGen: https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-autogen
 
-**Microsoft Foundry Agent Service:**
-- Overview: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview?view=foundry
-- Environment Setup: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/environment-setup?view=foundry
-- Quickstart: https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code?view=foundry
-- Python SDK Samples: https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-projects
+**Hosted Agents:**
+- Overview: https://learn.microsoft.com/azure/ai-studio/agents/agents-overview
+- Quickstart: https://learn.microsoft.com/azure/ai-studio/agents/deploy-agent
+- Hosting Adapter (Python): https://pypi.org/project/azure-ai-agentserver-agentframework/
+- Hosting Adapter (.NET): https://www.nuget.org/packages/Azure.AI.AgentServer.AgentFramework/
+- Azure Developer CLI: https://learn.microsoft.com/azure/developer/azure-developer-cli/overview
 
 **Community Resources:**
 - Discord: https://discord.gg/b5zjErwbQM (Azure AI Foundry)
@@ -598,16 +674,27 @@ Legend:
 
 ## Conclusion
 
-Both Microsoft Agent Framework and Foundry Agent Service are powerful solutions for building AI agents, each optimized for different stages of the development lifecycle and organizational needs:
+Microsoft Agent Framework and Hosted Agents are **complementary technologies** designed to work together:
 
-- **MAF** excels in flexibility, control, and development-phase work
-- **Foundry** excels in production readiness, enterprise features, and managed operations
+- **MAF** is the development framework—where you write agent code
+- **Hosted Agents** is the deployment platform—where Azure runs your agents
+- **Hosting Adapter** is the bridge—one line of code connects them
 
-The choice between them depends on your specific requirements for control, compliance, scale, and operational overhead. Many organizations find value in using both: MAF for development and Foundry for production deployment.
+**Key Insight**: These are not competing solutions. For production deployments, the recommended path is:
+1. Build with MAF (development framework)
+2. Add hosting adapter (one line)
+3. Deploy to Hosted Agents (Azure manages infrastructure)
+
+This gives you the flexibility of code-based development with the benefits of managed cloud infrastructure.
+
+**For Teams**:
+- **Developers**: Write agents in MAF with full programmatic control
+- **DevOps**: Deploy with `azd up`, Azure handles containers/scaling/monitoring
+- **Security**: Built-in enterprise compliance, no infrastructure management
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** December 9, 2025  
+**Document Version:** 2.0  
+**Last Updated:** December 20, 2025  
 **Author:** Research compiled from official Microsoft documentation  
 **Next Review:** Q1 2026
