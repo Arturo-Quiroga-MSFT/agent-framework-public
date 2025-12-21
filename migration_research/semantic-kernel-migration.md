@@ -4,6 +4,9 @@
 
 This guide provides detailed instructions for migrating from **Semantic Kernel's agent framework** to the **Microsoft Agent Framework**. The good news: many core concepts remain the same, and Microsoft has designed a smooth migration path.
 
+**✨ NEW: Comprehensive side-by-side code examples available!**  
+See [`/maf-upstream/python/samples/semantic-kernel-migration/`](../maf-upstream/python/samples/semantic-kernel-migration/) for working examples that run both SK and MAF implementations side-by-side.
+
 ## Key Changes Summary
 
 ### What Stays the Same ✅
@@ -669,20 +672,46 @@ public async Task Workflow_Executes_Correctly()
 
 ## Additional Resources
 
+### Official Documentation
 - [Official Migration Guide](https://learn.microsoft.com/en-us/semantic-kernel/support/migration/agent-framework-rc-migration-guide)
 - [Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
-- [Code Samples](../examples/)
+- [Migration from Semantic Kernel (MS Learn)](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-semantic-kernel)
 - [API Reference](https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents)
+
+### Code Samples & Examples
+
+**Side-by-Side Migration Samples** (Recommended starting point):
+- [`/maf-upstream/python/samples/semantic-kernel-migration/`](../maf-upstream/python/samples/semantic-kernel-migration/)
+  - **Chat Completion**: Basic agents, tools, threads, and streaming
+    - [01_basic_chat_completion.py](../maf-upstream/python/samples/semantic-kernel-migration/chat_completion/01_basic_chat_completion.py)
+    - [02_chat_completion_with_tool.py](../maf-upstream/python/samples/semantic-kernel-migration/chat_completion/02_chat_completion_with_tool.py)
+    - [03_chat_completion_thread_and_stream.py](../maf-upstream/python/samples/semantic-kernel-migration/chat_completion/03_chat_completion_thread_and_stream.py)
+  - **Azure AI Agents**: Cloud-hosted agents with code interpreter
+  - **OpenAI Assistants & Responses**: API parity examples
+  - **Copilot Studio**: Integration patterns
+  - **Orchestrations**: Sequential, concurrent, group chat, handoff, magentic
+  - **Processes**: Fan-out/fan-in, nested workflows
+
+**MAF Core Samples**:
+- [Getting Started (Python)](../maf-upstream/python/samples/getting_started/)
+- [Getting Started (.NET)](../maf-upstream/dotnet/samples/GettingStarted/)
+- [Workflow Samples](../maf-upstream/workflow-samples/)
+
+### Framework Reference
+- [Python README](../maf-upstream/python/README.md)
+- [.NET README](../maf-upstream/dotnet/README.md)
+- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
 
 ## Next Steps
 
 1. ✅ Review your current Semantic Kernel implementation
-2. ✅ Identify agents suitable for migration
-3. ✅ Start with simplest agents first
-4. ✅ Test thoroughly in non-production environment
-5. ✅ Monitor performance and behavior
-6. ✅ Gradually roll out to production
+2. ✅ **Start with side-by-side examples** in `/maf-upstream/python/samples/semantic-kernel-migration/`
+3. ✅ Identify agents suitable for migration
+4. ✅ Start with simplest agents first (chat completion)
+5. ✅ Test thoroughly in non-production environment
+6. ✅ Monitor performance and behavior
+7. ✅ Gradually roll out to production
 
 ---
 
-**Last Updated**: October 16, 2025
+**Last Updated**: December 20, 2025

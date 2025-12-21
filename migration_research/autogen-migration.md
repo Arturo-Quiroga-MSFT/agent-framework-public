@@ -4,6 +4,11 @@
 
 This guide helps teams migrate from **AutoGen** (Microsoft's multi-agent conversation framework) to the **Microsoft Agent Framework**. While AutoGen pioneered multi-agent patterns, the Agent Framework provides a production-ready, enterprise-grade evolution with enhanced capabilities.
 
+**✨ NEW: Comprehensive side-by-side code examples available!**  
+See [`/maf-upstream/python/samples/autogen-migration/`](../maf-upstream/python/samples/autogen-migration/) for working examples that run both AutoGen and MAF implementations side-by-side, including:
+- Single agent patterns (basic, with tools, threading, streaming)
+- Multi-agent orchestration (round-robin, selector, swarm, magentic-one)
+
 ## Key Concepts Mapping
 
 ### AutoGen → Agent Framework
@@ -790,19 +795,51 @@ async def test_workflow():
 
 ## Additional Resources
 
+### Official Documentation
+- [Migration from AutoGen (MS Learn)](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-autogen)
 - [Magentic Orchestration Docs](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/magentic)
 - [Workflow Documentation](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/overview)
-- [Code Examples](../examples/)
+- [Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
 - [AutoGen Comparison](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns)
+
+### Code Samples & Examples
+
+**Side-by-Side Migration Samples** (Recommended starting point):
+- [`/maf-upstream/python/samples/autogen-migration/`](../maf-upstream/python/samples/autogen-migration/)
+  - **Single Agent Parity**:
+    - [01_basic_assistant_agent.py](../maf-upstream/python/samples/autogen-migration/single_agent/01_basic_assistant_agent.py) - Basic agent migration
+    - [02_assistant_agent_with_tool.py](../maf-upstream/python/samples/autogen-migration/single_agent/02_assistant_agent_with_tool.py) - Function tools
+    - [03_assistant_agent_thread_and_stream.py](../maf-upstream/python/samples/autogen-migration/single_agent/03_assistant_agent_thread_and_stream.py) - Threading & streaming
+    - [04_agent_as_tool.py](../maf-upstream/python/samples/autogen-migration/single_agent/04_agent_as_tool.py) - Hierarchical agent pattern
+  - **Multi-Agent Orchestration**:
+    - [01_round_robin_group_chat.py](../maf-upstream/python/samples/autogen-migration/orchestrations/01_round_robin_group_chat.py) - RoundRobinGroupChat → GroupChatBuilder
+    - [02_selector_group_chat.py](../maf-upstream/python/samples/autogen-migration/orchestrations/02_selector_group_chat.py) - SelectorGroupChat → GroupChatBuilder
+    - [03_swarm.py](../maf-upstream/python/samples/autogen-migration/orchestrations/03_swarm.py) - Swarm → HandoffBuilder
+    - [04_magentic_one.py](../maf-upstream/python/samples/autogen-migration/orchestrations/04_magentic_one.py) - MagenticOneGroupChat → MagenticBuilder
+
+**MAF Core Samples**:
+- [Getting Started (Python)](../maf-upstream/python/samples/getting_started/)
+- [Getting Started (.NET)](../maf-upstream/dotnet/samples/GettingStarted/)
+- [Workflow Samples](../maf-upstream/workflow-samples/)
+
+### Framework Reference
+- [Python README](../maf-upstream/python/README.md)
+- [.NET README](../maf-upstream/dotnet/README.md)
+- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
 
 ## Next Steps
 
 1. ✅ Review AutoGen implementation
-2. ✅ Identify migration candidates
-3. ✅ Start with simple agents
-4. ✅ Test in development environment
-5. ✅ Monitor performance
-6. ✅ Roll out to production
+2. ✅ **Start with side-by-side examples** in `/maf-upstream/python/samples/autogen-migration/`
+3. ✅ Identify migration candidates (single agents first, then orchestrations)
+4. ✅ Note behavior differences (AutoGen single-turn vs MAF multi-turn default)
+5. ✅ Test in development environment
+6. ✅ Monitor performance
+7. ✅ Roll out to production
+
+---
+
+**Last Updated**: December 20, 2025
 
 ---
 

@@ -22,6 +22,14 @@ This document maps core concepts from the Semantic Kernel Process Framework (SK 
 7. Canary rollout and traffic split; keep SK available for rollback.
 
 ## Notes and references
+- **Complete side-by-side examples available**: See `/maf-upstream/python/samples/semantic-kernel-migration/processes/`
+  - [fan_out_fan_in_process.py](../maf-upstream/python/samples/semantic-kernel-migration/processes/fan_out_fan_in_process.py) - Fan-out/fan-in pattern
+  - [nested_process.py](../maf-upstream/python/samples/semantic-kernel-migration/processes/nested_process.py) - Nested process workflows
+- **Comprehensive MAF samples**: See `/maf-upstream/python/samples/getting_started/workflows/`
+  - Sequential workflows
+  - Concurrent orchestration
+  - Graph-based workflows with checkpointing
+  - Human-in-the-loop patterns
 - Example translation (before/after): fan-out/fan-in
 
 ### Before (Semantic Kernel Process Framework - excerpt)
@@ -66,7 +74,30 @@ async for event in workflow.run_stream(CommonEvents.START_PROCESS):
 Notes:
 - KernelFunctions become Executor handlers or small ai_function-style tools.
 - Event routing becomes explicit edges and fan-in/fan-out builder calls.
+- Complete working example available at: `/maf-upstream/python/samples/semantic-kernel-migration/processes/fan_out_fan_in_process.py`
 
-- See `python/samples/semantic-kernel-migration/processes/` for side-by-side examples.
-- Official SK Process Framework docs: https://learn.microsoft.com/en-us/semantic-kernel/frameworks/process/
-- Agent Framework docs: https://learn.microsoft.com/en-us/agent-framework/
+## Additional Resources
+
+### Official Migration Documentation
+- [Agent Framework Workflows Overview](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/overview)
+- [Migration from Semantic Kernel](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-semantic-kernel)
+- [Semantic Kernel Process Framework docs](https://learn.microsoft.com/en-us/semantic-kernel/frameworks/process/)
+
+### Code Samples
+- **SK to MAF Migration Samples**: `/maf-upstream/python/samples/semantic-kernel-migration/`
+  - Chat completion agents
+  - Azure AI agents
+  - OpenAI assistants & responses
+  - Orchestrations (sequential, concurrent, group chat, handoff, magentic)
+  - **Processes** (fan-out/fan-in, nested)
+  
+- **MAF Workflow Samples**: `/maf-upstream/python/samples/getting_started/workflows/`
+  - Basic workflows
+  - Agent integration
+  - Orchestration patterns
+  - Custom executors
+
+### Framework Documentation
+- Python README: `/maf-upstream/python/README.md`
+- .NET README: `/maf-upstream/dotnet/README.md`
+- Agent Framework Repository: https://github.com/microsoft/agent-framework

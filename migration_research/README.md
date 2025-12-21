@@ -56,13 +56,23 @@ AutoGen patterns are supported and enhanced:
 
 ### Official Documentation
 - [Microsoft Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
-- [Semantic Kernel Agent Framework RC Migration Guide](https://learn.microsoft.com/en-us/semantic-kernel/support/migration/agent-framework-rc-migration-guide)
+- [Agent Framework Overview](https://learn.microsoft.com/agent-framework/overview/agent-framework-overview)
+- [Quick Start Guide](https://learn.microsoft.com/agent-framework/tutorials/quick-start)
+- [Migration from Semantic Kernel](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-semantic-kernel)
+- [Migration from AutoGen](https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-autogen)
 - [Agent Framework Workflows](https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/overview)
+- [Semantic Kernel Agent Framework RC Migration Guide](https://learn.microsoft.com/en-us/semantic-kernel/support/migration/agent-framework-rc-migration-guide)
 
 ### Code Samples
-- [Agent Framework Samples (Python)](../python/samples/)
+- [Agent Framework Samples (Python)](../python/samples/) - Local development samples
+- [Upstream Python Samples](../maf-upstream/python/samples/) - Latest MAF samples from upstream
+  - [Semantic Kernel Migration Samples](../maf-upstream/python/samples/semantic-kernel-migration/) - Side-by-side SK→MAF examples
+  - [AutoGen Migration Samples](../maf-upstream/python/samples/autogen-migration/) - Side-by-side AutoGen→MAF examples
+  - [Getting Started Samples](../maf-upstream/python/samples/getting_started/) - Core MAF patterns
 - [Agent Framework Samples (.NET)](../dotnet/samples/)
+- [Upstream .NET Samples](../maf-upstream/dotnet/samples/) - Latest MAF samples from upstream
 - [Workflow Samples](../workflow-samples/)
+- [Upstream Workflow Samples](../maf-upstream/workflow-samples/) - Latest workflow patterns
 
 ## 🚀 Getting Started
 
@@ -89,4 +99,4 @@ This is an evolving research directory. Contributions are welcome:
 
 ---
 
-**Last Updated**: October 16, 2025
+**Last Updated**: December 20, 2025
