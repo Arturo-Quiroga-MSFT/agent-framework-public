@@ -393,14 +393,14 @@ public static partial class AzureAIProjectChatClientExtensions
 
         PromptAgentDefinition agentDefinition = new(model)
         {
-            Instructions = options.Instructions,
+            Instructions = options.ChatOptions?.Instructions,
             Temperature = options.ChatOptions?.Temperature,
             TopP = options.ChatOptions?.TopP,
             TextOptions = new() { TextFormat = ToOpenAIResponseTextFormat(options.ChatOptions?.ResponseFormat, options.ChatOptions) }
         };
 
         // Attempt to capture breaking glass options from the raw representation factory that match the agent definition.
-        if (options.ChatOptions?.RawRepresentationFactory?.Invoke(new NoOpChatClient()) is ResponseCreationOptions respCreationOptions)
+        if (options.ChatOptions?.RawRepresentationFactory?.Invoke(new NoOpChatClient()) is CreateResponseOptions respCreationOptions)
         {
             agentDefinition.ReasoningOptions = respCreationOptions.ReasoningOptions;
         }
@@ -459,14 +459,14 @@ public static partial class AzureAIProjectChatClientExtensions
 
         PromptAgentDefinition agentDefinition = new(model)
         {
-            Instructions = options.Instructions,
+            Instructions = options.ChatOptions?.Instructions,
             Temperature = options.ChatOptions?.Temperature,
             TopP = options.ChatOptions?.TopP,
             TextOptions = new() { TextFormat = ToOpenAIResponseTextFormat(options.ChatOptions?.ResponseFormat, options.ChatOptions) }
         };
 
         // Attempt to capture breaking glass options from the raw representation factory that match the agent definition.
-        if (options.ChatOptions?.RawRepresentationFactory?.Invoke(new NoOpChatClient()) is ResponseCreationOptions respCreationOptions)
+        if (options.ChatOptions?.RawRepresentationFactory?.Invoke(new NoOpChatClient()) is CreateResponseOptions respCreationOptions)
         {
             agentDefinition.ReasoningOptions = respCreationOptions.ReasoningOptions;
         }
@@ -822,10 +822,9 @@ public static partial class AzureAIProjectChatClientExtensions
         if (agentDefinition is PromptAgentDefinition promptAgentDefinition)
         {
             agentOptions.ChatOptions ??= chatOptions?.Clone() ?? new();
-            agentOptions.Instructions = promptAgentDefinition.Instructions;
+            agentOptions.ChatOptions.Instructions = promptAgentDefinition.Instructions;
             agentOptions.ChatOptions.Temperature = promptAgentDefinition.Temperature;
             agentOptions.ChatOptions.TopP = promptAgentDefinition.TopP;
-            agentOptions.ChatOptions.Instructions = promptAgentDefinition.Instructions;
         }
 
         if (agentTools is { Count: > 0 })

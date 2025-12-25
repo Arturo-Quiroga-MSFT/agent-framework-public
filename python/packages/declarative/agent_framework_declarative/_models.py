@@ -2,6 +2,7 @@
 import os
 import sys
 from collections.abc import MutableMapping
+from contextvars import ContextVar
 from typing import Any, Literal, TypeVar, Union
 
 from agent_framework import get_logger
@@ -20,6 +21,11 @@ else:
     from typing_extensions import overload  # pragma: no cover
 
 logger = get_logger("agent_framework.declarative")
+
+# Context variable for safe_mode setting.
+# When True (default), environment variables are NOT accessible in PowerFx expressions.
+# When False, environment variables CAN be accessed via Env symbol in PowerFx.
+_safe_mode_context: ContextVar[bool] = ContextVar("safe_mode", default=True)
 
 
 @overload
@@ -49,6 +55,9 @@ def _try_powerfx_eval(value: str | None, log_value: bool = True) -> str | None:
         )
         return value
     try:
+        safe_mode = _safe_mode_context.get()
+        if safe_mode:
+            return engine.eval(value[1:])
         return engine.eval(value[1:], symbols={"Env": dict(os.environ)})
     except Exception as exc:
         if log_value:
@@ -253,7 +262,7 @@ class Connection(SerializationMixin):
             # We're being called on a subclass, use the normal from_dict
             return SerializationMixin.from_dict.__func__(cls, value, dependencies=dependencies)  # type: ignore[misc]
 
-        kind = value.get("kind", "")
+        kind = value.get("kind", "").lower()
         if kind == "reference":
             return SerializationMixin.from_dict.__func__(  # type: ignore[misc]
                 ReferenceConnection, value, dependencies=dependencies
@@ -262,7 +271,7 @@ class Connection(SerializationMixin):
             return SerializationMixin.from_dict.__func__(  # type: ignore[misc]
                 RemoteConnection, value, dependencies=dependencies
             )
-        if kind == "key":
+        if kind in ("key", "apikey"):
             return SerializationMixin.from_dict.__func__(  # type: ignore[misc]
                 ApiKeyConnection, value, dependencies=dependencies
             )

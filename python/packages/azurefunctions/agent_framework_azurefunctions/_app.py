@@ -414,7 +414,7 @@ class AgentFunctionApp(DFAppBase):
                     request_response_format,
                 )
                 logger.debug("Signalling entity %s with request: %s", entity_instance_id, run_request)
-                await client.signal_entity(entity_instance_id, "run_agent", run_request)
+                await client.signal_entity(entity_instance_id, "run", run_request)
 
                 logger.debug(f"[HTTP Trigger] Signal sent to entity {session_id}")
 
@@ -495,7 +495,8 @@ class AgentFunctionApp(DFAppBase):
             """Durable entity that manages agent execution and conversation state.
 
             Operations:
-            - run_agent: Execute the agent with a message
+            - run: Execute the agent with a message
+            - run_agent: (Deprecated) Execute the agent with a message
             - reset: Clear conversation history
             """
             entity_handler = create_agent_entity(agent, callback)
@@ -562,6 +563,7 @@ class AgentFunctionApp(DFAppBase):
             logger.debug("[MCP Tool Trigger] Received invocation for agent: %s", agent_name)
             return await self._handle_mcp_tool_invocation(agent_name=agent_name, context=context, client=client)
 
+        _ = mcp_tool_handler
         logger.debug("[AgentFunctionApp] Registered MCP tool trigger for agent: %s", agent_name)
 
     async def _handle_mcp_tool_invocation(
@@ -587,15 +589,17 @@ class AgentFunctionApp(DFAppBase):
 
         # Parse JSON context string
         try:
-            parsed_context = json.loads(context)
+            parsed_context: Any = json.loads(context)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid MCP context format: {e}") from e
 
+        parsed_context = cast(Mapping[str, Any], parsed_context) if isinstance(parsed_context, dict) else {}
+
         # Extract arguments from MCP context
-        arguments = parsed_context.get("arguments", {}) if isinstance(parsed_context, dict) else {}
+        arguments: dict[str, Any] = parsed_context.get("arguments", {})
 
         # Validate required 'query' argument
-        query = arguments.get("query")
+        query: Any = arguments.get("query")
         if not query or not isinstance(query, str):
             raise ValueError("MCP Tool invocation is missing required 'query' argument of type string.")
 
@@ -634,7 +638,7 @@ class AgentFunctionApp(DFAppBase):
         logger.info("[MCP Tool] Invoking agent '%s' with query: %s", agent_name, query_preview)
 
         # Signal entity to run agent
-        await client.signal_entity(entity_instance_id, "run_agent", run_request)
+        await client.signal_entity(entity_instance_id, "run", run_request)
 
         # Poll for response (similar to HTTP handler)
         try:
@@ -951,10 +955,9 @@ class AgentFunctionApp(DFAppBase):
         """Create a lowercase header mapping from the incoming request."""
         headers: dict[str, str] = {}
         raw_headers = req.headers
-        if isinstance(raw_headers, Mapping):
-            for key, value in raw_headers.items():
-                if value is not None:
-                    headers[str(key).lower()] = str(value)
+        for key, value in cast(Mapping[str, str], raw_headers).items():
+            headers[key.lower()] = value
+
         return headers
 
     @staticmethod
