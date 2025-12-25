@@ -13,7 +13,7 @@ There are 4 different implementations for using an MCP server with the Agent Fra
 #HostedMCPTool and #MCPStreamableHTTPTool implementations support passing headers (i.e. Authorization token) to the MCP server. 
 The MCP Tools that have **direct connection** allow you to have more control over access to the MCP server, for example:
     - MCP server can be hosted privately with no public access
-    - Auth tokens are not sent and stored in Azure AI Foundry Service
+    - Auth tokens are not sent and stored in Azure AI Foundry
 
 ### Direct Connection Flow
 

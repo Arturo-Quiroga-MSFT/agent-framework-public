@@ -251,10 +251,38 @@ logging.basicConfig(level=logging.DEBUG)
 - [Cost Optimization Guide](https://learn.microsoft.com/azure/ai-foundry/how-to/control-plane-cost-optimization)
 - [Custom Agent Registration](https://learn.microsoft.com/azure/ai-foundry/how-to/custom-agent-registration)
 
+## Persistent Agents & Portal Visibility
+
+**New to agent creation or confused about portal visibility?** Start here:
+
+📚 **[ANSWER_PERSISTENT_AGENTS.md](ANSWER_PERSISTENT_AGENTS.md)** - Complete guide to creating persistent agents  
+📖 **[AGENT_PORTALS_EXPLAINED.md](AGENT_PORTALS_EXPLAINED.md)** - Understanding V1 vs V2 agents and portal visibility  
+
+### Quick Links
+
+| Problem | Solution |
+|---------|----------|
+| Agents don't show in new portal | Use V2 API (`AIProjectClient.agents.create_agent()`) |
+| Agents disappear after script runs | Remove deletion code from `finally` block |
+| Need working sample code | See [`agents/azure_ai_persistent_agent_v2.py`](agents/azure_ai_persistent_agent_v2.py) |
+| Want to deploy multiple agents | Run [`deploy_new_agents.py`](deploy_new_agents.py) |
+| Have old V1 agents to clean up | Use [`cleanup_v1_agents.py`](cleanup_v1_agents.py) |
+
 ## Files
 
 | File | Description |
 |------|-------------|
+| **Agent Creation & Persistence** | |
+| `agents/azure_ai_persistent_agent_v2.py` | ✅ Recommended: Simple persistent agent sample |
+| `agents/azure_ai_persistent_agent_with_version.py` | Persistent agent with versioning |
+| `ANSWER_PERSISTENT_AGENTS.md` | Complete answer for creating persistent agents |
+| `AGENT_PORTALS_EXPLAINED.md` | V1 vs V2 agents & portal visibility explained |
+| **Deployment & Management** | |
+| `deploy_new_agents.py` | Deploy 8 sample agents to your project |
+| `cleanup_v1_agents.py` | Clean up V1 agents (old portal only) |
+| `cleanup_v1_assistants.py` | Clean up V1 assistants (OpenAI API) |
+| `exercise_agents_v2.py` | Generate telemetry by exercising agents |
+| **Fleet Monitoring** | |
 | `fleet_health_client.py` | API client for aggregating Control Plane data |
 | `fleet_health_dashboard.py` | Streamlit dashboard application |
 | `requirements.txt` | Python dependencies |
