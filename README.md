@@ -15,7 +15,12 @@
 > - Redis persistence patterns
 > - Full observability implementations
 >
-> **🆕 Latest Updates (Nov 28, 2024)**: Latest MAF code synced, Mermaid architecture diagrams, enhanced documentation. See [AQ-CODE/CHANGELOG.md](./AQ-CODE/CHANGELOG.md) for full history.
+> **🆕 Latest Updates (Dec 25, 2025)**: 
+> - **DBMS Assistant**: Full-featured Tauri desktop app for SQL Server DBAs with MCP integration
+> - **Control Plane Integration**: Azure AI Foundry fleet health monitoring and management
+> - **Profisee Migration Guides**: Comprehensive SK→AF migration documentation
+> - **Enhanced NL2SQL**: Multiple deployment modes (CLI, Gradio, pipeline)
+> - Latest MAF code synced, production-ready patterns
 
 [![Microsoft Azure AI Foundry Discord](https://dcbadge.limes.pink/api/server/b5zjErwbQM?style=flat)](https://discord.gg/b5zjErwbQM)
 [![MS Learn Documentation](https://img.shields.io/badge/MS%20Learn-Documentation-blue)](https://learn.microsoft.com/en-us/agent-framework/)
@@ -30,6 +35,17 @@ This repository is organized into distinct sections:
 
 ### 🎯 **Custom Development & Demos**
 
+#### **[DBMS-ASSISTANT/](./DBMS-ASSISTANT/)** - AI-Powered SQL Database Administrator
+- **🎯 Tauri Desktop App**: Cross-platform database management with natural language
+- **🔧 MCP Integration**: Official Microsoft MSSQL MCP Server (@azure/mssql-mcp-server)
+- **🔐 Enterprise Auth**: Azure Entra ID and SQL authentication
+- **🎨 Modern UI**: React + Rust with real-time connection status
+- **🔍 Smart Queries**: NL to SQL with schema-aware validation
+- **📊 Observability**: OpenTelemetry + Application Insights tracing
+- **🛡️ Safety First**: Query validation, approval workflows, audit logging
+- **Capabilities**: Schema analysis, index optimization, ERD generation, performance tuning
+- See [DBMS-ASSISTANT/README.md](./DBMS-ASSISTANT/README.md) for details
+
 #### **[AQ-CODE/](./AQ-CODE/)** - Production Demos & Workshop Materials
 - **🎨 Streamlit Demo App**: 9 interactive agent scenarios (Basic Chat, Function Tools, Threads, Code Interpreter, Bing Search, File Search/RAG, Azure AI Search, MCP integrations)
   - 🚀 [Live Demo](https://agent-framework-demo.livelyforest-d40d7875.eastus.azurecontainerapps.io) deployed on Azure Container Apps
@@ -42,17 +58,27 @@ This repository is organized into distinct sections:
 - **🎭 Multi-Agent Orchestration**: DevUI backends and Streamlit dashboards
 - **📊 Observability**: Application Insights integration samples
 - **💾 Redis Persistence**: Memory and conversation state management
-- See [AQ-CODE/README.md](./AQ-CODE/README.md) for details
+- **🏢 Control Plane (Dec 2025)**: Fleet health monitoring, agent lifecycle management, compliance tracking
+- See [AQ-CODE/README.md](./AQ-CODE/README.md) and [FOUNDRY-CONTROL-PLANE-DEC-2025/README.md](./AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/README.md)
 
-#### **[nl2sql-pipeline/](./nl2sql-pipeline/)** - Natural Language to SQL Workflow
-- Production-ready sequential pipeline: NL Question → SQL → Insights
-- Azure SQL Database integration via MSSQL MCP Server
-- 8-step workflow with agents + business logic executors
-- ✨ **NEW**: Mermaid architecture diagrams for better visualization
-- CSV/Excel export, automatic chart generation
-- Schema caching (100-500x performance improvement)
-- DevUI interface on port 8097
-- See [nl2sql-pipeline/README.md](./nl2sql-pipeline/README.md) and [ARCHITECTURE.md](./nl2sql-pipeline/ARCHITECTURE.md)
+#### **[NL2SQL-WORK/](./NL2SQL-WORK/)** - Natural Language to SQL Systems
+- **🚀 Multiple Deployment Modes**: CLI, Gradio UI, and full pipeline
+- **⚡ nl2sql-cli**: Fast command-line interface for quick queries
+- **🎨 nl2sql-gradio**: Web-based interface with interactive visualizations
+- **🔄 nl2sql-pipeline**: Production 8-step workflow (NL → SQL → Insights)
+- **📊 Features**: Azure SQL integration, automatic charts, CSV/Excel export
+- **🎯 MCP Integration**: MSSQL MCP Server for database operations
+- **⚙️ Performance**: Schema caching (100-500x improvement), DevUI debugging
+- See [NL2SQL-WORK/README.md](./NL2SQL-WORK/README.md)
+
+#### **[AQ-PROFISEE/](./AQ-PROFISEE/)** - Semantic Kernel to Agent Framework Migration
+- **📚 Comprehensive Guides**: SK→AF migration patterns and best practices
+- **🔄 Real-World Examples**: Based on production NL2SQL pipeline migration
+- **🎯 Profisee-Specific**: Tailored guidance for Profisee team migration
+- **🔧 Code Comparisons**: Side-by-side SK vs AF implementations
+- **📊 IChatClient vs AIAgent**: Decision matrix for architecture choices
+- Guides: Migration overview, C# patterns, IChatClient comparison, addendums
+- See [AQ-PROFISEE/PROFISEE-SK-TO-AF-MIGRATION-GUIDE.md](./AQ-PROFISEE/PROFISEE-SK-TO-AF-MIGRATION-GUIDE.md)
 
 #### **[AQ-TERADATA/](./AQ-TERADATA/)** - Multi-Cloud Integration Strategy
 - LangGraph + MAF integration for cloud-agnostic deployments
@@ -170,22 +196,49 @@ bash deploy-to-azure.sh
 
 **Documentation**: [AQ-CODE/DOCUMENTATION_INDEX.md](./AQ-CODE/DOCUMENTATION_INDEX.md)
 
-### 2. **NL2SQL Pipeline** (8-Step Workflow)
+### 2. **NL2SQL Systems** (Multiple Interfaces)
 
 ```bash
-python nl2sql-pipeline/nl2sql_workflow.py
+# CLI mode - fast queries
+cd NL2SQL-WORK/nl2sql-cli
+python nl2sql_cli.py
+
+# Gradio UI - web interface
+cd NL2SQL-WORK/nl2sql-gradio
+python app.py
+
+# Full pipeline - production workflow
+cd NL2SQL-WORK/nl2sql-pipeline
+python nl2sql_workflow.py
 # DevUI at http://localhost:8097
 ```
 
 **Features:**
 - Natural language → SQL → Insights
-- Azure SQL Database integration
-- Automatic CSV/Excel export
-- Smart visualizations (bar, line, pie, heatmap)
+- Azure SQL Database integration via MCP
+- Automatic CSV/Excel export & visualizations
 - Schema caching for performance
-- Full observability
+- Multiple deployment modes
 
-**Documentation**: [nl2sql-pipeline/README.md](./nl2sql-pipeline/README.md)
+**Documentation**: [NL2SQL-WORK/README.md](./NL2SQL-WORK/README.md)
+
+### 3. **DBMS Assistant** (Database Administration)
+
+```bash
+cd DBMS-ASSISTANT/UI
+npm install
+npm run tauri dev
+# Desktop app launches
+```
+
+**Features:**
+- Natural language database queries
+- Schema analysis and ERD generation
+- Index optimization recommendations
+- Real-time connection status
+- OpenTelemetry tracing
+
+**Documentation**: [DBMS-ASSISTANT/README.md](./DBMS-ASSISTANT/README.md)
 
 ---
 
@@ -322,13 +375,17 @@ Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Fram
 ## 💼 Production Patterns & Best Practices
 
 ### Enterprise Deployment
-- **[AQ-CODE/DOCKER_README.md](./AQ-CODE/DOCKER_README.md)** - Container deployment guide
-- **[AQ-CODE/deploy-to-azure.sh](./AQ-CODE/deploy-to-azure.sh)** - Automated Azure Container Apps deployment
+- **[AQ-CODE/deployment/DOCKER_README.md](./AQ-CODE/deployment/DOCKER_README.md)** - Container deployment guide
+- **[AQ-CODE/deployment/deploy-to-azure.sh](./AQ-CODE/deployment/deploy-to-azure.sh)** - Automated Azure Container Apps deployment
+- **[DBMS-ASSISTANT/](./DBMS-ASSISTANT/)** - Desktop app deployment with Tauri
 - **[AQ-TERADATA/](./AQ-TERADATA/)** - Multi-cloud strategies (Azure/AWS/GCP)
+- **[AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/](./AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/)** - Fleet management and monitoring
 
 ### Observability & Monitoring
 - **[AQ-CODE/observability/](./AQ-CODE/observability/)** - Application Insights integration
 - **[AQ-CODE/observability/OBSERVABILITY_SAMPLES.md](./AQ-CODE/observability/OBSERVABILITY_SAMPLES.md)** - Workshop Module 4
+- **[DBMS-ASSISTANT/](./DBMS-ASSISTANT/)** - Database operations tracing
+- **[AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/](./AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/)** - Fleet health dashboard
 - OpenTelemetry traces, metrics, and logs
 
 ### State Management
@@ -336,10 +393,12 @@ Console.WriteLine(await agent.RunAsync("Write a haiku about Microsoft Agent Fram
 - Conversation memory and multi-agent isolation
 - Interactive DevUI demos included
 
-### LLMOps
+### LLMOps & Migration
 - **[LLMOPS/INDEX.md](./LLMOPS/INDEX.md)** - Operational best practices
 - **[LLMOPS/MAF_LLMOPS_BEST_PRACTICES.md](./LLMOPS/MAF_LLMOPS_BEST_PRACTICES.md)** - Comprehensive guide
-- Monitoring, evaluation, cost optimization
+- **[AQ-PROFISEE/](./AQ-PROFISEE/)** - Semantic Kernel to Agent Framework migration guides
+- **[AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/](./AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/)** - Agent lifecycle management
+- Monitoring, evaluation, cost optimization, fleet management
 
 ---
 
@@ -366,11 +425,15 @@ The script:
 - `workflow-samples/` - Official workflow patterns
 
 **Custom Directories (NOT synced):**
-- `AQ-CODE/` - Custom demos and tools
-- `nl2sql-pipeline/` - NL2SQL implementation
-- `AQ-TERADATA/` - Multi-cloud integration
+- `AQ-CODE/` - Custom demos, tools, and Control Plane integration
+- `DBMS-ASSISTANT/` - SQL Server DBA assistant with Tauri UI
+- `NL2SQL-WORK/` - NL2SQL implementations (CLI, Gradio, Pipeline)
+- `AQ-PROFISEE/` - Semantic Kernel to Agent Framework migration guides
+- `AQ-TERADATA/` - Multi-cloud integration patterns
 - `LLMOPS/` - Best practices documentation
-- `MCP/` - MCP experiments
+- `MCP/` - MCP experiments and integrations
+- `HOSTED_AGENTS/` - Hosted agent configurations
+- `MICROSOFT-ENTRA-AGENT-ID/` - Entra ID integration patterns
 
 ---
 
@@ -380,7 +443,9 @@ The script:
 - [Getting Started with Agents](./python/samples/getting_started/agents) - Basic agent creation and tool usage
 - [Chat Client Examples](./python/samples/getting_started/chat_client) - Direct chat client patterns
 - [Getting Started with Workflows](./python/samples/getting_started/workflows) - Workflow creation and orchestration
-- **[AQ-CODE/streamlit_azure_ai_demo.py](./AQ-CODE/streamlit_azure_ai_demo.py)** - Production Streamlit demo (9 scenarios)
+- **[AQ-CODE/demos/streamlit_azure_ai_demo.py](./AQ-CODE/demos/streamlit_azure_ai_demo.py)** - Production Streamlit demo (9 scenarios)
+- **[DBMS-ASSISTANT/dba_assistant.py](./DBMS-ASSISTANT/dba_assistant.py)** - Production DBA agent with MCP
+- **[NL2SQL-WORK/](./NL2SQL-WORK/)** - Natural language to SQL implementations
 
 ### .NET
 - [Getting Started with Agents](./dotnet/samples/GettingStarted/Agents) - Basic agent creation and tool usage
@@ -426,5 +491,20 @@ See [LICENSE](./LICENSE) file.
 ---
 
 **Maintained By**: Arturo Quiroga, Sr. Partner Solutions Architect @ Microsoft  
-**Last Updated**: November 28, 2024  
+**Last Updated**: December 25, 2025  
 **Repository**: [agent-framework-public](https://github.com/arturoquiroga/agent-framework-public)
+
+---
+
+## 🎯 Featured Projects
+
+### Production-Ready Applications
+- **[DBMS-ASSISTANT/](./DBMS-ASSISTANT/)** - Enterprise SQL Server DBA assistant with Tauri desktop UI
+- **[AQ-CODE/demos/streamlit_azure_ai_demo.py](./AQ-CODE/demos/)** - Live Streamlit demo (9 scenarios) on Azure Container Apps
+- **[NL2SQL-WORK/](./NL2SQL-WORK/)** - Multiple NL2SQL deployment modes (CLI, web, pipeline)
+- **[AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/](./AQ-CODE/FOUNDRY-CONTROL-PLANE-DEC-2025/)** - Azure AI Foundry fleet management
+
+### Enterprise Migration Resources
+- **[AQ-PROFISEE/](./AQ-PROFISEE/)** - Comprehensive Semantic Kernel → Agent Framework migration guides
+- **[AQ-TERADATA/](./AQ-TERADATA/)** - Multi-cloud deployment strategies
+- **[LLMOPS/](./LLMOPS/)** - Production operations and best practices
