@@ -1,0 +1,4 @@
+agent-framework>=1.0.0
+azure-identity>=1.15.0
+rich>=13.7.0
+pydantic>=2.5.0
