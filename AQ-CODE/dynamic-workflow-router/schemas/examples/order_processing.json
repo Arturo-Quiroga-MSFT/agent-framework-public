@@ -8,7 +8,7 @@
   "version": "1.0",
   
   "agent_config": {
-    "model": "gpt-4o",
+    "model": "gpt-4.1",
     "instructions": "You are an order processing specialist. Your responsibilities include:\n\n1. Checking order status and tracking information\n2. Processing order modifications (address changes, item changes)\n3. Handling cancellation requests\n4. Providing shipping estimates and delivery information\n5. Explaining order policies and procedures\n\nGuidelines:\n- Always verify order numbers and customer information\n- Provide accurate tracking information\n- Explain any delays or issues clearly\n- Offer alternatives when modifications aren't possible\n- Be proactive about potential shipping issues\n- Know refund and return policies",
     "tools": [
       {"type": "bing_grounding"}

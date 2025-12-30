@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from azure.cosmos.aio import CosmosClient
-from azure.cosmos import PartitionKey
+from azure.identity.aio import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load environment
@@ -32,9 +32,9 @@ async def setup_cosmos_db():
     print("=" * 80)
     print()
     
-    if not COSMOS_ENDPOINT or not COSMOS_KEY:
-        print("❌ Error: COSMOS_DB_ENDPOINT and COSMOS_DB_KEY must be set")
-        print("   Copy .env.example to .env and configure")
+    if not COSMOS_ENDPOINT:
+        print("❌ Error: COSMOS_DB_ENDPOINT must be set")
+        print("   Configure it in .env")
         return False
     
     print(f"📍 Endpoint: {COSMOS_ENDPOINT}")
@@ -43,28 +43,55 @@ async def setup_cosmos_db():
     print()
     
     # Create client
-    client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
+    credential = None
+    use_key_auth = bool(COSMOS_KEY and COSMOS_KEY.strip())
+    if use_key_auth:
+        print("🔑 Using key-based authentication")
+        client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
+    else:
+        print("🔐 Using Azure AD authentication (Cosmos native RBAC)")
+        credential = DefaultAzureCredential()
+        client = CosmosClient(COSMOS_ENDPOINT, credential=credential)
     
     try:
-        # Create database
-        print("Creating database...")
-        database = await client.create_database_if_not_exists(id=DATABASE_NAME)
-        print(f"✅ Database '{DATABASE_NAME}' ready")
-        
-        # Create container with hierarchical partition key
-        print("Creating container with hierarchical partition keys...")
-        partition_key_def = {
-            "paths": ["/partitionKey"],
-            "kind": "MultiHash",
-            "version": 2
-        }
-        
-        container = await database.create_container_if_not_exists(
-            id=CONTAINER_NAME,
-            partition_key=partition_key_def,
-            offer_throughput=400  # Minimum throughput
-        )
-        print(f"✅ Container '{CONTAINER_NAME}' ready")
+        if use_key_auth:
+            # Key auth typically implies Local Authorization is enabled.
+            # Create database + container via data-plane.
+            print("Creating database...")
+            database = await client.create_database_if_not_exists(id=DATABASE_NAME)
+            print(f"✅ Database '{DATABASE_NAME}' ready")
+
+            # Create container with hierarchical partition key
+            print("Creating container with hierarchical partition keys...")
+            partition_key_def = {
+                "paths": ["/partitionKey"],
+                "kind": "MultiHash",
+                "version": 2,
+            }
+
+            container = await database.create_container_if_not_exists(
+                id=CONTAINER_NAME,
+                partition_key=partition_key_def,
+                offer_throughput=400,  # Minimum throughput
+            )
+            print(f"✅ Container '{CONTAINER_NAME}' ready")
+        else:
+            # In Cosmos native RBAC mode, principals often don't have permissions to create
+            # databases/containers. Validate they exist, then proceed to load workflows.
+            print("Validating database/container exist...")
+            database = client.get_database_client(DATABASE_NAME)
+            container = database.get_container_client(CONTAINER_NAME)
+            try:
+                await database.read()
+                await container.read()
+            except Exception as e:
+                print(f"❌ Database/container not found or not accessible: {e}")
+                print("\nCreate them first (example):")
+                print(f"  az cosmosdb sql database create -g <rg> -a <account> -n {DATABASE_NAME}")
+                print(
+                    f"  az cosmosdb sql container create -g <rg> -a <account> -d {DATABASE_NAME} -n {CONTAINER_NAME} -p /category"
+                )
+                return False
         
         # Load and insert sample workflows
         print("\nLoading sample workflows...")
@@ -109,6 +136,8 @@ async def setup_cosmos_db():
     
     finally:
         await client.close()
+        if credential is not None:
+            await credential.close()
 
 
 if __name__ == "__main__":

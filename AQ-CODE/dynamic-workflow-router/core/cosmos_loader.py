@@ -29,7 +29,7 @@ class CosmosWorkflowLoader:
     def __init__(
         self,
         endpoint: str,
-        key: str,
+        key: Optional[str] = None,
         database_name: str = "workflows",
         container_name: str = "workflow_definitions",
         enable_cache: bool = True,
@@ -40,7 +40,7 @@ class CosmosWorkflowLoader:
         
         Args:
             endpoint: Cosmos DB endpoint URL
-            key: Cosmos DB access key
+            key: Cosmos DB access key (optional, uses Azure AD if not provided)
             database_name: Database name
             container_name: Container name
             enable_cache: Enable in-memory caching
@@ -76,12 +76,22 @@ class CosmosWorkflowLoader:
             raise ValueError("Cosmos DB endpoint is required")
         
         # Create async Cosmos client with Azure AD authentication
-        # Try DefaultAzureCredential first (for AAD), fallback to key if provided
-        if self.key and not self.key.startswith('$'):  # Check if it's an actual key, not env variable
-            # Use key-based auth
+        # Prefer Azure AD auth (recommended for production)
+        # Only use key-based auth if explicitly provided and valid
+        use_key_auth = False
+        if self.key:
+            # Check if it's a real key (not empty, not a placeholder)
+            cleaned_key = self.key.strip()
+            if cleaned_key and not cleaned_key.startswith('$') and len(cleaned_key) > 20:
+                use_key_auth = True
+        
+        if use_key_auth:
+            # Use key-based auth if key is explicitly provided
+            print("🔑 Using key-based authentication")
             self.client = CosmosClient(self.endpoint, credential=self.key)
         else:
-            # Use Azure AD auth (recommended for production)
+            # Use Azure AD auth (DefaultAzureCredential)
+            print("🔐 Using Azure AD authentication (recommended)")
             credential = DefaultAzureCredential()
             self.client = CosmosClient(self.endpoint, credential=credential)
         
@@ -137,8 +147,7 @@ class CosmosWorkflowLoader:
             items = []
             async for item in self.container.query_items(
                 query=query,
-                parameters=parameters,
-                enable_cross_partition_query=True
+                parameters=parameters
             ):
                 items.append(item)
             
@@ -206,8 +215,7 @@ class CosmosWorkflowLoader:
             workflows = []
             async for item in self.container.query_items(
                 query=query,
-                parameters=parameters if parameters else None,
-                enable_cross_partition_query=True
+                parameters=parameters if parameters else None
             ):
                 workflows.append(item)
             
@@ -274,8 +282,7 @@ class CosmosWorkflowLoader:
             results = []
             async for item in self.container.query_items(
                 query=query,
-                parameters=parameters,
-                enable_cross_partition_query=True
+                parameters=parameters
             ):
                 results.append(item)
             

@@ -11,9 +11,13 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
+import nest_asyncio
 
 import streamlit as st
 import pandas as pd
+
+# Allow nested event loops for Streamlit
+nest_asyncio.apply()
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,6 +27,30 @@ from dotenv import load_dotenv
 
 # Load environment
 load_dotenv()
+
+
+# ============================================================================
+# Event Loop Helper
+# ============================================================================
+
+def get_or_create_event_loop():
+    """Get existing event loop or create new one."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+
+def run_async(coro):
+    """Run async coroutine in a safe way for Streamlit."""
+    loop = get_or_create_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        # If loop is already running (in notebook or async context)
+        return asyncio.run(coro)
 
 
 # ============================================================================
@@ -63,7 +91,11 @@ async def initialize_router():
     if st.session_state.router is None:
         with st.spinner("🔄 Initializing router..."):
             try:
+                cosmos_database = os.getenv("COSMOS_DB_DATABASE", "workflows")
+                cosmos_container = os.getenv("COSMOS_DB_CONTAINER", "workflow_definitions")
                 router = DynamicWorkflowRouter(
+                    cosmos_database=cosmos_database,
+                    cosmos_container=cosmos_container,
                     enable_cache=True,
                     cache_ttl_seconds=300
                 )
@@ -121,15 +153,23 @@ async def send_message(user_input: str, context: Optional[Dict[str, Any]] = None
         # Show routing decision
         st.info(f"📍 Routed to: **{workflow_id}**")
         
-        # Stream response
-        async for chunk in st.session_state.router.execute_workflow(
-            workflow_id=workflow_id,
-            user_input=user_input,
-            context=context,
-            stream=True
-        ):
-            full_response += chunk
-            response_placeholder.markdown(full_response + "▌")
+        # Stream response - handle async generator properly
+        try:
+            async for chunk in st.session_state.router.execute_workflow(
+                workflow_id=workflow_id,
+                user_input=user_input,
+                context=context,
+                stream=True
+            ):
+                # Ensure chunk is a string
+                if chunk:
+                    chunk_str = str(chunk)
+                    full_response += chunk_str
+                    response_placeholder.markdown(full_response + "▌")
+        except Exception as stream_error:
+            st.error(f"Streaming error: {stream_error}")
+            import traceback
+            st.code(traceback.format_exc())
         
         # Final response
         response_placeholder.markdown(full_response)
@@ -144,6 +184,8 @@ async def send_message(user_input: str, context: Optional[Dict[str, Any]] = None
         
     except Exception as e:
         st.error(f"❌ Error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 
 # ============================================================================
@@ -180,11 +222,11 @@ def main():
         
         # Initialize router button
         if st.button("🚀 Initialize Router", use_container_width=True):
-            asyncio.run(initialize_router())
+            run_async(initialize_router())
         
         # Load workflows button
         if st.button("📥 Load Workflows", use_container_width=True):
-            workflows = asyncio.run(load_workflows())
+            workflows = run_async(load_workflows())
             if workflows:
                 st.success(f"✅ Loaded {len(workflows)} workflows")
         
@@ -216,7 +258,7 @@ def main():
         if not st.session_state.router:
             st.warning("⚠️ Router not initialized. Click 'Initialize Router' in the sidebar.")
             if st.button("🚀 Initialize Now"):
-                if asyncio.run(initialize_router()):
+                if run_async(initialize_router()):
                     st.rerun()
         else:
             # Chat history
@@ -232,7 +274,7 @@ def main():
                     st.markdown(prompt)
                 
                 with st.chat_message("assistant"):
-                    asyncio.run(send_message(prompt))
+                    run_async(send_message(prompt))
             
             # Example queries
             st.divider()
@@ -267,7 +309,7 @@ def main():
                     st.markdown(query)
                 
                 with st.chat_message("assistant"):
-                    asyncio.run(send_message(query))
+                    run_async(send_message(query))
     
     # ========================================================================
     # Tab 2: Workflow Browser
@@ -437,7 +479,7 @@ def main():
                 category = st.selectbox("Category*", ["support", "sales", "technical", "operations", "other"])
             
             with col2:
-                model = st.selectbox("Model*", ["gpt-4o", "gpt-4", "gpt-4o-mini", "gpt-35-turbo"])
+                model = st.selectbox("Model*", ["gpt-4.1", "gpt-4.1-mini", "gpt-5.1-chat", "gpt-5.2-chat", "gpt-4", "gpt-35-turbo"])
                 temperature = st.slider("Temperature", 0.0, 2.0, 0.7, 0.1)
                 version = st.text_input("Version", value="1.0")
             

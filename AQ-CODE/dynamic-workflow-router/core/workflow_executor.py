@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional, AsyncGenerator
 from datetime import datetime
 
 from azure.ai.projects.aio import AIProjectClient
+from azure.ai.agents.aio import AgentsClient
 
 
 class WorkflowExecutor:
@@ -20,6 +21,7 @@ class WorkflowExecutor:
     def __init__(
         self,
         project_client: AIProjectClient,
+        agents_client: Optional[AgentsClient] = None,
         observability: Optional[Any] = None
     ):
         """
@@ -27,10 +29,23 @@ class WorkflowExecutor:
         
         Args:
             project_client: Azure AI Project client
+            agents_client: Optional Azure Agents client (if not provided, creates new one)
             observability: Optional observability client
         """
         self.project_client = project_client
         self.observability = observability
+        
+        # Use provided agents_client or create new one
+        if agents_client:
+            self.agents_client = agents_client
+        else:
+            # Create AgentsClient from the same endpoint
+            from azure.identity.aio import DefaultAzureCredential
+            endpoint = project_client._config.endpoint
+            self.agents_client = AgentsClient(
+                endpoint=endpoint,
+                credential=DefaultAzureCredential()
+            )
         
         # Import agent factory
         from .agent_factory import WorkflowAgentFactory
@@ -66,7 +81,7 @@ class WorkflowExecutor:
             )
             
             # Create thread
-            thread = await self.project_client.agents.create_thread()
+            thread = await self.agents_client.threads.create()
             
             # Prepare input with context
             full_input = user_input
@@ -75,7 +90,7 @@ class WorkflowExecutor:
                 full_input = f"{user_input}\n\nAdditional Context:\n{context_str}"
             
             # Add message
-            await self.project_client.agents.create_message(
+            await self.agents_client.messages.create(
                 thread_id=thread.id,
                 role="user",
                 content=full_input
@@ -86,48 +101,90 @@ class WorkflowExecutor:
             response_text = ""
             
             if stream:
-                async with self.project_client.agents.create_stream(
+                # Create and run (non-streaming first for debugging)
+                run = await self.agents_client.runs.create(
                     thread_id=thread.id,
-                    assistant_id=agent_id
-                ) as event_stream:
-                    async for event in event_stream:
-                        event_type = event.event
-                        
-                        if event_type == "thread.message.delta":
-                            # Text content delta
-                            if hasattr(event.data, 'delta') and hasattr(event.data.delta, 'content'):
-                                for content in event.data.delta.content:
-                                    if hasattr(content, 'text') and hasattr(content.text, 'value'):
-                                        text = content.text.value
-                                        response_text += text
-                                        yield text
-                        
-                        elif event_type == "thread.run.completed":
-                            # Track token usage
-                            if hasattr(event.data, 'usage'):
-                                total_tokens = event.data.usage.total_tokens
+                    agent_id=agent_id
+                )
+                
+                # Poll for completion
+                while run.status in ["queued", "in_progress", "requires_action"]:
+                    await asyncio.sleep(0.5)
+                    run = await self.agents_client.runs.retrieve(
+                        thread_id=thread.id,
+                        run_id=run.id
+                    )
+                
+                if run.status == "completed":
+                    # Get messages
+                    messages = await self.agents_client.messages.list(thread_id=thread.id)
+                    if messages.data:
+                        latest_message = messages.data[0]
+                        if latest_message.content:
+                            for content_item in latest_message.content:
+                                # Handle different content types safely
+                                try:
+                                    if hasattr(content_item, 'text'):
+                                        text_obj = content_item.text
+                                        if hasattr(text_obj, 'value'):
+                                            text = str(text_obj.value)  # Ensure it's a string
+                                        else:
+                                            # text object might be the string itself
+                                            text = str(text_obj)
+                                    else:
+                                        # Content item might have the text directly
+                                        text = str(content_item)
+                                    
+                                    response_text = text
+                                    # Simulate streaming by yielding in chunks
+                                    words = text.split()
+                                    for word in words:
+                                        yield word + " "
+                                        await asyncio.sleep(0.05)  # Small delay for visual effect
+                                except Exception as content_error:
+                                    print(f"⚠️  Error processing content item: {content_error}")
+                                    yield f"[Error reading response content: {content_error}]"
+                    
+                    if hasattr(run, 'usage'):
+                        total_tokens = run.usage.total_tokens
+                else:
+                    yield f"Error: Run ended with status {run.status}"
             
             else:
                 # Non-streaming execution
-                run = await self.project_client.agents.create_run(
+                run = await self.agents_client.runs.create(
                     thread_id=thread.id,
-                    assistant_id=agent_id
+                    agent_id=agent_id
                 )
                 
                 # Wait for completion
                 while run.status in ["queued", "in_progress"]:
                     await asyncio.sleep(0.5)
-                    run = await self.project_client.agents.get_run(
+                    run = await self.agents_client.runs.retrieve(
                         thread_id=thread.id,
                         run_id=run.id
                     )
                 
                 if run.status == "completed":
                     # Get response
-                    messages = await self.project_client.agents.list_messages(
+                    messages = await self.agents_client.messages.list(
                         thread_id=thread.id
                     )
-                    response_text = messages.data[0].content[0].text.value
+                    try:
+                        if messages.data and messages.data[0].content:
+                            content_item = messages.data[0].content[0]
+                            if hasattr(content_item, 'text'):
+                                text_obj = content_item.text
+                                if hasattr(text_obj, 'value'):
+                                    response_text = str(text_obj.value)
+                                else:
+                                    response_text = str(text_obj)
+                            else:
+                                response_text = str(content_item)
+                        else:
+                            response_text = "[No response content]"
+                    except Exception as parse_error:
+                        response_text = f"[Error parsing response: {parse_error}]"
                     
                     if hasattr(run, 'usage'):
                         total_tokens = run.usage.total_tokens
@@ -137,7 +194,7 @@ class WorkflowExecutor:
                     yield f"Error: Workflow execution failed with status {run.status}"
             
             # Cleanup thread
-            await self.project_client.agents.delete_thread(thread.id)
+            await self.agents_client.threads.delete(thread.id)
             
             # Track observability
             if self.observability:

@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, AsyncGenerator
 from datetime import datetime
 
 from azure.ai.projects.aio import AIProjectClient
+from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 
 from .cosmos_loader import CosmosWorkflowLoader
@@ -57,11 +58,21 @@ class DynamicWorkflowRouter:
         # Configuration
         self.project_connection_string = project_connection_string or os.getenv("PROJECT_CONNECTION_STRING")
         self.cosmos_endpoint = cosmos_endpoint or os.getenv("COSMOS_DB_ENDPOINT")
-        self.cosmos_key = cosmos_key or os.getenv("COSMOS_DB_KEY")
+        
+        # For Cosmos DB key: only use if explicitly provided AND not empty
+        # If COSMOS_DB_KEY env var is not set or empty, will use Azure AD auth
+        cosmos_key_from_env = os.getenv("COSMOS_DB_KEY")
+        if cosmos_key_from_env and cosmos_key_from_env.strip():
+            self.cosmos_key = cosmos_key or cosmos_key_from_env
+        else:
+            # No key available, will use Azure AD auth
+            self.cosmos_key = cosmos_key  # Will be None if not explicitly provided
+        
         self.fallback_workflow_id = fallback_workflow_id
         
         # Clients (initialized on first use)
         self._project_client: Optional[AIProjectClient] = None
+        self._agents_client: Optional[AgentsClient] = None
         self._orchestrator_agent_id: Optional[str] = None
         
         # Components
@@ -116,9 +127,35 @@ class DynamicWorkflowRouter:
             if not endpoint:
                 raise ValueError("Invalid PROJECT_CONNECTION_STRING format - no endpoint found")
         
+        # Create AIProjectClient with proper transport configuration
+        # Fix for gzip decompression bug in azure-ai-projects 2.0.0b2
+        from azure.core.pipeline.transport import AioHttpTransport
+        import aiohttp
+        
+        # Create aiohttp session with auto_decompress=True to handle gzip
+        connector = aiohttp.TCPConnector()
+        session = aiohttp.ClientSession(
+            connector=connector,
+            auto_decompress=True,  # Critical: auto-decompress gzip responses
+            trust_env=True
+        )
+        
+        transport = AioHttpTransport(session=session, session_owner=False)
+        
+        # Create shared credential
+        credential = DefaultAzureCredential()
+        
         self._project_client = AIProjectClient(
             endpoint=endpoint,
-            credential=DefaultAzureCredential()
+            credential=credential,
+            transport=transport
+        )
+        
+        # Create AgentsClient for thread/message/run operations
+        self._agents_client = AgentsClient(
+            endpoint=endpoint,
+            credential=credential,
+            transport=transport
         )
         
         # Initialize Cosmos DB loader
@@ -130,6 +167,7 @@ class DynamicWorkflowRouter:
         # Initialize workflow executor
         self.workflow_executor = WorkflowExecutor(
             project_client=self._project_client,
+            agents_client=self._agents_client,
             observability=self.observability if self.enable_observability else None
         )
         
@@ -203,7 +241,7 @@ You: sales_inquiry_workflow
         start_time = datetime.utcnow()
         
         # Create thread for orchestrator
-        thread = await self._project_client.agents.create_thread()
+        thread = await self._agents_client.threads.create()
         
         # Add context if provided
         full_input = user_input
@@ -212,16 +250,16 @@ You: sales_inquiry_workflow
             full_input = f"User input: {user_input}\n\nContext:\n{context_str}"
         
         # Send message
-        await self._project_client.agents.create_message(
+        await self._agents_client.messages.create(
             thread_id=thread.id,
             role="user",
             content=full_input
         )
         
         # Get classification
-        run = await self._project_client.agents.create_run(
+        run = await self._agents_client.runs.create(
             thread_id=thread.id,
-            assistant_id=self._orchestrator_agent_id
+            agent_id=self._orchestrator_agent_id
         )
         
         # Wait for completion (with timeout)
@@ -233,7 +271,7 @@ You: sales_inquiry_workflow
             if elapsed > timeout:
                 raise TimeoutError("Intent classification timed out")
             
-            run = await self._project_client.agents.get_run(
+            run = await self._agents_client.runs.retrieve(
                 thread_id=thread.id,
                 run_id=run.id
             )
@@ -242,7 +280,7 @@ You: sales_inquiry_workflow
             raise RuntimeError(f"Intent classification failed: {run.status}")
         
         # Get workflow ID from response
-        messages = await self._project_client.agents.list_messages(thread_id=thread.id)
+        messages = await self._agents_client.messages.list(thread_id=thread.id)
         workflow_id = messages.data[0].content[0].text.value.strip()
         
         # Track observability
@@ -256,7 +294,7 @@ You: sales_inquiry_workflow
             )
         
         # Cleanup thread
-        await self._project_client.agents.delete_thread(thread.id)
+        await self._agents_client.threads.delete(thread.id)
         
         return workflow_id
     
