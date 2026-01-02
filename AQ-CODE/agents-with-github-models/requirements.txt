@@ -1,0 +1,70 @@
+# Microsoft Agent Framework with GitHub Models - Requirements
+# Python 3.10 or later required
+
+# ============================================================================
+# Core MAF Dependencies
+# ============================================================================
+
+# Microsoft Agent Framework (latest prerelease)
+agent-framework>=1.0.0b251223
+
+# ============================================================================
+# GitHub Models / OpenAI Client
+# ============================================================================
+
+# OpenAI SDK (for GitHub Models compatibility)
+openai>=1.55.0
+
+# ============================================================================
+# Environment & Configuration
+# ============================================================================
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# ============================================================================
+# Optional: Enhanced Features
+# ============================================================================
+
+# For Azure integration (if migrating to Azure OpenAI/Foundry)
+# azure-ai-projects>=2.0.0b1
+# azure-identity>=1.19.0
+# azure-core>=1.32.0
+
+# For observability and tracing
+# opentelemetry-api>=1.28.2
+# opentelemetry-sdk>=1.28.2
+
+# ============================================================================
+# Development Tools (Optional)
+# ============================================================================
+
+# Jupyter notebook support
+# jupyter>=1.1.1
+# ipykernel>=6.29.5
+
+# Code formatting
+# black>=24.10.0
+
+# Type checking
+# mypy>=1.13.0
+
+# Testing
+# pytest>=8.3.4
+# pytest-asyncio>=0.24.0
+
+# ============================================================================
+# Notes
+# ============================================================================
+# 
+# Installation:
+#   pip install -r requirements.txt
+#
+# For development:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#   (create requirements-dev.txt for dev tools)
+#
+# Verify installation:
+#   python -c "import agent_framework; print(agent_framework.__version__)"
+#
+# ============================================================================
