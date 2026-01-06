@@ -26,8 +26,8 @@ def check_environment():
     
     # Check required variables
     required_vars = {
-        "PROJECT_ENDPOINT": "Azure AI Foundry project endpoint",
-        "AZURE_OPENAI_CHAT_DEPLOYMENT_NAME": "Model deployment name"
+        "AZURE_AI_PROJECT_ENDPOINT": "Azure AI Foundry project endpoint",
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME": "Model deployment name"
     }
     
     missing_vars = []
@@ -53,8 +53,8 @@ def check_azure_auth():
     print("\n🔐 Checking Azure authentication...\n")
     
     try:
-        from azure.identity import DefaultAzureCredential
-        credential = DefaultAzureCredential()
+        from azure.identity import AzureCliCredential
+        credential = AzureCliCredential()
         
         # Try to get a token (this validates az login)
         token = credential.get_token("https://management.azure.com/.default")
@@ -102,30 +102,29 @@ def check_foundry_connection():
     print("\n🌐 Testing Azure AI Foundry connection...\n")
     
     try:
-        from azure.ai.projects import AIProjectClient
-        from azure.identity import DefaultAzureCredential
+        from agent_framework.azure import AzureOpenAIChatClient
+        from azure.identity import AzureCliCredential
         from dotenv import load_dotenv
         
         load_dotenv()
         
-        project_endpoint = os.getenv("PROJECT_ENDPOINT")
+        project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+        model_deployment = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")
         
         print(f"   Connecting to: {project_endpoint}")
+        print(f"   Model: {model_deployment}")
         
-        project_client = AIProjectClient(
-            endpoint=project_endpoint,
-            credential=DefaultAzureCredential()
-        )
+        # Test AzureOpenAIChatClient initialization
+        # This client automatically reads from environment variables
+        chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
         
-        # Try to get default connection
-        connection = project_client.connections.get_default(connection_type="AzureOpenAI")
         print(f"✅ Connected to Foundry project!")
-        print(f"   Connection: {connection.name}")
+        print(f"   AzureOpenAIChatClient initialized successfully")
         return True
     except Exception as e:
         print(f"❌ Foundry connection failed: {e}")
-        print("\n📝 Action: Verify PROJECT_ENDPOINT is correct")
-        print("   Get it from: https://ai.azure.com → Your Project → Settings")
+        print("\n📝 Action: Verify AZURE_AI_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME are correct")
+        print("   Get them from: https://ai.azure.com → Your Project → Settings & Deployments")
         return False
 
 

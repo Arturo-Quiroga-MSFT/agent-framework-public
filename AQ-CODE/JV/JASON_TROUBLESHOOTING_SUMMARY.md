@@ -17,23 +17,23 @@
 ### Question 2: AzureOpenAIChatClient Syntax
 **Issue:** In "Step 2", setting up chat_client for OpenAIClient. Assumes need to change to AzureOpenAIChatClient but unsure of syntax.
 
-**Answer:** ✅ FIXED - The correct pattern is:
+**Answer:** ✅ FIXED - For handoff workflows, use `AzureOpenAIChatClient` (not `AzureAIClient`):
+
 ```python
-# 1. Initialize project client
-project_client = AIProjectClient(
-    endpoint=os.getenv("PROJECT_ENDPOINT"),
-    credential=DefaultAzureCredential()
-)
+from agent_framework.azure import AzureOpenAIChatClient
+from azure.identity import AzureCliCredential
 
-# 2. Get the connection from Foundry
-connection = project_client.connections.get_default(connection_type="AzureOpenAI")
-
-# 3. Create chat client from connection
-chat_client = AzureOpenAIChatClient.from_connection(
-    connection=connection,
-    model=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
-)
+# AzureOpenAIChatClient automatically reads from environment:
+# - AZURE_AI_PROJECT_ENDPOINT
+# - AZURE_AI_MODEL_DEPLOYMENT_NAME
+chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 ```
+
+**Key Points:**
+- Use `AzureOpenAIChatClient` for handoff workflows (matches official MAF v2 examples)
+- Use `AzureCliCredential` (inherits from `az login`)
+- Automatically reads configuration from environment variables
+- No manual connection management needed
 
 ### Question 3: Async Method Alternative
 **Issue:** In "Step 6", using AzureOpenAIChatClient in async call - thinks this is core issue. Wants to see alternative function for async method. Thought it was AIO but not sure.
@@ -48,29 +48,32 @@ chat_client = AzureOpenAIChatClient.from_connection(
 **Added:**
 ```python
 from agent_framework.azure import AzureOpenAIChatClient
+from azure.identity import AzureCliCredential
 ```
 
 ### 2. Fixed Cell 7 (Step 2 - Client Setup)
-**Before:** Mixing incorrect Azure patterns  
-**After:** Proper Azure AI Foundry pattern with `from_connection()`
+**Before:** Using wrong client type or patterns  
+**After:** Correct MAF v2 pattern for handoff workflows
 
 **Key Fix:**
-- Uses `AIProjectClient` to connect to Foundry project
-- Gets default Azure OpenAI connection from project
-- Creates `AzureOpenAIChatClient` from that connection
-- Automatically handles authentication via `DefaultAzureCredential`
+```python
+chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+```
+
+- Uses `AzureOpenAIChatClient` (designed for handoff workflows)
+- Uses `AzureCliCredential` (standard authentication)
+- Automatically reads `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` from environment
+- No connection management needed
 
 ### 3. Updated Cell 8 (Configuration Requirements)
 **Simplified to just 2 environment variables:**
-- `PROJECT_ENDPOINT` - Azure AI Foundry project endpoint
-- `AZURE_OPENAI_CHAT_DEPLOYMENT_NAME` - Model deployment name
+- `AZURE_AI_PROJECT_ENDPOINT` - Azure AI Foundry project endpoint
+- `AZURE_AI_MODEL_DEPLOYMENT_NAME` - Model deployment name (e.g., gpt-4.1)
 
-**Removed confusion about:**
-- `AZURE_OPENAI_ENDPOINT` (not needed with Foundry connection)
-- API keys (not needed with Entra ID auth)
-
-### 4. Added Quick Start Guide
-**New markdown cell** with step-by-step instructions for Jason
+### 4. Agent Naming Fix
+**Changed:** Agent names must use **hyphens** (not underscores)
+- ✅ `travel-agent` (correct)
+- ❌ `travel_agent` (causes validation errors)
 
 ---
 

@@ -1,42 +1,44 @@
-# MAF v2 Upgrade Notes for Jason's Travel Agent Demo
+# MAF v2 Handoff Workflow Setup for Jason's Travel Agent Demo
 
-## What Changed
+## Correct Pattern for Handoff Workflows
 
-Your notebook has been updated to use the **Microsoft Agent Framework v2 (MAF v2)** API, which is simpler and more reliable than v1.
+For multi-agent handoff orchestration with Azure AI Foundry, use this pattern:
 
-## Key Differences
-
-### Old Pattern (MAF v1) ❌
+### Correct Implementation ✅
 ```python
 from agent_framework.azure import AzureOpenAIChatClient
-from azure.ai.projects import AIProjectClient
+from azure.identity import AzureCliCredential
 
-project_client = AIProjectClient(endpoint=..., credential=...)
-connection = project_client.connections.get_default(connection_type="AzureOpenAI")
-chat_client = AzureOpenAIChatClient.from_connection(connection=connection, model=...)
-```
+# AzureOpenAIChatClient automatically reads environment variables:
+# - AZURE_AI_PROJECT_ENDPOINT
+# - AZURE_AI_MODEL_DEPLOYMENT_NAME
+chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
 
-**Problems:**
-- Required `get_default(connection_type="AzureOpenAI")` which could fail if no default connection exists
-- More complex multi-step initialization
-- Required explicit connection management
+# Create agents with hyphenated names
+travel_agent = chat_client.create_agent(
+    instructions="You are a friendly travel agent...",
+    name="travel-agent",  # ✅ Use hyphens, not underscores
+)
 
-### New Pattern (MAF v2) ✅
-```python
-from agent_framework.azure import AzureAIClient
-
-chat_client = AzureAIClient(
-    credential=DefaultAzureCredential(),
-    project_endpoint=os.getenv("AZURE_AI_PROJECT_ENDPOINT"),
-    model_deployment_name=os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")
+# Build handoff workflow
+workflow = (
+    HandoffBuilder(
+        name="travel_support",
+        participants=[travel_agent, specialist1, specialist2],
+    )
+    .set_coordinator(travel_agent)
+    .build()
 )
 ```
 
-**Benefits:**
-- ✅ One-line initialization
-- ✅ No connection management needed
-- ✅ Automatically discovers project resources using just the endpoint
-- ✅ More robust and simpler to use
+### Why This Pattern?
+
+Based on official MAF v2 examples (`/maf-upstream/python/samples/getting_started/workflows/orchestration/`):
+
+- ✅ **`AzureOpenAIChatClient`**: Designed for handoff workflows with `HandoffBuilder`
+- ✅ **`AzureCliCredential`**: Standard authentication (inherits from `az login`)
+- ✅ **Auto-configuration**: Reads `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_AI_MODEL_DEPLOYMENT_NAME` from environment
+- ✅ **Agent naming**: Must use hyphens (e.g., `travel-agent`), not underscores
 
 ## Updated Environment Variables
 

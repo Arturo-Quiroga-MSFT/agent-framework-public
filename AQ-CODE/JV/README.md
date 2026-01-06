@@ -24,8 +24,8 @@ cp .env.template .env
 
 # Edit .env with your values
 # You need:
-# - PROJECT_ENDPOINT from https://ai.azure.com
-# - AZURE_OPENAI_CHAT_DEPLOYMENT_NAME from your Foundry deployments
+# - AZURE_AI_PROJECT_ENDPOINT from https://ai.azure.com → Your Project → Settings
+# - AZURE_AI_MODEL_DEPLOYMENT_NAME from Deployments (e.g., gpt-4.1, gpt-4o)
 ```
 
 ### Step 3: Validate Setup
@@ -40,11 +40,7 @@ If all checks pass ✅, you're ready to run the notebook!
 1. Open `14-handoffjdv.ipynb` in VS Code
 2. Select Python kernel
 3. Run all cells (Shift + Enter)
-4. Test the 4 handoff scenarios:
-   - Flight booking
-   - Hotel booking
-   - Car booking
-   - Trip confirmation
+4. The notebook uses `AzureOpenAIChatClient(credential=AzureCliCredential())` in Cell 7
 
 ## 🔧 What Was Fixed
 

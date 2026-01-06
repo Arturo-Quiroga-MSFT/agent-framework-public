@@ -1,41 +1,30 @@
-# ⚠️ CRITICAL FIX: Wrong Client Type for Handoff Workflows
+# ✅ SOLUTION: Correct Setup for Handoff Workflows with Azure AI Foundry
 
-## The Problem
+## The Correct Pattern
 
-Your notebook is using `AzureAIClient` but for **handoff workflows with HandoffBuilder**, you MUST use `AzureOpenAIChatClient`.
+For **handoff workflows with HandoffBuilder** using Azure AI Foundry, use this pattern:
+
+### Cell 3: Correct Imports
+```python
+from agent_framework.azure import AzureOpenAIChatClient
+from azure.identity import AzureCliCredential
+```
+
+### Cell 7: Correct Client Initialization
+```python
+# AzureOpenAIChatClient automatically reads AZURE_AI_PROJECT_ENDPOINT and 
+# AZURE_AI_MODEL_DEPLOYMENT_NAME from environment variables
+chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+```
 
 ## Why This Matters
 
 Based on the official MAF v2 handoff examples (`/maf-upstream/python/samples/getting_started/workflows/orchestration/`):
 
 - ✅ **`AzureOpenAIChatClient`**: For handoff workflows, multi-agent orchestration
-- ❌ **`AzureAIClient`**: For single-agent scenarios, not handoff workflows
-
-## The Fix
-
-### Cell 3: Update Import
-**Change:**
-```python
-from agent_framework.azure import AzureAIClient
-```
-
-**To:**
-```python
-from agent_framework.azure import AzureOpenAIChatClient
-```
-
-### Cell 7: Update Client Initialization
-**Change:**
-```python
-chat_client = AzureAIClient(credential=DefaultAzureCredential())
-```
-
-**To:**
-```python
-chat_client = AzureOpenAIChatClient(credential=DefaultAzureCredential())
-```
-
-That's it! Just change these two lines.
+- ❌ **`AzureAIClient`**: For single-agent scenarios (NOT for handoff workflows)
+- ✅ **`AzureCliCredential`**: Standard authentication for samples (inherits from `az login`)
+- ⚠️ **Agent names**: Use hyphens (e.g., `travel-agent`), NOT underscores
 
 ## Reference Examples
 
