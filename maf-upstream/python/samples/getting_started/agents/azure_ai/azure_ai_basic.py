@@ -7,9 +7,6 @@ from typing import Annotated
 from agent_framework.azure import AzureAIClient
 from azure.identity.aio import AzureCliCredential
 from pydantic import Field
-from dotenv import load_dotenv
-
-load_dotenv()
 
 """
 Azure AI Agent Basic Example
