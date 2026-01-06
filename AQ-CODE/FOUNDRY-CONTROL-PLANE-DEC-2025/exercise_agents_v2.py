@@ -2,7 +2,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Agent Exercise Script V2 - Exercises all 10 agents in your fleet
+Agent Exercise Script V2 - Exercises all agents in your fleet
 
 This script runs prompts against all agents to generate telemetry data
 visible in the Fleet Health Dashboard:
@@ -11,17 +11,15 @@ visible in the Fleet Health Dashboard:
 - Latency metrics
 - Run counts
 
-AGENTS USED (10 agents total):
-- BingSearchAgent (existing)
-- CodeInterpreterAgent (existing)
-- DataAnalysisAgent (new)
-- ResearchAgent (new)
-- CustomerSupportAgent (new)
-- FinancialAnalystAgent (new)
-- TechnicalWriterAgent (new)
-- HRAssistantAgent (new)
-- MarketingStrategistAgent (new)
-- ProjectManagerAgent (new)
+AGENTS USED (8 agents total):
+- ProjectManagerAgent
+- TechnicalWriterAgent
+- CustomerSupportAgent
+- travel-agent
+- MarketResearchAgent
+- ContosoSupportAgent
+- BasicWeatherAgent
+- RESEARCHER
 
 Telemetry is sent to Application Insights via OpenTelemetry.
 
@@ -41,12 +39,18 @@ import asyncio
 import argparse
 import random
 import time
+from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# Prefer the `.env` file next to this script so running from repo root still works.
+_env_path = Path(__file__).with_name(".env")
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
 
 # ============================================================================
 # TELEMETRY SETUP - Send metrics to Application Insights
@@ -57,29 +61,133 @@ trace = None
 Status = None
 StatusCode = None
 
-try:
-    from azure.monitor.opentelemetry import configure_azure_monitor
-    from opentelemetry import trace as otel_trace
-    from opentelemetry.trace import Status as OtelStatus, StatusCode as OtelStatusCode
-    
-    trace = otel_trace
-    Status = OtelStatus
-    StatusCode = OtelStatusCode
-    
-    app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
-    if app_insights_conn_str:
-        configure_azure_monitor(
-            connection_string=app_insights_conn_str,
-            enable_live_metrics=True,
-        )
+
+def setup_telemetry(enable: bool, *, force_console: bool = False) -> None:
+    """Configure OpenTelemetry using agent_framework.observability pattern.
+
+    - If `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, uses agent framework's observability
+      helpers with proper resource setup to avoid hangs.
+    - Otherwise (or if `force_console=True`), falls back to a console span exporter.
+    """
+    global TELEMETRY_ENABLED, tracer, trace, Status, StatusCode
+
+    TELEMETRY_ENABLED = False
+    tracer = None
+    trace = None
+    Status = None
+    StatusCode = None
+
+    if not enable:
+        print("⚠️ Telemetry disabled (use --telemetry to enable)")
+        return
+
+    try:
+        from opentelemetry import trace as otel_trace
+        from opentelemetry.trace import Status as OtelStatus, StatusCode as OtelStatusCode
+
+        trace = otel_trace
+        Status = OtelStatus
+        StatusCode = OtelStatusCode
+
+        app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
+
+        # Try Azure Monitor using agent_framework.observability pattern (prevents hangs)
+        if (not force_console) and app_insights_conn_str:
+            print("🔄 Configuring Azure Monitor telemetry (using agent_framework pattern)...")
+            try:
+                from azure.monitor.opentelemetry import configure_azure_monitor
+                from agent_framework.observability import create_resource, enable_instrumentation
+                
+                # Use agent_framework's resource creation to avoid cloud metadata hang
+                configure_azure_monitor(
+                    connection_string=app_insights_conn_str,
+                    enable_live_metrics=False,
+                    resource=create_resource(),
+                    enable_performance_counters=False,
+                )
+                
+                # Enable agent framework instrumentation
+                enable_instrumentation(enable_sensitive_data=True)
+                
+                TELEMETRY_ENABLED = True
+                tracer = trace.get_tracer(__name__)
+                print("✅ Telemetry enabled - Azure Monitor (spans will appear in App Insights after ~2-5 min)")
+                return
+                
+            except Exception as e:
+                print(f"⚠️ Azure Monitor setup failed: {type(e).__name__}: {e}")
+                print("   Falling back to console telemetry...")
+
+        # Console fallback: still exercises OTel lifecycle/shutdown paths without Azure.
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
+        provider = TracerProvider()
+        otel_trace.set_tracer_provider(provider)
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+
         TELEMETRY_ENABLED = True
         tracer = trace.get_tracer(__name__)
-        print("✅ Telemetry enabled - sending to Application Insights")
-    else:
-        print("⚠️ APPLICATIONINSIGHTS_CONNECTION_STRING not set - telemetry disabled")
-except ImportError:
-    print("⚠️ azure-monitor-opentelemetry not installed - telemetry disabled")
-    print("   Install with: pip install azure-monitor-opentelemetry")
+
+        if force_console:
+            print("✅ Telemetry enabled - Console exporter")
+        elif app_insights_conn_str:
+            print("⚠️ Telemetry enabled - Console fallback (Azure Monitor setup failed)")
+        else:
+            print("⚠️ Telemetry enabled - Console fallback (no App Insights connection string)")
+
+    except Exception as e:
+        TELEMETRY_ENABLED = False
+        tracer = None
+        print(f"⚠️ Telemetry failed to initialize: {type(e).__name__}: {e}")
+
+
+def shutdown_telemetry() -> None:
+    """Best-effort flush/shutdown to avoid process hang after asyncio.run()."""
+    if not TELEMETRY_ENABLED or trace is None:
+        return
+
+    try:
+        provider = trace.get_tracer_provider()
+
+        # Some SDK versions expose timeout/return values; keep best-effort and compatible.
+        if hasattr(provider, "force_flush"):
+            try:
+                provider.force_flush()
+            except TypeError:
+                provider.force_flush()
+
+        if hasattr(provider, "shutdown"):
+            try:
+                provider.shutdown()
+            except TypeError:
+                provider.shutdown()
+    except Exception as e:
+        print(f"⚠️ Telemetry shutdown encountered an error: {type(e).__name__}: {e}")
+
+# try:
+#     from azure.monitor.opentelemetry import configure_azure_monitor
+#     from opentelemetry import trace as otel_trace
+#     from opentelemetry.trace import Status as OtelStatus, StatusCode as OtelStatusCode
+#     
+#     trace = otel_trace
+#     Status = OtelStatus
+#     StatusCode = OtelStatusCode
+#     
+#     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
+#     if app_insights_conn_str:
+#         configure_azure_monitor(
+#             connection_string=app_insights_conn_str,
+#             enable_live_metrics=True,
+#         )
+#         TELEMETRY_ENABLED = True
+#         tracer = trace.get_tracer(__name__)
+#         print("✅ Telemetry enabled - sending to Application Insights")
+#     else:
+#         print("⚠️ APPLICATIONINSIGHTS_CONNECTION_STRING not set - telemetry disabled")
+# except ImportError:
+#     print("⚠️ azure-monitor-opentelemetry not installed - telemetry disabled")
+#     print("   Install with: pip install azure-monitor-opentelemetry")
 
 # ============================================================================
 # WORKAROUND for azure-ai-projects 2.0.0b2 gzip encoding bug
@@ -95,7 +203,7 @@ policies.HeadersPolicy.on_request = _patched_on_request
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureAIClient
 from azure.ai.projects.aio import AIProjectClient
-from azure.identity.aio import AzureCliCredential
+from azure.identity.aio import DefaultAzureCredential
 
 
 @dataclass
@@ -110,20 +218,16 @@ class ExerciseResult:
     tokens_used: int
 
 
-# 10 agents to exercise (2 existing + 8 newly created)
+# Agents currently deployed in your fleet
 EXISTING_AGENTS = [
-    # Original existing agents
-    "BingSearchAgent",
-    "CodeInterpreterAgent",
-    # Newly created agents
-    "DataAnalysisAgent",
-    "ResearchAgent",
-    "CustomerSupportAgent",
-    "FinancialAnalystAgent",
-    "TechnicalWriterAgent",
-    "HRAssistantAgent",
-    "MarketingStrategistAgent",
     "ProjectManagerAgent",
+    "TechnicalWriterAgent",
+    "CustomerSupportAgent",
+    "travel-agent",
+    "MarketResearchAgent",
+    "ContosoSupportAgent",
+    "BasicWeatherAgent",
+    "RESEARCHER",
 ]
 
 # Prompts for exercising agents - general purpose
@@ -243,12 +347,14 @@ async def exercise_existing_agent(
             use_latest_version=True,
         )
         
-        async with ChatAgent(chat_client=chat_client) as agent:
-            result = await agent.run(prompt if prompt else "Hello")
-            response_text = str(result) if result else "No response"
-            
-            # Estimate tokens (rough approximation)
-            tokens_used = len((prompt or "").split()) + len(response_text.split()) * 2
+        agent = ChatAgent(chat_client=chat_client)
+        
+        # Run the async method
+        result = await agent.run(prompt if prompt else "Hello")
+        response_text = str(result) if result else "No response"
+        
+        # Estimate tokens (rough approximation)
+        tokens_used = len((prompt or "").split()) + len(response_text.split()) * 2
         
         latency_ms = (time.time() - start_time) * 1000
         
@@ -311,7 +417,7 @@ async def exercise_agents(
         prompts_per_agent: Number of prompts per agent per iteration
     """
     print(f"\n🏋️ Exercising {len(EXISTING_AGENTS)} agents in your fleet for {iterations} iteration(s)")
-    print(f"   Agents: {', '.join(EXISTING_AGENTS)}")
+
     print("=" * 70)
     
     results = []
@@ -326,7 +432,7 @@ async def exercise_agents(
         prompts.extend(FAILING_PROMPTS)
     
     async with (
-        AzureCliCredential() as credential,
+        DefaultAzureCredential() as credential,
         AIProjectClient(
             endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
             credential=credential
@@ -338,34 +444,28 @@ async def exercise_agents(
             
             for agent_name in EXISTING_AGENTS:
                 # Select appropriate prompts based on agent type
-                if agent_name == "DataAnalysisAgent":
-                    available_prompts = DATA_ANALYSIS_PROMPTS + prompts[:3]
-                elif agent_name == "ResearchAgent":
-                    available_prompts = RESEARCH_PROMPTS + prompts[:3]
-                elif agent_name == "CustomerSupportAgent":
+                if agent_name == "CustomerSupportAgent" or agent_name == "ContosoSupportAgent":
                     available_prompts = CUSTOMER_SUPPORT_PROMPTS + prompts[:2]
-                elif agent_name == "FinancialAnalystAgent":
-                    available_prompts = FINANCIAL_PROMPTS + prompts[:2]
                 elif agent_name == "TechnicalWriterAgent":
                     available_prompts = TECHNICAL_WRITER_PROMPTS + prompts[:2]
-                elif agent_name == "HRAssistantAgent":
-                    available_prompts = HR_PROMPTS + prompts[:2]
-                elif agent_name == "MarketingStrategistAgent":
-                    available_prompts = MARKETING_PROMPTS + prompts[:2]
                 elif agent_name == "ProjectManagerAgent":
                     available_prompts = PROJECT_MANAGER_PROMPTS + prompts[:2]
-                elif agent_name == "CodeInterpreterAgent":
-                    # Code-focused prompts
+                elif agent_name == "MarketResearchAgent":
+                    available_prompts = MARKETING_PROMPTS + prompts[:2]
+                elif agent_name == "researcher-flow" or agent_name == "RESEARCHER":
+                    available_prompts = RESEARCH_PROMPTS + prompts[:3]
+                elif agent_name == "travel-agent":
+                    # Travel-focused prompts
                     available_prompts = [
-                        "Calculate the factorial of 10.",
-                        "Generate a list of the first 10 Fibonacci numbers.",
-                        "What is 15% of 250?",
+                        "I need help planning a trip to Paris.",
+                        "What's the best time to visit Tokyo?",
+                        "Suggest a 3-day itinerary for New York City.",
                     ] + prompts[:2]
-                elif agent_name == "BingSearchAgent":
-                    # Search-focused prompts
+                elif agent_name == "BasicWeatherAgent":
+                    # Weather-focused prompts
                     available_prompts = [
-                        "What are the latest tech news headlines?",
-                        "Find information about Azure AI services.",
+                        "What's the weather like in Seattle?",
+                        "Will it rain tomorrow in San Francisco?",
                     ] + prompts[:2]
                 else:
                     # Use general prompts for other agents
@@ -418,13 +518,13 @@ async def exercise_agents(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Exercise all 10 AI agents in your fleet to generate metrics"
+        description="Exercise all AI agents in your fleet to generate metrics"
     )
     parser.add_argument(
         "--iterations", 
         type=int, 
         default=1,
-        help="Number of iterations to run (default: 1)"
+        help="Number of iterations run (default: 1)"
     )
     parser.add_argument(
         "--prompts",
@@ -443,6 +543,17 @@ def main():
         default=1.0,
         help="Delay between API calls in seconds (default: 1.0)"
     )
+
+    parser.add_argument(
+        "--telemetry",
+        action="store_true",
+        help="Enable OpenTelemetry spans (Azure Monitor if configured; otherwise console fallback)"
+    )
+    parser.add_argument(
+        "--telemetry-console",
+        action="store_true",
+        help="Force console span exporter (implies --telemetry; useful to test lifecycle without Azure)"
+    )
     
     args = parser.parse_args()
     
@@ -453,16 +564,23 @@ def main():
         print("   Make sure your .env file is configured")
         return
     
-    print("🎛️ Agent Exercise Script V2 (exercising all 10 fleet agents)")
+    # If console exporter is requested, telemetry should be enabled automatically.
+    telemetry_enabled = args.telemetry or args.telemetry_console
+    setup_telemetry(telemetry_enabled, force_console=args.telemetry_console)
+
+    print(f"🎛️ Agent Exercise Script V2 (exercising {len(EXISTING_AGENTS)} fleet agents)")
     print(f"   Endpoint: {endpoint[:50]}...")
-    
+
     # Run exercise
-    asyncio.run(exercise_agents(
-        iterations=args.iterations,
-        include_failures=args.include_failures,
-        delay_between_calls=args.delay,
-        prompts_per_agent=args.prompts,
-    ))
+    try:
+        asyncio.run(exercise_agents(
+            iterations=args.iterations,
+            include_failures=args.include_failures,
+            delay_between_calls=args.delay,
+            prompts_per_agent=args.prompts,
+        ))
+    finally:
+        shutdown_telemetry()
 
 
 if __name__ == "__main__":

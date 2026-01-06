@@ -33,6 +33,17 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import json
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load environment variables
+# Prefer the `.env` file next to this script so running from repo root still works.
+_env_path = Path(__file__).with_name(".env")
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
 
 # Azure SDK imports
 from azure.identity import DefaultAzureCredential
@@ -196,7 +207,8 @@ class FleetHealthClient:
         project_endpoint: Optional[str] = None,
         subscription_id: Optional[str] = None,
         app_insights_connection_string: Optional[str] = None,
-        workspace_id: Optional[str] = None
+        workspace_id: Optional[str] = None,
+        app_insights_resource_id: Optional[str] = None
     ):
         """
         Initialize the Fleet Health Client.
@@ -211,6 +223,11 @@ class FleetHealthClient:
         self.subscription_id = subscription_id or os.environ.get("AZURE_SUBSCRIPTION_ID")
         self.app_insights_conn_str = app_insights_connection_string or os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
         self.workspace_id = workspace_id or os.environ.get("LOG_ANALYTICS_WORKSPACE_ID")
+        self.app_insights_resource_id = (
+            app_insights_resource_id
+            or os.environ.get("APPLICATIONINSIGHTS_RESOURCE_ID")
+            or os.environ.get("APPINSIGHTS_RESOURCE_ID")
+        )
         
         # Initialize credential
         self.credential = DefaultAzureCredential()
@@ -220,6 +237,32 @@ class FleetHealthClient:
         self._logs_client: Optional[Any] = None
         self._metrics_client: Optional[Any] = None
         self._resource_graph_client: Optional[Any] = None
+
+    def _query_logs(self, *, query: str, timespan: timedelta):
+        """Run a logs query against either App Insights resource or a LA workspace.
+
+        If `APPLICATIONINSIGHTS_RESOURCE_ID` is set, uses `query_resource(...)`.
+        Otherwise, falls back to `LOG_ANALYTICS_WORKSPACE_ID` + `query_workspace(...)`.
+        """
+        if not self.logs_client:
+            return None
+
+        if self.app_insights_resource_id:
+            # Preferred: direct resource query (works for classic or workspace-based App Insights)
+            return self.logs_client.query_resource(
+                resource_id=self.app_insights_resource_id,
+                query=query,
+                timespan=timespan,
+            )
+
+        if self.workspace_id:
+            return self.logs_client.query_workspace(
+                workspace_id=self.workspace_id,
+                query=query,
+                timespan=timespan,
+            )
+
+        return None
     
     @property
     def project_client(self) -> AIProjectClient:
@@ -263,8 +306,8 @@ class FleetHealthClient:
         """
         agents = []
         try:
-            # List all agents using the SDK - use list_agents() method
-            agent_list = self.project_client.agents.list_agents()
+            # List all agents using the SDK
+            agent_list = self.project_client.agents.list()
             
             # The response might be paginated, iterate through all pages
             for agent in agent_list:
@@ -341,33 +384,35 @@ class FleetHealthClient:
             "completion_tokens": 0
         }
         
-        if not self.logs_client or not self.workspace_id:
+        if not self.logs_client or (not self.workspace_id and not self.app_insights_resource_id):
             return metrics
         
         try:
-            # Query AppDependencies table where OpenTelemetry GenAI spans are stored
-            # Properties is a JSON string containing gen_ai.* attributes
+            # Query dependencies table where OpenTelemetry GenAI spans are stored
+            # customDimensions is a JSON string containing gen_ai.* attributes
             query = f"""
-            AppDependencies
-            | where TimeGenerated >= ago({time_range_hours}h)
-            | where DependencyType == "GenAI | azure_ai_agents"
-            | extend props = parse_json(Properties)
+            dependencies
+            | where timestamp >= ago({time_range_hours}h)
+            | where type == "GenAI | azure_ai_agents"
+            | extend props = parse_json(customDimensions)
             | where props["gen_ai.agent.id"] == "{agent_id}" 
                or props["gen_ai.agent.name"] == "{agent_id}"
             | summarize 
                 total_runs = count(),
-                successful_runs = countif(Success == true),
-                failed_runs = countif(Success == false),
-                avg_latency = avg(DurationMs),
-                p95_latency = percentile(DurationMs, 95),
+                successful_runs = countif(success == true),
+                failed_runs = countif(success == false),
+                avg_latency = avg(duration),
+                p95_latency = percentile(duration, 95),
                 total_tokens = sum(toint(props["gen_ai.usage.total_tokens"]))
             """
             
-            response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            response = self._query_logs(
                 query=query,
-                timespan=timedelta(hours=time_range_hours)
+                timespan=timedelta(hours=time_range_hours),
             )
+
+            if response is None:
+                return metrics
             
             if _is_query_success(response) and response.tables:
                 table = response.tables[0]
@@ -397,33 +442,35 @@ class FleetHealthClient:
         """
         alerts = []
         
-        if not self.logs_client or not self.workspace_id:
+        if not self.logs_client or (not self.workspace_id and not self.app_insights_resource_id):
             return alerts
         
         try:
             # Query for errors and exceptions from agent runs
             query = """
-            AppDependencies
-            | where TimeGenerated >= ago(24h)
-            | where DependencyType == "GenAI | azure_ai_agents"
-            | where Success == false
-            | extend props = parse_json(Properties)
+            dependencies
+            | where timestamp >= ago(24h)
+            | where type == "GenAI | azure_ai_agents"
+            | where success == false
+            | extend props = parse_json(customDimensions)
             | project 
-                TimeGenerated,
-                Message = Name,
+                timestamp,
+                Message = name,
                 agent_id = tostring(props["gen_ai.agent.id"]),
                 agent_name = tostring(props["gen_ai.agent.name"]),
                 model = tostring(props["gen_ai.request.model"]),
-                DurationMs
-            | order by TimeGenerated desc
+                duration
+            | order by timestamp desc
             | take 100
             """
             
-            response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            response = self._query_logs(
                 query=query,
-                timespan=timedelta(hours=24)
+                timespan=timedelta(hours=24),
             )
+
+            if response is None:
+                return alerts
             
             if _is_query_success(response) and response.tables:
                 table = response.tables[0]
@@ -439,19 +486,18 @@ class FleetHealthClient:
                         "source": "application_insights"
                     })
             
-            # Also check AppExceptions
+            # Also check exceptions table
             exc_query = """
-            AppExceptions
-            | where TimeGenerated >= ago(24h)
-            | project TimeGenerated, ExceptionType, OuterMessage, InnermostMessage
-            | order by TimeGenerated desc
+            exceptions
+            | where timestamp >= ago(24h)
+            | project timestamp, type, outerMessage, innermostMessage
+            | order by timestamp desc
             | take 50
             """
             
-            exc_response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            exc_response = self._query_logs(
                 query=exc_query,
-                timespan=timedelta(hours=24)
+                timespan=timedelta(hours=24),
             )
             
             if _is_query_success(exc_response) and exc_response.tables:
@@ -487,36 +533,38 @@ class FleetHealthClient:
         """
         traces = []
         
-        if not self.logs_client or not self.workspace_id:
+        if not self.logs_client or (not self.workspace_id and not self.app_insights_resource_id):
             return traces
         
         try:
             query = f"""
-            AppDependencies
-            | where TimeGenerated >= ago(24h)
-            | where DependencyType == "GenAI | azure_ai_agents"
-            | extend props = parse_json(Properties)
+            dependencies
+            | where timestamp >= ago(24h)
+            | where type == "GenAI | azure_ai_agents"
+            | extend props = parse_json(customDimensions)
             | where tostring(props["gen_ai.agent.name"]) == "{agent_name}"
             | project 
-                TimeGenerated,
-                Name,
-                DurationMs,
-                Success,
+                timestamp,
+                name,
+                duration,
+                success,
                 thread_id = tostring(props["gen_ai.thread.id"]),
                 run_id = tostring(props["gen_ai.thread.run.id"]),
                 model = tostring(props["gen_ai.request.model"]),
                 input_tokens = toint(props["gen_ai.usage.input_tokens"]),
                 output_tokens = toint(props["gen_ai.usage.output_tokens"]),
                 total_tokens = toint(props["gen_ai.usage.total_tokens"])
-            | order by TimeGenerated desc
+            | order by timestamp desc
             | take {limit}
             """
             
-            response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            response = self._query_logs(
                 query=query,
-                timespan=timedelta(hours=24)
+                timespan=timedelta(hours=24),
             )
+
+            if response is None:
+                return traces
             
             if _is_query_success(response) and response.tables:
                 table = response.tables[0]
@@ -620,31 +668,33 @@ class FleetHealthClient:
             "max_latency": 0.0
         }
         
-        if not self.logs_client or not self.workspace_id:
+        if not self.logs_client or (not self.workspace_id and not self.app_insights_resource_id):
             return breakdown
         
         try:
             # Query for latency percentiles
             query = f"""
-            AppDependencies
-            | where TimeGenerated >= ago({time_range_hours}h)
-            | where DependencyType == "GenAI | azure_ai_agents"
-            | extend props = parse_json(Properties)
+            dependencies
+            | where timestamp >= ago({time_range_hours}h)
+            | where type == "GenAI | azure_ai_agents"
+            | extend props = parse_json(customDimensions)
             | where tostring(props["gen_ai.agent.name"]) == "{agent_name}"
             | summarize 
-                avg_latency = avg(DurationMs),
-                p50 = percentile(DurationMs, 50),
-                p95 = percentile(DurationMs, 95),
-                p99 = percentile(DurationMs, 99),
-                min_latency = min(DurationMs),
-                max_latency = max(DurationMs)
+                avg_latency = avg(duration),
+                p50 = percentile(duration, 50),
+                p95 = percentile(duration, 95),
+                p99 = percentile(duration, 99),
+                min_latency = min(duration),
+                max_latency = max(duration)
             """
             
-            response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            response = self._query_logs(
                 query=query,
-                timespan=timedelta(hours=time_range_hours)
+                timespan=timedelta(hours=time_range_hours),
             )
+
+            if response is None:
+                return breakdown
             
             if _is_query_success(response) and response.tables and response.tables[0].rows:
                 row = response.tables[0].rows[0]
@@ -683,16 +733,16 @@ class FleetHealthClient:
             "cost_trend": []
         }
         
-        if not self.logs_client or not self.workspace_id:
+        if not self.logs_client or (not self.workspace_id and not self.app_insights_resource_id):
             return cost_data
         
         try:
-            # Query token usage from AppDependencies and estimate costs
+            # Query token usage from dependencies and estimate costs
             query = f"""
-            AppDependencies
-            | where TimeGenerated >= ago({time_range_days}d)
-            | where DependencyType == "GenAI | azure_ai_agents"
-            | extend props = parse_json(Properties)
+            dependencies
+            | where timestamp >= ago({time_range_days}d)
+            | where type == "GenAI | azure_ai_agents"
+            | extend props = parse_json(customDimensions)
             | extend 
                 agent_id = tostring(props["gen_ai.agent.id"]),
                 agent_name = tostring(props["gen_ai.agent.name"]),
@@ -700,15 +750,17 @@ class FleetHealthClient:
                 total_tokens = toint(props["gen_ai.usage.total_tokens"])
             | summarize 
                 token_sum = sum(total_tokens)
-                by agent_id, agent_name, model, bin(TimeGenerated, 1d)
-            | order by TimeGenerated asc
+                by agent_id, agent_name, model, bin(timestamp, 1d)
+            | order by timestamp asc
             """
             
-            response = self.logs_client.query_workspace(
-                workspace_id=self.workspace_id,
+            response = self._query_logs(
                 query=query,
-                timespan=timedelta(days=time_range_days)
+                timespan=timedelta(days=time_range_days),
             )
+
+            if response is None:
+                return cost_data
             
             if _is_query_success(response) and response.tables:
                 # Estimated pricing per 1K tokens (adjust based on actual model pricing)

@@ -23,6 +23,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 
 # Load environment variables
 load_dotenv()
@@ -198,18 +199,20 @@ def create_agent(client: AIProjectClient, config: Dict[str, Any]) -> bool:
     """
     try:
         # Check if agent already exists
-        existing_agents = list(client.agents.list_agents())
+        existing_agents = list(client.agents.list())
         for existing in existing_agents:
             if getattr(existing, 'name', None) == config["name"]:
                 print(f"   ⏭️  Agent '{config['name']}' already exists, skipping...")
                 return True
         
-        # Create the agent
-        agent = client.agents.create_agent(
-            model=config["model"],
-            name=config["name"],
-            instructions=config["instructions"],
-            tools=config.get("tools", []),
+        # Create the agent using correct V2 API
+        agent = client.agents.create_version(
+            agent_name=config["name"],
+            definition=PromptAgentDefinition(
+                model=config["model"],
+                instructions=config["instructions"],
+                tools=config.get("tools", []),
+            ),
             description=config.get("description", ""),
         )
         
@@ -222,7 +225,7 @@ def create_agent(client: AIProjectClient, config: Dict[str, Any]) -> bool:
         return False
 
 
-async def deploy_agents():
+def deploy_agents():
     """Deploy all agents to Azure AI."""
     print("=" * 70)
     print("🚀 Deploying 8 New Agents to Azure AI Foundry")
@@ -248,7 +251,7 @@ async def deploy_agents():
     # List existing agents
     print("\n📋 Checking existing agents...")
     try:
-        existing = list(client.agents.list_agents())
+        existing = list(client.agents.list())
         print(f"   Found {len(existing)} existing agent(s)")
         for agent in existing:
             print(f"   - {getattr(agent, 'name', 'Unknown')} ({getattr(agent, 'model', 'unknown')})")
@@ -277,7 +280,7 @@ async def deploy_agents():
     # Show final agent count
     print("\n📊 Final Agent Inventory:")
     try:
-        final_agents = list(client.agents.list_agents())
+        final_agents = list(client.agents.list())
         print(f"   Total agents in project: {len(final_agents)}")
         for agent in final_agents:
             print(f"   - {getattr(agent, 'name', 'Unknown')} ({getattr(agent, 'model', 'unknown')})")
@@ -294,7 +297,7 @@ async def deploy_agents():
 
 def main():
     """Main entry point."""
-    success = asyncio.run(deploy_agents())
+    success = deploy_agents()
     sys.exit(0 if success else 1)
 
 
