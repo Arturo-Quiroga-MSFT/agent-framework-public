@@ -1,6 +1,6 @@
 # Azure AI vs Azure AI Agent: Detailed Comparison
 
-**Date:** November 21, 2025  
+**Date:** January 6, 2026 (Updated)  
 **Purpose:** Understand the differences between the two Azure AI agent implementations in MAF
 
 ---
@@ -43,23 +43,25 @@ The following samples exist **ONLY** in the V2 directory:
 
 1. ✅ **`azure_ai_use_latest_version.py`** - Reuse latest agent version
 2. ✅ **`azure_ai_with_agent_to_agent.py`** - Agent-to-agent (A2A) protocol
-3. ✅ **`azure_ai_with_browser_automation.py`** - Browser automation
-4. ✅ **`azure_ai_with_existing_conversation.py`** - Resume conversations (replaces `existing_thread`)
-5. ✅ **`azure_ai_with_image_generation.py`** - Image generation tool
-6. ✅ **`azure_ai_with_microsoft_fabric.py`** - Microsoft Fabric integration
-7. ✅ **`azure_ai_with_response_format.py`** - Structured outputs with Pydantic
-8. ✅ **`azure_ai_with_search_context_agentic.py`** - Agentic search (Knowledge Bases)
-9. ✅ **`azure_ai_with_search_context_semantic.py`** - Semantic search (RAG)
-10. ✅ **`azure_ai_with_sharepoint.py`** - SharePoint grounding
-11. ✅ **`azure_ai_with_web_search.py`** - `HostedWebSearchTool`
+3. ✅ **`azure_ai_with_application_endpoint.py`** - Application endpoint integration
+4. ✅ **`azure_ai_with_browser_automation.py`** - Browser automation
+5. ✅ **`azure_ai_with_existing_conversation.py`** - Resume conversations (replaces `existing_thread`)
+6. ✅ **`azure_ai_with_image_generation.py`** - Image generation tool
+7. ✅ **`azure_ai_with_memory_search.py`** - Memory search capabilities
+8. ✅ **`azure_ai_with_microsoft_fabric.py`** - Microsoft Fabric integration
+9. ✅ **`azure_ai_with_openapi.py`** - OpenAPI integration (modern approach)
+10. ✅ **`azure_ai_with_response_format.py`** - Structured outputs with Pydantic
+11. ✅ **`azure_ai_with_runtime_json_schema.py`** - Dynamic JSON schema validation
+12. ✅ **`azure_ai_with_sharepoint.py`** - SharePoint grounding
+13. ✅ **`azure_ai_with_web_search.py`** - `HostedWebSearchTool`
 
 #### Features in V1 ONLY (`azure_ai_agent/`)
 The following samples exist **ONLY** in the V1 directory:
 
-1. ✅ **`azure_ai_with_function_tools.py`** - Explicit function tool patterns
-2. ✅ **`azure_ai_with_local_mcp.py`** - Local MCP server integration
+1. ✅ **`azure_ai_with_bing_grounding_citations.py`** - Bing grounding with citation details
+2. ✅ **`azure_ai_with_function_tools.py`** - Explicit function tool patterns
 3. ✅ **`azure_ai_with_multiple_tools.py`** - Multi-tool coordination
-4. ✅ **`azure_ai_with_openapi_tools.py`** - OpenAPI/REST API integration
+4. ✅ **`azure_ai_with_openapi_tools.py`** - OpenAPI/REST API integration (legacy approach)
 5. ✅ **`azure_ai_with_existing_thread.py`** - Thread management (old naming)
 
 #### Common Features (in both)
@@ -68,9 +70,11 @@ The following samples exist **ONLY** in the V1 directory:
 - ✅ Bing Grounding search
 - ✅ Bing Custom Search
 - ✅ Code interpreter
+- ✅ Code interpreter with file generation
 - ✅ File search
-- ✅ Hosted MCP
-- ✅ Thread management
+- ✅ Hosted MCP servers
+- ✅ Local MCP servers
+- ✅ Thread/Conversation management
 - ✅ Explicit settings configuration
 - ✅ Existing agent reuse
 
@@ -174,9 +178,7 @@ AzureAIClient().create_agent(
 ```
 
 ### 3. **Advanced Search Modes**
-V2 introduces sophisticated search patterns:
-- **Agentic mode**: Multi-hop reasoning with Knowledge Bases (more accurate)
-- **Semantic mode**: Fast hybrid search with semantic ranking (faster)
+> **Note (Jan 2026):** The previously documented `azure_ai_with_search_context_agentic.py` and `azure_ai_with_search_context_semantic.py` samples have been consolidated or renamed. Check `azure_ai_with_azure_ai_search.py` and `azure_ai_with_memory_search.py` for latest search capabilities.
 
 ### 4. **Structured Outputs**
 ```python
@@ -217,15 +219,17 @@ Since you're comparing code between old and new:
 
 **High Priority (New V2 Features):**
 1. `azure_ai_with_response_format.py` - Structured outputs
-2. `azure_ai_with_search_context_agentic.py` - Advanced RAG
-3. `azure_ai_with_agent_to_agent.py` - A2A communication
-4. `azure_ai_use_latest_version.py` - Version management
-5. `azure_ai_with_existing_conversation.py` - Modern conversation handling
+2. `azure_ai_with_runtime_json_schema.py` - Dynamic JSON schema
+3. `azure_ai_with_memory_search.py` - Memory search
+4. `azure_ai_with_agent_to_agent.py` - A2A communication
+5. `azure_ai_use_latest_version.py` - Version management
+6. `azure_ai_with_existing_conversation.py` - Modern conversation handling
 
-**Medium Priority (Useful V1 Patterns):**
+**Medium Priority (Useful Patterns):**
 1. `azure_ai_with_function_tools.py` (V1) - Function tool patterns
-2. `azure_ai_with_openapi_tools.py` (V1) - REST API integration
+2. `azure_ai_with_openapi.py` (V2) vs `azure_ai_with_openapi_tools.py` (V1) - Compare API approaches
 3. `azure_ai_with_multiple_tools.py` (V1) - Multi-tool workflows
+4. `azure_ai_with_local_mcp.py` (Both) - Local MCP server patterns
 
 ---
 
@@ -237,8 +241,9 @@ Since you're comparing code between old and new:
 | **SDK** | `azure-ai-projects` 2.x | `azure-ai-agents` 1.x |
 | **Status** | ✅ Current | ⚠️ Legacy |
 | **Release** | Nov 2025 | Earlier |
-| **Sample Count** | 22 files | 16 files |
-| **New Features** | 11 exclusive samples | 5 exclusive samples |
+| **Sample Count** | 25 files | 18 files |
+| **Exclusive Features** | 13 unique samples | 5 unique samples |
+| **Common Features** | 11 shared samples | 11 shared samples |
 | **Recommended** | ✅ Yes (for new projects) | ⚠️ For compatibility only |
 
 ---
