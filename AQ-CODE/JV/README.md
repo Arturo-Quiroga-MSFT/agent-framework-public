@@ -4,7 +4,7 @@ Welcome! This guide will help you get the Travel Agent handoff demo working with
 
 ## 📋 What's in This Folder
 
-- **14-handoffjdv.ipynb** - Main notebook with the travel agent demo
+- **14-handoffjdv-AQ-modified.ipynb** - Main notebook with the travel agent demo
 - **.env.template** - Template for environment variables
 - **validate_setup.py** - Script to validate your setup
 - **JASON_TROUBLESHOOTING_SUMMARY.md** - Detailed troubleshooting notes
