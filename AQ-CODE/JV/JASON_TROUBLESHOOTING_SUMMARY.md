@@ -3,7 +3,7 @@
 **Date:** January 6, 2026  
 **Contact:** Jason Virtue  
 **Project:** Travel agent handoff demo using Microsoft Agent Framework  
-**Notebook:** `14-handoffjdv.ipynb`
+**Fixed Notebook:** `14-handoffjdv-AQ-modified.ipynb`
 
 ---
 
@@ -88,8 +88,8 @@ az login
 Create a `.env` file in `/Users/arturoquiroga/GITHUB/agent-framework-public/AQ-CODE/JV/` with:
 
 ```bash
-PROJECT_ENDPOINT=https://[your-project-name].api.azureml.ms
-AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4o
+PROJECT_ENDPOINT=https://[your-project-name]..........
+AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-4.1
 ```
 
 **To get PROJECT_ENDPOINT:**

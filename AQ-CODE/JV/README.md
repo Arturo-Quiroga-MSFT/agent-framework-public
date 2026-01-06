@@ -37,7 +37,7 @@ If all checks pass ✅, you're ready to run the notebook!
 
 ## 📓 Running the Notebook
 
-1. Open `14-handoffjdv.ipynb` in VS Code
+1. Open `14-handoffjdv-AQ-modified.ipynb` in VS Code
 2. Select Python kernel
 3. Run all cells (Shift + Enter)
 4. The notebook uses `AzureOpenAIChatClient(credential=AzureCliCredential())` in Cell 7
