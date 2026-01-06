@@ -222,3 +222,5 @@ AQ-PROFISEE/_local/
 
 # Add to /Users/arturoquiroga/GITHUB/agent-framework-public/.gitignore
 AQ-CODE/FOREX/
+
+.env.jason
