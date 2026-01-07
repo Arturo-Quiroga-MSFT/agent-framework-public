@@ -1,8 +1,56 @@
 # ChatAgent vs create_agent() - Technical Comparison
 
-**Date**: November 13, 2025  
+**Date**: November 13, 2025 (Updated: January 6, 2026)  
 **Status**: Validated against Microsoft Docs & Agent Framework source code  
 **Team Question**: What are the differences between the two approaches to create agents?
+
+---
+
+## Supported Agent Types in Microsoft Agent Framework
+
+Microsoft Agent Framework supports multiple agent types with different chat history storage capabilities:
+
+| Agent Type | Underlying Service | Service Chat History | Custom Chat History |
+|------------|-------------------|---------------------|---------------------|
+| **Azure AI Agent** | Azure AI Agents Service | ✅ Yes | ❌ No |
+| **Azure OpenAI Chat Completion** | Azure OpenAI Chat Completion | ❌ No | ✅ Yes |
+| **Azure OpenAI Responses** | Azure OpenAI Responses | ✅ Yes | ✅ Yes |
+
+
+## So the Complete Picture Is:
+
+NOTE: Azure AI Agents are sometimes referred to as Azure AI Foundry Agents (same thing).
+
+| Summary Name (table) | Detailed Doc Page | Client Classes | Environment Variables |
+|---------------------|-------------------|----------------|---------------------|
+| **Azure AI Agent** | [Azure AI Foundry Agents](https://learn.microsoft.com/en-us/agent-framework/user-guide/agents/agent-types/azure-ai-foundry-agent) | `AzureAIAgentClient` or `AzureAIClient` | `AZURE_AI_PROJECT_ENDPOINT`<br/>`AZURE_AI_MODEL_DEPLOYMENT_NAME` |
+| **Azure OpenAI Chat Completion** | [Azure OpenAI Chat Completion](https://learn.microsoft.com/en-us/agent-framework/user-guide/agents/agent-types/azure-ai-foundry-models-chat-completion-agent) | `AzureOpenAIChatClient` | `AZURE_OPENAI_ENDPOINT`<br/>`AZURE_OPENAI_DEPLOYMENT_NAME` |
+| **Azure OpenAI Responses** | [Azure OpenAI Responses](https://learn.microsoft.com/en-us/agent-framework/user-guide/agents/agent-types/azure-ai-foundry-models-responses-agent) | `AzureOpenAIResponsesClient` | `AZURE_OPENAI_ENDPOINT`<br/>`AZURE_OPENAI_DEPLOYMENT_NAME` |
+
+
+### Key Differences
+
+**Azure AI Agent (`AzureAIAgentClient`)**
+- Uses the Azure AI Agents Service backend
+- Service-managed chat history (threads stored server-side)
+- Cannot use custom chat history storage
+- Best for: Production scenarios requiring hosted agent infrastructure
+
+**Azure OpenAI Chat Completion (`AzureOpenAIChatClient`)**
+- Uses Azure OpenAI Chat Completion API
+- Client-managed chat history only (you must implement storage)
+- No service-side history management
+- Best for: Custom storage requirements, full control over conversation state
+
+**Azure OpenAI Responses**
+- Uses Azure OpenAI Responses API
+- **Both** service-managed AND custom chat history supported
+- Most flexible option
+- Best for: Scenarios requiring both convenience and customization
+
+> **Source**: [Microsoft Learn - Agent Types](https://learn.microsoft.com/en-us/agent-framework/user-guide/agents/agent-types/?pivots=programming-language-python) (Updated: November 10, 2025)
+
+---
 
 ## Question
 
