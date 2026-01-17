@@ -14,7 +14,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add weather_tool to path and import real weather function
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "weather_tool"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "AQ-CODE" / "azure_ai" / "weather_tool"))
 from shared_utils import get_real_weather as get_weather
 
 """
