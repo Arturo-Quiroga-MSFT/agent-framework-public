@@ -14,7 +14,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add weather_tool to path and import real weather function
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "weather_tool"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "AQ-CODE" / "azure_ai" / "weather_tool"))
 from shared_utils import get_real_weather as get_weather
 
 """
@@ -40,7 +40,7 @@ async def main() -> None:
             tools=get_weather,
         )
 
-        query = "What's the weather like in Seattle?"
+        query = "What's the weather like in Montreal?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}\n")
@@ -52,7 +52,7 @@ async def main() -> None:
             tools=get_weather,  # Tools must be provided for function tools
         )
 
-        query = "What's the weather like in Tokyo?"
+        query = "What's the weather like in Calgary?"
         print(f"User: {query}")
         result = await agent2.run(query)
         print(f"Agent: {result}\n")

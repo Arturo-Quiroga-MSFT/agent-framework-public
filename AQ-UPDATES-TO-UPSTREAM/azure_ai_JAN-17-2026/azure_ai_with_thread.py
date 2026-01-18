@@ -13,7 +13,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add weather_tool to path and import real weather function
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "weather_tool"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "AQ-CODE" / "azure_ai" / "weather_tool"))
 from shared_utils import get_real_weather as get_weather
 
 """
@@ -39,7 +39,7 @@ async def example_with_automatic_thread_creation() -> None:
         )
 
         # First conversation - no thread provided, will be created automatically
-        query1 = "What's the weather like in Seattle?"
+        query1 = "What's the weather like in Halifax?"
         print(f"User: {query1}")
         result1 = await agent.run(query1)
         print(f"Agent: {result1.text}")
@@ -73,7 +73,7 @@ async def example_with_thread_persistence_in_memory() -> None:
         thread = agent.get_new_thread()
 
         # First conversation
-        query1 = "What's the weather like in Tokyo?"
+        query1 = "What's the weather like in Winnipeg?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, thread=thread, store=False)
         print(f"Agent: {result1.text}")
@@ -115,7 +115,7 @@ async def example_with_existing_thread_id() -> None:
         # Start a conversation and get the thread ID
         thread = agent.get_new_thread()
 
-        query1 = "What's the weather in Paris?"
+        query1 = "What's the weather in Victoria?"
         print(f"User: {query1}")
         result1 = await agent.run(query1, thread=thread)
         print(f"Agent: {result1.text}")

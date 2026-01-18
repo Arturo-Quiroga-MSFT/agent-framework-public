@@ -16,7 +16,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add weather_tool to path and import real weather function
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "weather_tool"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "AQ-CODE" / "azure_ai" / "weather_tool"))
 from shared_utils import get_real_weather as get_weather
 
 """
@@ -58,7 +58,7 @@ async def create_agent_example() -> None:
         print(f"Created agent: {agent.name}")
         print(f"Agent ID: {agent.id}")
 
-        query = "What's the weather in Paris?"
+        query = "What's the weather in Ottawa?"
         print(f"User: {query}")
         result = await agent.run(query)
         print(f"Agent: {result}\n")
@@ -177,7 +177,7 @@ async def multiple_agents_example() -> None:
         print(f"Created agents: {weather_agent.name}, {translator_agent.name}, {poet_agent.name}\n")
 
         # Use each agent for its specialty
-        weather_query = "What's the weather in London?"
+        weather_query = "What's the weather in Quebec City?"
         print(f"User to WeatherExpert: {weather_query}")
         weather_result = await weather_agent.run(weather_query)
         print(f"WeatherExpert: {weather_result}\n")

@@ -2,6 +2,7 @@
 import asyncio
 import os
 from pathlib import Path
+import re
 
 from agent_framework.azure import AzureAIProjectAgentProvider
 from azure.identity.aio import AzureCliCredential
@@ -24,6 +25,12 @@ Prerequisites:
 """
 
 
+def _normalize_citations(text: str) -> str:
+    # Some models emit citations using full-width brackets like: .
+    # Normalize to the requested ASCII format: [5:0†source].
+    return re.sub(r"【([^】]+)】", r"[\1]", text)
+
+
 async def main() -> None:
     async with (
         AzureCliCredential() as credential,
@@ -31,8 +38,16 @@ async def main() -> None:
     ):
         agent = await provider.create_agent(
             name="MySearchAgent",
-            instructions="""You are a helpful assistant. You must always provide citations for
-            answers using the tool and render them as: `[message_idx:search_idx†source]`.""",
+            instructions="""You are a helpful assistant.
+
+You must ALWAYS call the Azure AI Search tool before answering.
+
+Only answer using information returned by the tool. If the tool returns no relevant results, say you don't have
+enough information in the connected search index to answer.
+
+Every answer MUST include at least one citation rendered using ASCII brackets exactly like:
+[message_idx:search_idx†source]
+(do not use other bracket styles).""",
             tools={
                 "type": "azure_ai_search",
                 "azure_ai_search": {
@@ -48,10 +63,11 @@ async def main() -> None:
             },
         )
 
-        query = "Tell me about insurance options"
+        query = "According to the HR handbook in the search index, what insurance options are offered?"
         print(f"User: {query}")
         result = await agent.run(query)
-        print(f"Result: {result}\n")
+    text = getattr(result, "text", str(result))
+    print(f"Result: {_normalize_citations(text)}\n")
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
 # Add weather_tool to path and import real weather function
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent.parent / "weather_tool"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "AQ-CODE" / "azure_ai" / "weather_tool"))
 from shared_utils import get_real_weather as get_weather
 
 """
@@ -45,7 +45,7 @@ async def example_with_conversation_id() -> None:
         )
 
         # Pass conversation_id at run level
-        query = "What's the weather like in Seattle?"
+        query = "What's the weather like in Regina?"
         print(f"User: {query}")
         result = await agent.run(query, conversation_id=conversation_id)
         print(f"Agent: {result.text}\n")
@@ -79,7 +79,7 @@ async def example_with_thread() -> None:
         # Create a thread with the existing ID
         thread = agent.get_new_thread(service_thread_id=conversation_id)
 
-        query = "What's the weather like in Seattle?"
+        query = "What's the weather like in Saskatoon?"
         print(f"User: {query}")
         result = await agent.run(query, thread=thread)
         print(f"Agent: {result.text}\n")

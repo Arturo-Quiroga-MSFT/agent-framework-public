@@ -25,7 +25,7 @@ uses a file search tool to answer user questions.
 USER_INPUTS = [
     "Who is the youngest employee?",
     "Who works in sales?",
-    "I have a customer request, who can help me?",
+    "I have a customer request. Who should I contact? Reply with the best single person and include their department.",
 ]
 
 
@@ -41,7 +41,7 @@ async def main() -> None:
     ):
         try:
             # 1. Upload file and create vector store
-            pdf_file_path = Path(__file__).parent.parent / "resources" / "employees.pdf"
+            pdf_file_path = Path(__file__).parent / "resources" / "employees.pdf"
             print(f"Uploading file from: {pdf_file_path}")
 
             file = await agents_client.files.upload_and_poll(file_path=str(pdf_file_path), purpose="assistants")
@@ -58,7 +58,8 @@ async def main() -> None:
                 name="EmployeeSearchAgent",
                 instructions=(
                     "You are a helpful assistant that can search through uploaded employee files "
-                    "to answer questions about employees."
+                    "to answer questions about employees. "
+                    "When asked who to contact, recommend the best single person from the file and include their department."
                 ),
                 tools=file_search_tool,
             )
