@@ -1,7 +1,70 @@
 # PROFISEE Multi-Agent System Design Document
 
+---
+
+## About This Template
+
+### Purpose
+This design document template was created to support PROFISEE's migration from Semantic Kernel to Microsoft Agent Framework and the design of their multi-agent Master Data Management (MDM) system. It provides a structured approach to documenting agent personas, workflows, tools, and architecture decisions prior to the Architecture Design Session (ADS) in late January 2026.
+
+### Context & Background
+This template was developed following the **December 19, 2025 meeting** between Microsoft (Jason Virtue - PSA, Arturo Quiroga - CSA) and PROFISEE (Jack Gordon, Wes Heath, Eric Melcher, Jayla Ellis, and team) to establish a clear path forward for:
+1. Migrating from Semantic Kernel to Agent Framework
+2. Designing a scalable multi-agent architecture
+3. Integrating MCP (Model Context Protocol) servers for tool management
+4. Operating in "startup mode" for rapid prototyping in February 2026
+
+The template incorporates real examples from **Jack Gordon's December 2025 demo** showing Data Modeler and Reviewer agents collaborating to build data models in Profisee MDM, including actual chat logs, tool interactions, and JSON response formats.
+
+### Alignment with Jason Virtue's Game Plan (January 17, 2026)
+
+This template directly addresses **Items 1-3** from Jason's follow-up email:
+
+1. ✅ **Design document as a sequence diagram** - Complete template for agent personas and workflows with Mermaid diagrams
+2. ✅ **List of Plug-ins and description of business logic** - Comprehensive tool inventory section with migration planning
+3. ✅ **List of MCP Servers** - MCP Server Architecture section for documenting setup and integration
+
+**Additional game plan items** supported by this document:
+- **Item 4** (Setup meeting to review MCP servers): Template provides structure for documenting current MCP setup
+- **Item 5** (ADS Session in late Jan): Document serves as preparation material for productive session
+- **Item 6** (Rapid Prototyping): Design decisions documented here inform February prototyping work
+- **Item 7** (Monthly MAF discussions): Provides baseline for tracking migration progress
+
+### How to Use This Template
+
+**For PROFISEE Team:**
+1. **Review** sections already populated with examples from Jack's demo (Data Modeler, Reviewer agents)
+2. **Complete** all sections marked `[TO BE COMPLETED]` with your specific implementation details
+3. **Add** any additional agent personas beyond Data Modeler and Reviewer
+4. **Document** all current Semantic Kernel plugins for migration planning
+5. **Describe** your MCP server architecture and tool distribution strategy
+6. **Review** with your team before sharing with Microsoft for ADS session
+
+**Completion Checklist:**
+- [ ] All agent personas documented with complete system prompts
+- [ ] At least 2-3 key workflows documented with sequence diagrams
+- [ ] Complete plugin/tool inventory (beyond the 3 examples provided)
+- [ ] MCP server architecture and deployment documented
+- [ ] Integration points and external systems identified
+- [ ] Success criteria and KPIs defined
+- [ ] Open questions listed for ADS session discussion
+
+**Microsoft Team Contact:**
+- Jason Virtue (PSA): Jason.Virtue@microsoft.com
+- Arturo Quiroga (CSA): Arturo.Quiroga@microsoft.com
+- Christian Thilmany (on Cc)
+
+### Related Migration Resources
+- [SK to AF Migration Guide (C#)](./PROFISEE-SK-TO-AF-MIGRATION-GUIDE-CSHARP.md)
+- [IChatClient vs AIAgent Decision Guide](./PROFISEE-SK-TO-AF-ICHATCLIENT-VS-AIAGENT.md)
+- [PROFISEE Specific Migration Guide](./PROFISEE-SPECIFIC-MIGRATION-GUIDE-2025-12-19.md)
+- [Migration Addendum](./PROFISEE-SPECIFIC-MIGRATION-GUIDE-ADDENDUM-2025-12-19.md)
+- [December 19, 2025 Meeting Recap](./recap_DEC_19_2005.md)
+
+---
+
 **Document Version:** 1.0  
-**Date:** January 19, 2026  
+**Date Created:** January 19, 2026  
 **Status:** TEMPLATE - To be completed by PROFISEE team  
 **Next Review:** ADS Session - Late January 2026
 
