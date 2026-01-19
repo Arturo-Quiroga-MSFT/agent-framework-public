@@ -15,16 +15,23 @@ from datetime import datetime
 from dotenv import load_dotenv
 from azure.identity import InteractiveBrowserCredential, DeviceCodeCredential
 from azure.core.exceptions import ClientAuthenticationError
-from microsoft.graph import GraphServiceClient
+from msgraph import GraphServiceClient
 
 from utils.token_validator import TokenValidator
 from utils.error_handler import handle_auth_error, AuthErrorContext
 
-# Configure logging
+# Configure logging - reduce verbosity
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Silence verbose loggers
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('azure.identity').setLevel(logging.WARNING)
+logging.getLogger('utils.error_handler').setLevel(logging.WARNING)
+logging.getLogger('utils.token_validator').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
@@ -202,7 +209,8 @@ def main():
     load_dotenv()
     
     tenant_id = os.getenv("TENANT_ID")
-    client_id = os.getenv("AGENT_CLIENT_ID")
+    # Use dedicated interactive agent client ID, fallback to service principal ID
+    client_id = os.getenv("INTERACTIVE_AGENT_CLIENT_ID") or os.getenv("AGENT_CLIENT_ID")
     
     # Validate configuration
     if not all([tenant_id, client_id]):

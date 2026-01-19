@@ -21,11 +21,18 @@ from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 from utils.token_validator import TokenValidator
 from utils.error_handler import handle_auth_error, AuthErrorContext
 
-# Configure logging
+# Configure logging - reduce verbosity
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Silence verbose loggers
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('azure.identity').setLevel(logging.WARNING)
+logging.getLogger('utils.error_handler').setLevel(logging.WARNING)
+logging.getLogger('utils.token_validator').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 

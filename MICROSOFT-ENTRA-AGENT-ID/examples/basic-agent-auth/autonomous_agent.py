@@ -20,11 +20,18 @@ from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 from utils.token_validator import TokenValidator
 from utils.error_handler import handle_auth_error, AuthErrorContext
 
-# Configure logging
+# Configure logging - reduce verbosity
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Silence verbose loggers
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('azure.identity').setLevel(logging.WARNING)
+logging.getLogger('utils.error_handler').setLevel(logging.WARNING)
+logging.getLogger('utils.token_validator').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +61,11 @@ class AutonomousAgent:
                 client_secret=client_secret
             )
         
-        logger.info(f"Autonomous agent initialized: {client_id}")
+        print(f"\n{'='*60}")
+        print(f"Autonomous Agent (Client Credentials)")
+        print(f"{'='*60}")
+        print(f"Agent ID: {client_id}")
+        print(f"{'='*60}\n")
     
     def get_access_token(self, scope: str) -> str:
         """
@@ -71,20 +82,16 @@ class AutonomousAgent:
                 token_result = self.credential.get_token(scope)
                 token = token_result.token
                 
-                # Log token metadata (never log the actual token!)
-                logger.info(f"Token acquired successfully")
-                logger.info(f"Token expires at: {datetime.fromtimestamp(token_result.expires_on)}")
-                
                 # Validate the token
                 validator = TokenValidator(self.tenant_id)
                 claims = validator.get_token_claims(token)
                 
-                logger.info(f"Token issued for: {claims.get('appid')}")
-                logger.info(f"Token roles: {claims.get('roles', [])}")
+                print(f"✓ Token acquired for: {claims.get('appid')}")
+                print(f"  Expires: {datetime.fromtimestamp(token_result.expires_on)}")
                 
                 # Verify it's an agent token
                 if not validator.validate_agent_identity(token):
-                    logger.warning("Token does not represent an agent identity!")
+                    print(f"⚠ Warning: Token does not represent an agent identity!")
                 
                 return token
                 
@@ -113,16 +120,27 @@ class AutonomousAgent:
                     credential=self.credential
                 )
                 
-                # List blobs in container
+                # Get or create container
                 container_client = blob_service_client.get_container_client(container_name)
+                
+                # Try to create container if it doesn't exist
+                try:
+                    container_client.create_container()
+                    print(f"✓ Created new container: {container_name}")
+                except Exception as e:
+                    if "ContainerAlreadyExists" in str(e):
+                        print(f"✓ Container exists: {container_name}")
+                    else:
+                        pass  # Ignore other container creation messages
+                
+                # List blobs in container
                 blobs = []
                 
-                logger.info(f"Listing blobs in container: {container_name}")
                 for blob in container_client.list_blobs():
                     blobs.append(blob.name)
-                    logger.info(f"  - {blob.name} ({blob.size} bytes)")
+                    print(f"  - {blob.name} ({blob.size} bytes)")
                 
-                logger.info(f"Found {len(blobs)} blobs")
+                print(f"✓ Found {len(blobs)} blobs")
                 return blobs
                 
             except HttpResponseError as e:
@@ -143,29 +161,27 @@ class AutonomousAgent:
         Demonstrate automatic token refresh.
         The Azure Identity SDK handles token caching and refresh automatically.
         """
-        logger.info("\n=== Token Refresh Demo ===")
-        
         scope = "https://management.azure.com/.default"
         
         # First token acquisition
-        logger.info("Acquiring first token...")
+        print("Acquiring first token...")
         token1 = self.get_access_token(scope)
         
         # Check if token is cached
-        logger.info("Acquiring second token (should use cache)...")
+        print("Acquiring second token (should use cache)...")
         token2 = self.get_access_token(scope)
         
         if token1 == token2:
-            logger.info("✓ Token was reused from cache")
+            print("✓ Token was reused from cache")
         else:
-            logger.info("✗ New token was acquired")
+            print("✗ New token was acquired")
         
         # Validate token
         validator = TokenValidator(self.tenant_id)
         if not validator.is_token_expired(token1):
-            logger.info("✓ Token is still valid")
+            print("✓ Token is still valid")
         else:
-            logger.info("✗ Token is expired (will be refreshed automatically)")
+            print("✗ Token is expired (will be refreshed automatically)")
 
 
 def main():
@@ -182,48 +198,54 @@ def main():
     
     # Validate configuration
     if not all([tenant_id, client_id, client_secret]):
-        logger.error(
-            "Missing required environment variables!\n"
-            "Please create .env file with:\n"
-            "  TENANT_ID\n"
-            "  AGENT_CLIENT_ID\n"
-            "  AGENT_CLIENT_SECRET\n"
-            "See .env.example for template."
-        )
+        print("ERROR: Missing required environment variables!")
+        print("Please create .env file with:")
+        print("  TENANT_ID")
+        print("  AGENT_CLIENT_ID")
+        print("  AGENT_CLIENT_SECRET")
+        print("See .env.example for template.")
         return 1
     
     try:
-        logger.info("=== Autonomous Agent Demo ===\n")
-        
         # Create autonomous agent
         agent = AutonomousAgent(tenant_id, client_id, client_secret)
         
         # Demo 1: Acquire token for Azure Management API
-        logger.info("\n--- Demo 1: Azure Management Token ---")
+        print(f"\n{'='*60}")
+        print(f"DEMO 1: Azure Management Token")
+        print(f"{'='*60}")
         mgmt_token = agent.get_access_token("https://management.azure.com/.default")
-        logger.info(f"✓ Management token acquired (length: {len(mgmt_token)})")
         
         # Demo 2: Access Azure Storage (if configured)
         if storage_account:
-            logger.info("\n--- Demo 2: Azure Storage Access ---")
+            print(f"\n{'='*60}")
+            print(f"DEMO 2: Azure Storage Access")
+            print(f"{'='*60}")
+            print(f"Storage account: {storage_account}")
+            print(f"Container: {container_name}")
             try:
                 blobs = agent.access_storage(storage_account, container_name)
-                logger.info(f"✓ Successfully accessed storage: {len(blobs)} blobs found")
             except Exception as e:
-                logger.warning(f"Storage access demo skipped: {e}")
-                logger.info("To enable storage demo, configure STORAGE_ACCOUNT_NAME")
+                print(f"⚠ Storage access failed: {e}")
+                print("To enable storage demo, configure STORAGE_ACCOUNT_NAME and permissions")
         else:
-            logger.info("\n--- Demo 2: Skipped (no storage account configured) ---")
+            print(f"\n{'='*60}")
+            print(f"DEMO 2: Skipped (no storage account configured)")
+            print(f"{'='*60}")
         
         # Demo 3: Token refresh behavior
-        logger.info("\n--- Demo 3: Token Refresh ---")
+        print(f"\n{'='*60}")
+        print(f"DEMO 3: Token Refresh and Caching")
+        print(f"{'='*60}")
         agent.demonstrate_token_refresh()
         
-        logger.info("\n=== All demos completed successfully ===")
+        print(f"\n{'='*60}")
+        print(f"ALL DEMOS COMPLETED SUCCESSFULLY")
+        print(f"{'='*60}\n")
         return 0
         
     except Exception as e:
-        logger.error(f"Demo failed: {e}")
+        print(f"ERROR: Demo failed: {e}")
         return 1
 
 

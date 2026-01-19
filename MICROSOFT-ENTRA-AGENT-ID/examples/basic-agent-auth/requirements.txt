@@ -8,6 +8,17 @@ azure-core>=1.29.0
 # Azure Storage SDK (for examples)
 azure-storage-blob>=12.19.0
 
+# Azure Management SDKs (for managed identity examples)
+azure-mgmt-resource>=23.0.0
+azure-mgmt-storage>=21.0.0
+
+# Microsoft Graph SDK (for interactive agent examples)
+msgraph-sdk>=1.0.0
+
+# Azure OpenAI SDK (for LLM examples)
+openai>=1.12.0
+azure-ai-inference>=1.0.0
+
 # Token handling
 PyJWT>=2.8.0
 cryptography>=41.0.0
