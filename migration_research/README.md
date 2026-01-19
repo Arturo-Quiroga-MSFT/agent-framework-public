@@ -2,7 +2,30 @@
 
 This directory contains research, documentation, and resources to help customers migrate from **Semantic Kernel** and **AutoGen** to the new **Microsoft Agent Framework**.
 
-## 📚 Contents
+## � Recent Updates
+
+### January 2026 Updates
+**Date**: January 19, 2026 | **Status**: ✅ Complete
+
+- **API Updates**: Updated all agent creation patterns to use `.AsAIAgent()` extension method (was `new ChatClientAgent()`)
+- **Provider-Specific Types**: Documented new `OpenAIChatClientAgent` and `OpenAIResponseClientAgent` types
+- **.NET 10**: Updated target framework references to .NET 10.0 (backward compatible with .NET 6+)
+- **Upstream Sync**: Validated against latest MAF repository code
+
+📄 See [UPDATES_JAN_2026.md](./UPDATES_JAN_2026.md) for complete details.
+
+### December 2025 Updates
+**Date**: December 20, 2025 | **Status**: ✅ Complete
+
+- **Sample Library**: Added comprehensive references to upstream sample directories
+- **Side-by-Side Examples**: 27+ working samples comparing SK/AutoGen → MAF
+- **Production Status**: Updated framework status to production-ready
+
+📄 See [UPDATES_DEC_2025.md](./UPDATES_DEC_2025.md) for complete details.
+
+---
+
+## �📚 Contents
 
 - [Overview](./overview.md) - High-level comparison and migration philosophy
 - [Semantic Kernel Migration](./semantic-kernel-migration.md) - Detailed guide for migrating from Semantic Kernel

@@ -139,7 +139,7 @@ var agent = new ChatCompletionAgent
 
 **After (Agent Framework):**
 ```csharp
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient: AzureOpenAIChatClient.Create(...),
     instructions: "...",
     plugins: [new MyPlugin()]

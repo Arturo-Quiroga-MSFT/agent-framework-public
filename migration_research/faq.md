@@ -200,7 +200,7 @@ var kernel = Kernel.CreateBuilder()
     .AddAzureOpenAIChatCompletion(...)
     .Build();
 
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     kernel.GetRequiredService<IChatClient>(),
     ...
 );
@@ -209,7 +209,7 @@ var agent = new ChatClientAgent(
 **Simpler approach:**
 ```csharp
 // Direct service configuration (no kernel)
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     AzureOpenAIChatClient.Create(...),
     ...
 );
@@ -321,7 +321,7 @@ edges:
 
 ```csharp
 // Simple agent, no workflow needed
-var agent = new ChatClientAgent(...);
+var agent = chatClient.AsAIAgent(...);
 var response = await agent.GetResponseAsync("Hello");
 ```
 
@@ -504,7 +504,7 @@ var settings = new AgentSettings
 var mockClient = new MockChatClient();
 mockClient.Setup(response: "Test response");
 
-var agent = new ChatClientAgent(mockClient, ...);
+var agent = chatClient.AsAIAgent(mockClient, ...);
 var response = await agent.GetResponseAsync("Test");
 
 Assert.Equal("Test response", response.Content);

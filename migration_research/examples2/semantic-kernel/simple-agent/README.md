@@ -76,7 +76,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.OpenAI;
 
 // Create agent with direct service configuration
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient: AzureOpenAIChatClient.Create(
         endpoint: new Uri("https://your-resource.openai.azure.com/"),
         credential: new Azure.AzureKeyCredential(
@@ -152,7 +152,7 @@ var agent = new ChatCompletionAgent
 
 **After:**
 ```csharp
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient,
     instructions: "...",
     name: "Assistant"
@@ -233,7 +233,7 @@ var agent = new ChatCompletionAgent
 };
 
 // New pattern
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient,
     instructions: "...",
     name: "..."

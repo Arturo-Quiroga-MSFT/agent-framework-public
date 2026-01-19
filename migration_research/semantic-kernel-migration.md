@@ -80,7 +80,7 @@ var chatClient = new AzureOpenAIChatClient(
 );
 
 // Create agent with plugins directly
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient,
     instructions: "You are a helpful assistant",
     name: "Assistant",
@@ -323,7 +323,7 @@ public class WeatherPlugin
 kernel.Plugins.AddFromType<WeatherPlugin>();
 
 // Agent Framework
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient,
     instructions: "...",
     plugins: [KernelPluginFactory.CreateFromType<WeatherPlugin>()]
@@ -351,7 +351,7 @@ var agent = new ChatCompletionAgent
 #### Microsoft Agent Framework (New)
 ```csharp
 // Auto function calling enabled by default for ChatClientAgent
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     chatClient,
     instructions: "...",
     plugins: [myPlugin]
@@ -548,7 +548,7 @@ await foreach (var msg in agent.InvokeAsync(history)) { }
 
 **After:**
 ```csharp
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     AzureOpenAIChatClient.Create(...),
     instructions: "..."
 );
@@ -570,7 +570,7 @@ var agent = new ChatCompletionAgent { Kernel = kernel, ... };
 
 **After:**
 ```csharp
-var agent = new ChatClientAgent(
+var agent = chatClient.AsAIAgent(
     AzureOpenAIChatClient.Create(...),
     plugins: [KernelPluginFactory.CreateFromType<MyPlugin>()]
 );
@@ -603,7 +603,7 @@ public async Task Agent_Responds_Correctly()
 {
     // Arrange
     var mockClient = new MockChatClient();
-    var agent = new ChatClientAgent(mockClient, instructions: "...");
+    var agent = chatClient.AsAIAgent(mockClient, instructions: "...");
     
     // Act
     var response = await agent.GetResponseAsync("Test");
@@ -714,4 +714,4 @@ public async Task Workflow_Executes_Correctly()
 
 ---
 
-**Last Updated**: December 20, 2025
+**Last Updated**: January 19, 2026
