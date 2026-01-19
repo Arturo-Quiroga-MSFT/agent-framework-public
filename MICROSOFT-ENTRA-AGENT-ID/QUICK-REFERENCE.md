@@ -1,6 +1,6 @@
 # Microsoft Entra Agent ID - Quick Reference
 
-> **Last Updated**: December 4, 2025  
+> **Last Updated**: January 19, 2026  
 > **Status**: PREVIEW
 
 ## What Is It?

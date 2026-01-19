@@ -1,7 +1,7 @@
 # Microsoft Entra Agent ID Documentation
 
-> **Status**: PREVIEW (as of December 2025)  
-> **Last Updated**: December 4, 2025
+> **Status**: PREVIEW (as of January 2026)  
+> **Last Updated**: January 19, 2026
 
 ## Overview
 
@@ -9,8 +9,11 @@ This directory contains comprehensive documentation and implementation guides fo
 
 Microsoft Entra Agent ID extends Microsoft Entra ID's capabilities to provide specialized identity constructs, authentication patterns, and governance frameworks for autonomous and assistive AI agents.
 
+> **Note**: Microsoft Entra Agent ID is part of **Microsoft Agent 365**, available now in **Frontier**, the Microsoft early access program for the latest AI innovations.
+
 ## 📚 Documentation Structure
 
+### Core Documentation
 - **[01-OVERVIEW.md](01-OVERVIEW.md)** - Introduction to Microsoft Entra Agent ID platform
 - **[02-CORE-CONCEPTS.md](02-CORE-CONCEPTS.md)** - Agent identities, blueprints, and registry
 - **[03-AUTHENTICATION.md](03-AUTHENTICATION.md)** - OAuth 2.0, OIDC, and token flows
@@ -21,6 +24,10 @@ Microsoft Entra Agent ID extends Microsoft Entra ID's capabilities to provide sp
 - **[08-A2A-PROTOCOL.md](08-A2A-PROTOCOL.md)** - Agent-to-Agent communication patterns
 - **[09-BEST-PRACTICES.md](09-BEST-PRACTICES.md)** - Security, scalability, and operational best practices
 - **[10-USE-CASES.md](10-USE-CASES.md)** - Real-world scenarios and patterns
+
+### Quick References
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Quick start guide and essential commands
+- **[UPDATES_JAN_2026.md](UPDATES_JAN_2026.md)** - Latest updates and new features (January 2026)
 
 ## 🎯 Quick Start
 
@@ -52,6 +59,13 @@ Microsoft Entra Agent ID extends Microsoft Entra ID's capabilities to provide sp
 
 ## 🏗️ Architecture Components
 
+![Microsoft Entra Agent ID Architecture](./media/microsoft-entra-agent-identity-capabilities.png)
+
+**Three Foundational Pillars**:
+1. **Register and manage AI agents** - Agent identity platform and SDK
+2. **Govern agent identities and lifecycle** - A2A protocol and authentication
+3. **Protect agent access to resources** - Identity governance, conditional access, and network controls
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  Microsoft Entra Agent ID                    │
@@ -64,7 +78,7 @@ Microsoft Entra Agent ID extends Microsoft Entra ID's capabilities to provide sp
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 │                                                               │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │        Authentication Service (OAuth/OIDC)           │   │
+│  │   Authentication (OAuth/OIDC) + A2A + MCP Protocols  │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
@@ -178,24 +192,24 @@ Microsoft Entra Agent ID implements **Zero Trust** principles:
 
 ```
 Week 1: Fundamentals
-├── Understand agent identity concepts
-├── Learn authentication patterns
-└── Explore the agent registry
+├── Understand agent identity concepts (01-OVERVIEW.md)
+├── Learn authentication patterns (03-AUTHENTICATION.md)
+└── Explore the agent registry (04-AGENT-REGISTRY.md)
 
 Week 2: Implementation
-├── Create your first agent with identity
-├── Configure RBAC permissions
-└── Implement MCP tool authentication
+├── Review core concepts (02-CORE-CONCEPTS.md)
+├── Configure RBAC permissions (scripts/auto_mapper.py)
+└── Study real-world examples (examples/)
 
 Week 3: Advanced Topics
-├── Multi-agent orchestration (A2A)
-├── Conditional access policies
-└── Identity governance workflows
+├── Multi-agent orchestration with A2A
+├── MCP server integration
+└── Security and governance patterns
 
 Week 4: Production
-├── Security hardening
-├── Monitoring and observability
-└── Operational best practices
+├── Security hardening best practices
+├── Monitoring and observability setup
+└── Operational procedures
 ```
 
 ## 📖 Official Resources
@@ -242,12 +256,13 @@ When adding new documentation or examples:
 2. Include practical code examples
 3. Reference official Microsoft documentation
 4. Update this README with new content
-5. Add use cases to [10-USE-CASES.md](10-USE-CASES.md)
+5. Add examples to the `examples/` directory
 
 ## 📝 Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2 | January 19, 2026 | Updated with Microsoft Agent 365/Frontier program, enhanced security features, network controls, architectural clarity. See [UPDATES_JAN_2026.md](UPDATES_JAN_2026.md) |
 | 1.1 | December 4, 2025 | Added auto_mapper.py tool, identity creation pattern discovery, verified mapping for 9 agents |
 | 1.0 | December 4, 2025 | Initial documentation structure |
 

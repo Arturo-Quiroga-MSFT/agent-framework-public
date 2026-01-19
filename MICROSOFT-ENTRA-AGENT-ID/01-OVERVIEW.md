@@ -1,11 +1,13 @@
 # Microsoft Entra Agent ID - Overview
 
 > **Status**: PREVIEW  
-> **Last Updated**: December 4, 2025
+> **Last Updated**: January 19, 2026
 
 ## What is Microsoft Entra Agent ID?
 
 Microsoft Entra Agent ID is a comprehensive **identity and security platform** specifically designed for AI agents operating in enterprise environments. It extends the proven capabilities of Microsoft Entra ID (formerly Azure Active Directory) to address the unique authentication, authorization, and governance challenges posed by autonomous and assistive AI agents.
+
+> **Important**: Microsoft Entra Agent ID is part of **Microsoft Agent 365**, available now in **Frontier**, the Microsoft early access program for the latest AI innovations. For more information, see [Microsoft Entra Agent ID](https://aka.ms/EntraAgentID).
 
 ### Why Agent-Specific Identity?
 
