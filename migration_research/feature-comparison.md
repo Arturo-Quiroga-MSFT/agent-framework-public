@@ -271,4 +271,4 @@ Use this matrix to decide which framework best suits your needs:
 
 ---
 
-**Last Updated**: October 16, 2025
+**Last Updated**: January 19, 2026
