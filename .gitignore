@@ -224,3 +224,7 @@ AQ-PROFISEE/_local/
 AQ-CODE/FOREX/
 
 .env.jason
+
+# Partner-specific directories (not for public GitHub)
+AQ-TERADATA/
+AQ-THOUGHTWORKS-2026/
