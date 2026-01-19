@@ -137,7 +137,7 @@ AIAgent agent = new AzureOpenAIClient(
         new Uri(endpoint),
         new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(
+    .AsAIAgent(
         name: "AiseyAgent",
         instructions: "You are Aisey, Profisee's AI assistant for master data management."
     );
@@ -184,7 +184,7 @@ var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT
 
 AIAgent agent = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(
+    .AsAIAgent(
         name: "AiseyAgent",
         instructions: "You are Aisey, Profisee's AI assistant.",
         tools: [AIFunctionFactory.Create(GetCustomerDataAsync, name: "get_customer_data")]
@@ -265,7 +265,7 @@ var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT
 
 var agent = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(name: "VisionAgent", instructions: "Analyze images.");
+    .AsAIAgent(name: "VisionAgent", instructions: "Analyze images.");
 
 ChatMessage message = new(ChatRole.User, [
     new TextContent("What do you see in this image?"),

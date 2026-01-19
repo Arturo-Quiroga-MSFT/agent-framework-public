@@ -2,8 +2,9 @@
 
 **Prepared for**: Profisee SK → AF Migration Workshop  
 **Author**: Arturo Quiroga  
-**Date**: December 15, 2025  
+**Date**: December 15, 2025 (Updated: January 19, 2026)  
 **Framework Versions**: Semantic Kernel 1.30+ → Agent Framework 1.0+  
+**Target Framework**: .NET 10.0+ (backward compatible with .NET 6+)  
 **Language**: C# / .NET
 
 ---
@@ -101,14 +102,14 @@ OpenAIResponseAgent responseAgent = new(...);            // OpenAI Responses
 
 ### Agent Framework
 
-**Unified `ChatClientAgent`** works with all `IChatClient`-based services:
+**Unified `AIAgent`** works with all `IChatClient`-based services:
 
 ```csharp
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
 // Single agent type for all providers implementing IChatClient
-ChatClientAgent agent = chatClient.CreateAIAgent(
+AIAgent agent = chatClient.AsAIAgent(
     instructions: "You are a helpful assistant"
 );
 
@@ -177,7 +178,7 @@ using OpenAI;
 // OpenAI - Single line creation
 AIAgent openAIAgent = new OpenAIClient(apiKey)
     .GetChatClient(model)
-    .CreateAIAgent(
+    .AsAIAgent(
         name: "Support",
         instructions: "Answer customer questions."
     );
@@ -185,7 +186,7 @@ AIAgent openAIAgent = new OpenAIClient(apiKey)
 // Azure OpenAI
 AIAgent azureAgent = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(
+    .AsAIAgent(
         name: "Support",
         instructions: "Answer customer questions."
     );
@@ -219,6 +220,34 @@ AIAgent existingAgent = await persistentAgentsClient.GetAIAgentAsync(agentId);
 - Provider-specific extension methods
 - More discoverable API
 - Cleaner code
+
+### Provider-Specific Agent Types (New in 2026)
+
+Agent Framework now includes **provider-specific agent classes** for direct construction:
+
+```csharp
+using OpenAI;
+using OpenAI.Chat;
+using Microsoft.Agents.AI;
+
+// OpenAI ChatClient-based agent
+ChatClient chatClient = new OpenAIClient(apiKey).GetChatClient(model);
+OpenAIChatClientAgent chatAgent = new(chatClient, 
+    instructions: "You are helpful", 
+    name: "Assistant");
+
+// OpenAI Responses-based agent
+ResponsesClient responseClient = new OpenAIClient(apiKey).GetResponsesClient(model);
+OpenAIResponseClientAgent responseAgent = new(responseClient,
+    instructions: "You are helpful",
+    name: "Assistant");
+```
+
+**When to use provider-specific types vs. `.AsAIAgent()`:**
+- **Provider-specific** (`OpenAIChatClientAgent`): Use when you need strong typing and provider-specific features
+- **Extension method** (`.AsAIAgent()`): Use for provider-agnostic code and simpler scenarios
+
+Both approaches are valid and interchangeable. The extension method is more concise for most scenarios.
 
 ---
 
@@ -342,7 +371,7 @@ static string GetWeather([Description("Location")] string location)
     => $"The weather in {location} is sunny.";
 
 // Step 2: Create agent with tool - single call
-AIAgent agent = chatClient.CreateAIAgent(
+AIAgent agent = chatClient.AsAIAgent(
     instructions: "You are a weather assistant.",
     tools: [AIFunctionFactory.Create(GetWeather)]
 );
@@ -370,7 +399,7 @@ public class WeatherTools
 }
 
 // Register multiple methods
-AIAgent agent = chatClient.CreateAIAgent(
+AIAgent agent = chatClient.AsAIAgent(
     tools: [
         AIFunctionFactory.Create(WeatherTools.GetWeather),
         AIFunctionFactory.Create(WeatherTools.GetForecast)
@@ -646,7 +675,7 @@ var services = new ServiceCollection();
 services.AddTransient<AIAgent>(sp => 
     new OpenAIClient(apiKey)
         .GetChatClient(model)
-        .CreateAIAgent(
+        .AsAIAgent(
             name: "Joker",
             instructions: "You are good at telling jokes."
         )
@@ -656,7 +685,7 @@ services.AddTransient<AIAgent>(sp =>
 services.AddKeyedSingleton<AIAgent>("joker", (sp, key) => 
     new OpenAIClient(apiKey)
         .GetChatClient(model)
-        .CreateAIAgent(
+        .AsAIAgent(
             name: "Joker",
             instructions: "You are good at telling jokes."
         )
@@ -731,12 +760,12 @@ using Azure.Identity;
 var chatClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName);
 
-AIAgent writer = chatClient.CreateAIAgent(
+AIAgent writer = chatClient.AsAIAgent(
     name: "writer",
     instructions: "You are a creative copywriter."
 );
 
-AIAgent reviewer = chatClient.CreateAIAgent(
+AIAgent reviewer = chatClient.AsAIAgent(
     name: "reviewer",
     instructions: "You are a thoughtful reviewer."
 );
@@ -808,12 +837,12 @@ finally
 ```csharp
 using Microsoft.Agents.AI.Workflows;
 
-AIAgent physics = chatClient.CreateAIAgent(
+AIAgent physics = chatClient.AsAIAgent(
     name: "physics",
     instructions: "You are a physics expert."
 );
 
-AIAgent chemistry = chatClient.CreateAIAgent(
+AIAgent chemistry = chatClient.AsAIAgent(
     name: "chemistry",
     instructions: "You are a chemistry expert."
 );
@@ -841,9 +870,9 @@ await foreach (var @event in workflow.RunStreamingAsync("Explain temperature"))
 using Microsoft.Agents.AI.Workflows;
 
 // Create specialized agents
-AIAgent triage = chatClient.CreateAIAgent(...);
-AIAgent refund = chatClient.CreateAIAgent(...);
-AIAgent orderStatus = chatClient.CreateAIAgent(...);
+AIAgent triage = chatClient.AsAIAgent(...);
+AIAgent refund = chatClient.AsAIAgent(...);
+AIAgent orderStatus = chatClient.AsAIAgent(...);
 
 // Create handoff workflow
 var workflow = new HandoffBuilder()
@@ -902,7 +931,7 @@ using Azure.Identity;
 
 AIAgent agent = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(
+    .AsAIAgent(
         name: "Support",
         instructions: "Answer customer questions in one paragraph."
     );
@@ -969,7 +998,7 @@ static string GetWeather([Description("Location")] string location)
 
 AIAgent agent = new OpenAIClient(apiKey)
     .GetChatClient(model)
-    .CreateAIAgent(
+    .AsAIAgent(
         instructions: "You are a weather assistant",
         tools: [AIFunctionFactory.Create(GetWeather)]
     );
@@ -1108,7 +1137,7 @@ var tools = AIFunctionFactory.CreateFromOpenApi(openApiDocument);
 
 AIAgent agent = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential())
     .GetChatClient(deploymentName)
-    .CreateAIAgent(
+    .AsAIAgent(
         instructions: "You are a helpful assistant",
         tools: tools
     );
@@ -1216,7 +1245,7 @@ Console.WriteLine(response.Text);
   };
   
   // To AF
-  AIAgent afAgent = chatClient.CreateAIAgent(...);
+  AIAgent afAgent = chatClient.AsAIAgent(...);
   ```
 
 - [ ] **Remove Kernel dependencies**
@@ -1317,7 +1346,7 @@ ChatCompletionAgent skAgent = new() { Kernel = kernel, ... };
 AIAgent afAgent = skAgent.AsAIAgent();
 
 // Later: Gradually migrate to native AF
-AIAgent nativeAgent = chatClient.CreateAIAgent(...);
+AIAgent nativeAgent = chatClient.AsAIAgent(...);
 ```
 
 ### 2. **Leverage Microsoft.Extensions.AI**
@@ -1342,7 +1371,7 @@ services.AddTransient<ChatCompletionAgent>(sp => new()
 
 // AF: Direct registration
 services.AddTransient<AIAgent>(sp => 
-    chatClient.CreateAIAgent(...)
+    chatClient.AsAIAgent(...)
 );
 ```
 

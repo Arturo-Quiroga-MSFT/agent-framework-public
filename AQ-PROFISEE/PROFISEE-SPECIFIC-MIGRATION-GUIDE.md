@@ -166,7 +166,7 @@ public class AiseyService
             new AzureCliCredential()
         )
         .GetChatClient(deploymentName)
-        .CreateAIAgent(
+        .AsAIAgent(
             name: "AiseyAgent",
             instructions: "You are Aisey, Profisee's AI assistant.",
             temperature: 0.7f,
@@ -256,7 +256,7 @@ public class AiseyAgentManager
         };
         
         // Create agent with tools
-        _agent = chatClient.CreateAIAgent(
+        _agent = chatClient.AsAIAgent(
             name: "AiseyAgent",
             instructions: "You are Aisey, Profisee's AI assistant.",
             tools: tools
@@ -558,7 +558,7 @@ public class Startup
                 AIFunctionFactory.Create(ValidateDataAsync)
             };
             
-            return chatClient.CreateAIAgent(
+            return chatClient.AsAIAgent(
                 name: "AiseyAgent",
                 instructions: "You are Aisey, Profisee's AI assistant.",
                 tools: tools
@@ -734,7 +734,7 @@ public class AiseyService
         };
         
         // Create agent with tools
-        _agent = chatClient.CreateAIAgent(
+        _agent = chatClient.AsAIAgent(
             name: "AiseyAgent",
             instructions: "You are Aisey, Profisee's AI assistant for master data management.",
             tools: tools,
@@ -752,7 +752,7 @@ public class AiseyService
         if (!string.IsNullOrEmpty(systemPrompt))
         {
             // Create new agent with custom instructions
-            var customAgent = _agent.GetChatClient().CreateAIAgent(
+            var customAgent = _agent.GetChatClient().AsAIAgent(
                 name: _agent.Name,
                 instructions: systemPrompt,
                 tools: _agent.Tools,
@@ -913,7 +913,7 @@ public class AiseyService
             new DefaultAzureCredential()
         )
         .GetChatClient(settings.DeploymentName)
-        .CreateAIAgent(
+        .AsAIAgent(
             name: "AiseyAgent",
             instructions: settings.SystemPrompt,
             temperature: settings.Temperature,
