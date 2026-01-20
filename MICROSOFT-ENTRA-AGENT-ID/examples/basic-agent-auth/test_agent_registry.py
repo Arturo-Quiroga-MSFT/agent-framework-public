@@ -261,21 +261,25 @@ def register_full_agent(credential, config):
             "supportsAuthenticatedExtendedCard": False,
             "skills": [
                 {
-                    "identifier": "test-skill-1",
-                    "name": "Test Skill 1",
-                    "description": "First test skill"
+                    "id": "test-skill-1",
+                    "displayName": "Test Skill 1",
+                    "description": "First test skill",
+                    "examples": ["Example usage 1"],
+                    "tags": ["test", "demo"]
                 },
                 {
-                    "identifier": "test-skill-2",
-                    "name": "Test Skill 2",
-                    "description": "Second test skill"
+                    "id": "test-skill-2",
+                    "displayName": "Test Skill 2",
+                    "description": "Second test skill",
+                    "examples": ["Example usage 2"],
+                    "tags": ["test", "demo"]
                 }
             ],
             "defaultInputModes": ["application/json"],
             "defaultOutputModes": ["application/json"],
             "provider": {
-                "name": "Test Provider",
-                "contactUrl": "https://example.com/contact"
+                "organization": "Test Provider",
+                "url": "https://example.com/contact"
             }
         }
     }
