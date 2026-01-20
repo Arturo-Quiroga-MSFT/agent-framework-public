@@ -225,6 +225,8 @@ AQ-CODE/FOREX/
 
 .env.jason
 
-# Partner-specific directories (not for public GitHub)
+# Partner-specific directories (kept local only, not tracked in Git)
+AQ-ZAFIN-2026/
+AQ-PROFISEE/
 AQ-TERADATA/
 AQ-THOUGHTWORKS-2026/
