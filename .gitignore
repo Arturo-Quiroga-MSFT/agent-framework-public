@@ -230,3 +230,6 @@ AQ-ZAFIN-2026/
 AQ-PROFISEE/
 AQ-TERADATA/
 AQ-THOUGHTWORKS-2026/
+
+# Partner exports (zip files for sharing)
+partner-exports/
