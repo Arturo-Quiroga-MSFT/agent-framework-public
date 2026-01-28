@@ -156,9 +156,9 @@ async def create_code_interpreter_agent():
 
 async def create_bing_grounded_agent():
     """Create an agent with Bing search grounding."""
-    bing_connection = os.getenv("BING_CONNECTION_NAME")
+    bing_connection = os.getenv("BING_PROJECT_CONNECTION_ID")
     if not bing_connection:
-        raise ValueError("BING_CONNECTION_NAME environment variable required for Bing grounding")
+        raise ValueError("BING_PROJECT_CONNECTION_ID environment variable required for Bing grounding")
     
     async with DefaultAzureCredential() as credential:
         async with AIProjectClient(
@@ -172,7 +172,14 @@ async def create_bing_grounded_agent():
                 Use Bing search to find current, accurate information.
                 Always cite your sources when providing information from the web.
                 Synthesize information from multiple sources when relevant.""",
-                tools=[{"bing_grounding": {"connection_name": bing_connection}}],
+                tools={
+                    "type": "bing_grounding",
+                    "bing_grounding": {
+                        "search_configurations": [
+                            {"project_connection_id": bing_connection}
+                        ]
+                    },
+                },
             )
             return agent, provider
 
@@ -185,38 +192,104 @@ async def chat_profiles():
     return [
         cl.ChatProfile(
             name="Basic Chat",
-            markdown_description="Simple conversational agent",
+            markdown_description="💬 Simple conversational agent for general questions",
             icon="https://img.icons8.com/fluency/96/chat.png",
         ),
         cl.ChatProfile(
             name="Weather Tool",
-            markdown_description="Agent with weather function tool",
+            markdown_description="🌤️ Real-time weather lookup with OpenWeatherMap API",
             icon="https://img.icons8.com/fluency/96/partly-cloudy-day.png",
         ),
         cl.ChatProfile(
             name="Code Interpreter",
-            markdown_description="Agent that executes Python code",
+            markdown_description="💻 Execute Python code, create visualizations & analyze data",
             icon="https://img.icons8.com/fluency/96/code.png",
         ),
         cl.ChatProfile(
             name="Bing Grounding",
-            markdown_description="Agent with web search capabilities",
+            markdown_description="🔍 Web search powered research with citations",
             icon="https://img.icons8.com/fluency/96/search.png",
+        ),
+    ]
+
+
+@cl.set_starters
+async def set_starters():
+    """Set starter prompts - shown on new chat."""
+    return [
+        cl.Starter(
+            label="🌤️ Weather in Tokyo",
+            message="What's the weather like in Tokyo right now?",
+            icon="https://img.icons8.com/fluency/96/partly-cloudy-day.png",
+        ),
+        cl.Starter(
+            label="📊 Population chart",
+            message="Create a bar chart showing the top 10 most populated countries in the world",
+            icon="https://img.icons8.com/fluency/96/bar-chart.png",
+        ),
+        cl.Starter(
+            label="📈 Compound interest",
+            message="Plot a line chart showing how $10,000 grows over 30 years with 7% compound interest",
+            icon="https://img.icons8.com/fluency/96/money-bag.png",
+        ),
+        cl.Starter(
+            label="💡 Explain quantum computing",
+            message="Can you explain quantum computing in simple terms?",
+            icon="https://img.icons8.com/fluency/96/atom.png",
         ),
     ]
 
 
 @cl.on_chat_start
 async def on_chat_start():
-    """Initialize the chat session."""
+    """Initialize the chat session with mode-specific welcome."""
     chat_profile = cl.user_session.get("chat_profile")
     
-    # Welcome message based on profile
+    # Enhanced welcome messages with mode explanations
     welcome_messages = {
-        "Basic Chat": "Hello! I'm a basic conversational assistant. How can I help you today?",
-        "Weather Tool": "Hello! I'm a weather assistant. Ask me about weather in cities like Seattle, London, Tokyo, New York, Paris, Sydney, Mumbai, or Berlin!",
-        "Code Interpreter": "Hello! I'm a coding assistant with Python execution capabilities. I can help with calculations, data analysis, and visualizations.",
-        "Bing Grounding": "Hello! I'm a research assistant with web search capabilities. I can find current information on any topic!",
+        "Basic Chat": """👋 **Welcome to Basic Chat!**
+
+I'm a conversational AI assistant that can help with:
+- Answering questions on any topic
+- Writing and editing text
+- Explaining concepts
+- Brainstorming ideas
+
+Try one of the suggested prompts below, or ask me anything!""",
+
+        "Weather Tool": """🌤️ **Welcome to Weather Tool!**
+
+I can fetch **real-time weather data** for any city using the OpenWeatherMap API.
+
+I'll provide:
+- Current temperature & conditions
+- "Feels like" temperature
+- Humidity levels
+- Clothing recommendations
+
+Try one of the suggested prompts, or ask about any city!""",
+
+        "Code Interpreter": """💻 **Welcome to Code Interpreter!**
+
+I can **execute Python code** to help you with:
+- 📊 Creating charts and visualizations
+- 🔢 Mathematical calculations
+- 📈 Data analysis
+- 🎨 Generating plots with matplotlib
+
+Charts will be displayed inline. Try one of the suggested prompts!""",
+
+        "Bing Grounding": """🔍 **Welcome to Bing Grounding!**
+
+I'm a research assistant with **web search capabilities**.
+
+I can:
+- Find current news and information
+- Answer questions with real-time data
+- Provide sources and citations
+- Synthesize information from multiple sources
+
+Try one of the suggested prompts, or ask about any topic!""",
     }
     
     profile = chat_profile or "Basic Chat"
@@ -439,9 +512,9 @@ async def run_code_interpreter_chat(user_query: str, context: str) -> tuple[str,
 
 async def run_bing_chat(user_query: str, context: str) -> str:
     """Run Bing grounded agent."""
-    bing_connection = os.getenv("BING_CONNECTION_NAME")
+    bing_connection = os.getenv("BING_PROJECT_CONNECTION_ID")
     if not bing_connection:
-        return "Bing grounding not configured. Set BING_CONNECTION_NAME environment variable."
+        return "Bing grounding not configured. Set BING_PROJECT_CONNECTION_ID environment variable."
     
     async with DefaultAzureCredential() as credential:
         async with AIProjectClient(
@@ -458,7 +531,14 @@ async def run_bing_chat(user_query: str, context: str) -> str:
             agent = await provider.create_agent(
                 name="BingGroundedAgent",
                 instructions=instructions,
-                tools=[{"bing_grounding": {"connection_name": bing_connection}}],
+                tools={
+                    "type": "bing_grounding",
+                    "bing_grounding": {
+                        "search_configurations": [
+                            {"project_connection_id": bing_connection}
+                        ]
+                    },
+                },
             )
             
             thread = agent.get_new_thread()

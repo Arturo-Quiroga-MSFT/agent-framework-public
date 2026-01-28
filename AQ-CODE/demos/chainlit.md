@@ -1,14 +1,42 @@
-# Welcome to Chainlit! 🚀🤖
+# Azure AI Agent Framework Demo 🤖
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+Welcome to the **Agent Framework V2** demonstration app!
 
-## Useful Links 🔗
+This demo showcases different agent capabilities powered by Azure AI Foundry.
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
+---
 
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
+## 🎯 Available Modes
 
-## Welcome screen
+Select a mode from the **dropdown at the top left**:
 
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+### 💬 Basic Chat
+Simple conversational AI assistant for general questions.
+
+### 🌤️ Weather Tool  
+Agent with **real-time weather lookup** using OpenWeatherMap API.
+- Ask about weather in any city worldwide
+- Get temperature, conditions, humidity, and recommendations
+
+### 💻 Code Interpreter
+Execute Python code, create **visualizations**, and perform data analysis.
+- Generate charts and graphs
+- Perform calculations
+- Analyze data
+
+### 🔍 Bing Grounding
+Web search powered **research assistant** with citations.
+- Find current information on any topic
+- Get answers grounded in real web sources
+
+---
+
+## 🚀 Quick Start
+
+1. **Select a mode** from the dropdown menu (top left)
+2. **Try the suggested prompts** or type your own question
+3. **View results** including charts, data, and responses
+
+---
+
+*Built with [Chainlit](https://chainlit.io) + [Microsoft Agent Framework](https://aka.ms/agent-framework)*
