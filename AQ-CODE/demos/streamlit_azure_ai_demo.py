@@ -27,7 +27,7 @@ from PIL import Image
 # Add parent directories to path to import agent framework
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentRunResponse, HostedMCPTool, ChatMessage
+from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentResponse, HostedMCPTool, ChatMessage
 from agent_framework.azure import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential, AzureCliCredential
 from azure.ai.agents.models import FileInfo, VectorStore
@@ -102,46 +102,44 @@ def get_weather(
 
 async def run_basic_chat(user_query: str, demo_type: str) -> str:
     """Run a basic chat interaction without persistent thread."""
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            if demo_type == "weather":
-                instructions = "You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Never apologize or say you can't access weather data - you have the get_weather function available."
-            else:
-                instructions = "You are a helpful assistant that can answer questions."
-            
-            agent = ChatAgent(
-                chat_client=client,
-                instructions=instructions,
-                tools=[get_weather] if demo_type == "weather" else None,
-            )
-            
-            result = await agent.run(user_query)
-            return str(result.text)
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    if demo_type == "weather":
+        instructions = "You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Never apologize or say you can't access weather data - you have the get_weather function available."
+    else:
+        instructions = "You are a helpful assistant that can answer questions."
+    
+    async with ChatAgent(
+        chat_client=client,
+        instructions=instructions,
+        tools=[get_weather] if demo_type == "weather" else None,
+    ) as agent:
+        result = await agent.run(user_query)
+        return str(result.text)
 
 
 async def run_threaded_chat(user_query: str) -> str:
     """Run chat with persistent thread for conversation context."""
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            agent = ChatAgent(
-                chat_client=client,
-                instructions="You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Remember previous conversations in this thread.",
-                tools=[get_weather],
-            )
-            
-            # Create or reuse thread
-            if st.session_state.service_thread_id:
-                thread = agent.get_new_thread(service_thread_id=st.session_state.service_thread_id)
-            else:
-                thread = agent.get_new_thread()
-            
-            result = await agent.run(user_query, thread=thread, store=True)
-            
-            # Store thread ID for next message
-            if thread.service_thread_id:
-                st.session_state.service_thread_id = thread.service_thread_id
-            
-            return str(result.text)
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    async with ChatAgent(
+        chat_client=client,
+        instructions="You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Remember previous conversations in this thread.",
+        tools=[get_weather],
+    ) as agent:
+        # Create or reuse thread
+        if st.session_state.service_thread_id:
+            thread = agent.get_new_thread(service_thread_id=st.session_state.service_thread_id)
+        else:
+            thread = agent.get_new_thread()
+        
+        result = await agent.run(user_query, thread=thread, store=True)
+        
+        # Store thread ID for next message
+        if thread.service_thread_id:
+            st.session_state.service_thread_id = thread.service_thread_id
+        
+        return str(result.text)
 
 
 async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
@@ -205,271 +203,81 @@ async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
     import time
     start_time = time.time()
     
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            bing_search_tool = HostedWebSearchTool(
-                name="Bing Grounding Search",
-                description="Search the web for current information using Bing",
-            )
-            
-            agent = ChatAgent(
-                chat_client=client,
-                name="BingSearchAgent",
-                instructions="You are a helpful assistant that can search the web for current information. Use the Bing search tool to find up-to-date information and provide accurate, well-sourced answers. Always cite your sources when possible. Remember previous searches and questions in this conversation.",
-                tools=bing_search_tool,
-            )
-            
-            # Create or reuse thread for conversation memory
-            if st.session_state.bing_thread_id:
-                thread = agent.get_new_thread(service_thread_id=st.session_state.bing_thread_id)
-            else:
-                thread = agent.get_new_thread()
-            
-            result = await agent.run(user_query, thread=thread, store=True)
-            
-            # Store thread ID for next message to maintain conversation history
-            if thread.service_thread_id:
-                st.session_state.bing_thread_id = thread.service_thread_id
-            
-            # Get the response text
-            response_text = str(result.text)
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
-                )
-            
-            # Simply replace citation markers with numbered references
-            # Pattern: 【3:0†source】
-            citation_pattern = r'【[^】]+】'
-            citation_counter = 0
-            
-            def replace_citation(match):
-                nonlocal citation_counter
-                citation_counter += 1
-                return f'[{citation_counter}]'
-            
-            response_text = re.sub(citation_pattern, replace_citation, response_text)
-            
-            # Add note about citations
-            if citation_counter > 0:
-                response_text += f"\n\n*Note: Response includes {citation_counter} citations from web sources*"
-            
-            # Add usage stats at the bottom
-            response_text += f"\n\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-            
-            return response_text, metadata
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                # Try different attribute name patterns
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
-                )
-            
-            # Extract citation URLs from the response
-            citations_map = {}
-            
-            # Try method 1: Extract from result.raw_representation.messages (ChatMessage objects)
-            if hasattr(result, 'raw_representation') and hasattr(result.raw_representation, 'messages'):
-                messages = result.raw_representation.messages
-                print(f"[DEBUG] Found {len(messages)} ChatMessage objects")
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    bing_search_tool = HostedWebSearchTool(
+        name="Bing Grounding Search",
+        description="Search the web for current information using Bing",
+    )
+    
+    async with ChatAgent(
+        chat_client=client,
+        name="BingSearchAgent",
+        instructions="You are a helpful assistant that can search the web for current information. Use the Bing search tool to find up-to-date information and provide accurate, well-sourced answers. Always cite your sources when possible. Remember previous searches and questions in this conversation.",
+        tools=bing_search_tool,
+    ) as agent:
+        # Create or reuse thread for conversation memory
+        if st.session_state.bing_thread_id:
+            thread = agent.get_new_thread(service_thread_id=st.session_state.bing_thread_id)
+        else:
+            thread = agent.get_new_thread()
+        
+        result = await agent.run(user_query, thread=thread, store=True)
                 
-                for msg_idx, msg in enumerate(messages):
-                    if hasattr(msg, 'contents'):
-                        contents = msg.contents
-                        print(f"[DEBUG] Message has {len(contents)} content items")
-                        
-                        for content_idx, content in enumerate(contents):
-                            print(f"[DEBUG] Content {content_idx}: type={type(content).__name__}")
-                            
-                            # Check what attributes the TextContent object has
-                            if hasattr(content, '__dict__'):
-                                attrs = [attr for attr in dir(content) if not attr.startswith('_')]
-                                print(f"[DEBUG] TextContent attributes: {attrs}")
-                            
-                            # Try different ways to access annotations:
-                            # 1. Direct annotations attribute on content
-                            if hasattr(content, 'annotations'):
-                                annotations = content.annotations
-                                print(f"[DEBUG] Found {len(annotations) if annotations else 0} annotations on content.annotations")
-                                
-                                if annotations:
-                                    for ann in annotations:
-                                        if hasattr(ann, 'type') and ann.type == 'url_citation':
-                                            citation_text = getattr(ann, 'text', '')
-                                            if hasattr(ann, 'url_citation'):
-                                                url_cit = ann.url_citation
-                                                url = getattr(url_cit, 'url', '')
-                                                title = getattr(url_cit, 'title', url)
-                                                if citation_text and url:
-                                                    citations_map[citation_text] = {'url': url, 'title': title}
-                                                    print(f"[DEBUG] ✓ Extracted: {citation_text} -> {url[:50]}...")
-                            
-                            # 2. Check content.text if it's an object (not just string)
-                            elif hasattr(content, 'text'):
-                                text_obj = content.text
-                                if hasattr(text_obj, 'annotations'):
-                                    annotations = text_obj.annotations
-                                    print(f"[DEBUG] Found {len(annotations) if annotations else 0} annotations on content.text.annotations")
+        # Store thread ID for next message to maintain conversation history
+        if thread.service_thread_id:
+            st.session_state.bing_thread_id = thread.service_thread_id
+        
+        # Get the response text
+        response_text = str(result.text)
+    
+    # Extract timing and token usage
+    elapsed_time = time.time() - start_time
+    metadata = {
+        'elapsed_time': elapsed_time,
+        'prompt_tokens': 0,
+        'completion_tokens': 0,
+        'total_tokens': 0
+    }
             
-            # Try method 2: Check raw_representation list (this is where the raw event stream is)
-            if not citations_map and hasattr(result, 'raw_representation'):
-                raw_obj = result.raw_representation
-                if hasattr(raw_obj, 'raw_representation'):
-                    raw_list = raw_obj.raw_representation
-                    
-                    if isinstance(raw_list, list) and len(raw_list) > 0:
-                        print(f"[DEBUG] Searching {len(raw_list)} items in raw_list for ThreadMessage objects")
-                        
-                        # Look for ThreadMessage objects (these are agent_framework objects, not dicts)
-                        for idx, item in enumerate(reversed(raw_list)):
-                            # Check if it's a ThreadMessage object
-                            if type(item).__name__ == 'ThreadMessage':
-                                status = getattr(item, 'status', None)
-                                status_str = str(status) if status else 'unknown'
-                                
-                                # Check if status indicates completion (handle both enum and string)
-                                is_completed = (
-                                    'COMPLETED' in status_str.upper() or
-                                    status_str == 'completed' or
-                                    (hasattr(status, 'value') and status.value == 'completed')
-                                )
-                                
-                                if is_completed:
-                                    msg_id = getattr(item, 'id', 'unknown')
-                                    print(f"[DEBUG] Found completed ThreadMessage: id={msg_id}")
-                                    
-                                    # Try to get annotations from raw_representation of the ThreadMessage
-                                    if hasattr(item, 'raw_representation') and item.raw_representation:
-                                        raw_msg = item.raw_representation
-                                        print(f"[DEBUG] ThreadMessage.raw_representation type: {type(raw_msg)}")
-                                        print(f"[DEBUG] ThreadMessage.raw_representation is dict: {isinstance(raw_msg, dict)}")
-                                        
-                                        # If raw_representation is a dict with content
-                                        if isinstance(raw_msg, dict):
-                                            print(f"[DEBUG] Raw dict keys: {list(raw_msg.keys())}")
-                                            content_list = raw_msg.get('content', [])
-                                            print(f"[DEBUG] Raw dict has {len(content_list)} content items")
-                                            
-                                            if content_list:
-                                                import json
-                                                print(f"[DEBUG] Full content structure:")
-                                                print(json.dumps(content_list, indent=2, default=str))
-                                            
-                                            for content in content_list:
-                                                if isinstance(content, dict) and content.get('type') == 'text':
-                                                    text_data = content.get('text', {})
-                                                    annotations = text_data.get('annotations', [])
-                                                    print(f"[DEBUG] Found {len(annotations)} annotations in raw dict")
-                                                    
-                                                    for ann in annotations:
-                                                        if isinstance(ann, dict) and ann.get('type') == 'url_citation':
-                                                            citation_text = ann.get('text', '')
-                                                            url_citation = ann.get('url_citation', {})
-                                                            url = url_citation.get('url', '')
-                                                            title = url_citation.get('title', url)
-                                                            if citation_text and url:
-                                                                citations_map[citation_text] = {'url': url, 'title': title}
-                                                                print(f"[DEBUG] ✓ Extracted: {citation_text} -> {url[:50]}...")
-                                        else:
-                                            print(f"[DEBUG] raw_representation is not a dict, trying to convert...")
-                                            if hasattr(raw_msg, '__dict__'):
-                                                raw_dict = vars(raw_msg)
-                                                print(f"[DEBUG] Converted to dict, keys: {list(raw_dict.keys())}")
-                                    else:
-                                        print(f"[DEBUG] ThreadMessage has no raw_representation or it's None")
-                                    
-                                    # If we found citations, stop searching
-                                    if citations_map:
-                                        break
-            
-            if citations_map:
-                print(f"✓ Extracted {len(citations_map)} citations from Bing response")
-            
-            # Now replace citations in the response text with numbered references
-            citation_counter = 0
-            citation_references = []
-            
-            def replace_citation(match):
-                nonlocal citation_counter
-                citation_text = match.group(0)  # e.g., 【3:0†source】
-                
-                if citation_text in citations_map:
-                    citation_counter += 1
-                    citation_info = citations_map[citation_text]
-                    url = citation_info['url']
-                    title = citation_info['title']
-                    citation_references.append({'num': citation_counter, 'url': url, 'title': title})
-                    return f'[{citation_counter}]'
-                else:
-                    citation_counter += 1
-                    return f'[{citation_counter}]'
-            
-            # Pattern: 【3:0†source】
-            citation_pattern = r'【[^】]+】'
-            response_text = re.sub(citation_pattern, replace_citation, response_text)
-            
-            # Add references section at the bottom
-            if citation_references:
-                response_text += "\n\n---\n**References:**\n\n"
-                for ref in citation_references:
-                    response_text += f"[{ref['num']}] {ref['title']}  \n{ref['url']}\n\n"
-            
-            # Add usage statistics
-            response_text += "---\n"
-            response_text += f"⏱️ **Time:** {metadata['elapsed_time']:.2f}s | "
-            response_text += f"🔢 **Tokens:** {metadata['total_tokens']} "
-            response_text += f"(↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-
-            # Debug prints for verification
-            print(f"[DEBUG] Extracted token metadata: {metadata}")
-            print(f"[DEBUG] Extracted {len(citation_references)} citation references")
-
-            return response_text, metadata
+    # Extract token usage from result.usage_details
+    if hasattr(result, 'usage_details') and result.usage_details:
+        usage = result.usage_details
+        metadata['prompt_tokens'] = (
+            getattr(usage, 'input_token_count', None) or
+            getattr(usage, 'input_tokens', None) or
+            getattr(usage, 'prompt_tokens', 0)
+        )
+        metadata['completion_tokens'] = (
+            getattr(usage, 'output_token_count', None) or
+            getattr(usage, 'output_tokens', None) or
+            getattr(usage, 'completion_tokens', 0)
+        )
+        metadata['total_tokens'] = (
+            getattr(usage, 'total_token_count', None) or
+            getattr(usage, 'total_tokens', 0)
+        )
+    
+    # Simply replace citation markers with numbered references
+    # Pattern: 【3:0†source】
+    citation_pattern = r'【[^】]+】'
+    citation_counter = 0
+    
+    def replace_citation(match):
+        nonlocal citation_counter
+        citation_counter += 1
+        return f'[{citation_counter}]'
+    
+    response_text = re.sub(citation_pattern, replace_citation, response_text)
+    
+    # Add note about citations
+    if citation_counter > 0:
+        response_text += f"\n\n*Note: Response includes {citation_counter} citations from web sources*"
+    
+    # Add usage stats at the bottom
+    response_text += f"\n\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+    
+    return response_text, metadata
 
 
 async def run_file_search(query: str, document_name: str = "employees.pdf") -> tuple[str, dict]:
@@ -538,7 +346,7 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
                 thread = agent.get_new_thread()
             
             print(f"[DEBUG] Running query against {document_name}...")
-            result: AgentRunResponse = await agent.run(query, thread=thread, store=True)
+            result: AgentResponse = await agent.run(query, thread=thread, store=True)
             
             # Store thread ID for next message to maintain conversation history
             if thread.service_thread_id:
@@ -628,70 +436,69 @@ async def run_azure_ai_search(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            # Create Azure AI Search tool
-            azure_ai_search_tool = HostedFileSearchTool(
-                additional_properties={
-                    "index_name": "hotels-sample-index",  # Name of your search index
-                    "query_type": "simple",  # Use simple search
-                    "top_k": 10,  # Get more comprehensive results
-                },
-            )
-            
-            agent = ChatAgent(
-                chat_client=client,
-                name="HotelSearchAgent",
-                instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results. Remember previous searches and questions in this conversation.",
-                tools=azure_ai_search_tool,
-            )
-            
-            # Create or reuse thread for conversation memory
-            if st.session_state.azureaisearch_thread_id:
-                thread = agent.get_new_thread(service_thread_id=st.session_state.azureaisearch_thread_id)
-            else:
-                thread = agent.get_new_thread()
-            
-            # Run the agent with the query
-            result = await agent.run(query, thread=thread, store=True)
-            response_text = str(result.text)
-            
-            # Store thread ID for next message to maintain conversation history
-            if thread.service_thread_id:
-                st.session_state.azureaisearch_thread_id = thread.service_thread_id
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
-                )
-            
-            # Add search indicator and usage stats
-            response_text += f"\n\n🔍 Powered by: Azure AI Search (hotels-sample-index)"
-            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-            
-            return response_text, metadata
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    # Create Azure AI Search tool
+    azure_ai_search_tool = HostedFileSearchTool(
+        additional_properties={
+            "index_name": "hotels-sample-index",  # Name of your search index
+            "query_type": "simple",  # Use simple search
+            "top_k": 10,  # Get more comprehensive results
+        },
+    )
+    
+    async with ChatAgent(
+        chat_client=client,
+        name="HotelSearchAgent",
+        instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results. Remember previous searches and questions in this conversation.",
+        tools=azure_ai_search_tool,
+    ) as agent:
+        # Create or reuse thread for conversation memory
+        if st.session_state.azureaisearch_thread_id:
+            thread = agent.get_new_thread(service_thread_id=st.session_state.azureaisearch_thread_id)
+        else:
+            thread = agent.get_new_thread()
+        
+        # Run the agent with the query
+        result = await agent.run(query, thread=thread, store=True)
+        response_text = str(result.text)
+        
+        # Store thread ID for next message to maintain conversation history
+        if thread.service_thread_id:
+            st.session_state.azureaisearch_thread_id = thread.service_thread_id
+    
+    # Extract timing and token usage
+    elapsed_time = time.time() - start_time
+    metadata = {
+        'elapsed_time': elapsed_time,
+        'prompt_tokens': 0,
+        'completion_tokens': 0,
+        'total_tokens': 0
+    }
+    
+    # Extract token usage from result.usage_details
+    if hasattr(result, 'usage_details') and result.usage_details:
+        usage = result.usage_details
+        metadata['prompt_tokens'] = (
+            getattr(usage, 'input_token_count', None) or
+            getattr(usage, 'input_tokens', None) or
+            getattr(usage, 'prompt_tokens', 0)
+        )
+        metadata['completion_tokens'] = (
+            getattr(usage, 'output_token_count', None) or
+            getattr(usage, 'output_tokens', None) or
+            getattr(usage, 'completion_tokens', 0)
+        )
+        metadata['total_tokens'] = (
+            getattr(usage, 'total_token_count', None) or
+            getattr(usage, 'total_tokens', 0)
+        )
+    
+    # Add search indicator and usage stats
+    response_text += f"\n\n🔍 Powered by: Azure AI Search (hotels-sample-index)"
+    response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+    
+    return response_text, metadata
 
 
 async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
@@ -710,80 +517,79 @@ async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            # Create Firecrawl MCP tool
-            # Firecrawl hosted MCP server format: https://mcp.firecrawl.dev/{API_KEY}/v2/mcp
-            firecrawl_url = f"https://mcp.firecrawl.dev/{api_key}/v2/mcp"
-            firecrawl_tool = HostedMCPTool(
-                name="Firecrawl Web Scraper",
-                url=firecrawl_url,
-            )
-            
-            agent = ChatAgent(
-                chat_client=client,
-                name="FirecrawlAgent",
-                instructions="You are a helpful web research assistant with access to Firecrawl for web scraping and content extraction. Use Firecrawl to fetch web pages, extract clean content, and provide accurate information from websites. Always cite your sources.",
-                tools=firecrawl_tool,
-            )
-            
-            # Create a thread for this conversation
-            thread = agent.get_new_thread()
-            
-            # Run the agent with the query
-            result = await agent.run(query, thread=thread, store=True)
-            
-            # Handle any user input requests (function call approvals)
-            # For demo purposes, we auto-approve all function calls
-            while len(result.user_input_requests) > 0:
-                new_input = []
-                for user_input_needed in result.user_input_requests:
-                    # Auto-approve the function call for demo purposes
-                    print(f"[DEBUG] Auto-approving Firecrawl function call: {user_input_needed.function_call.name}")
-                    new_input.append(
-                        ChatMessage(
-                            role="user",
-                            contents=[user_input_needed.create_response(True)],  # Auto-approve
-                        )
-                    )
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    # Create Firecrawl MCP tool
+    # Firecrawl hosted MCP server format: https://mcp.firecrawl.dev/{API_KEY}/v2/mcp
+    firecrawl_url = f"https://mcp.firecrawl.dev/{api_key}/v2/mcp"
+    firecrawl_tool = HostedMCPTool(
+        name="Firecrawl Web Scraper",
+        url=firecrawl_url,
+    )
+    
+    async with ChatAgent(
+        chat_client=client,
+        name="FirecrawlAgent",
+        instructions="You are a helpful web research assistant with access to Firecrawl for web scraping and content extraction. Use Firecrawl to fetch web pages, extract clean content, and provide accurate information from websites. Always cite your sources.",
+        tools=firecrawl_tool,
+    ) as agent:
+        # Create a thread for this conversation
+        thread = agent.get_new_thread()
+        
+        # Run the agent with the query
+        result = await agent.run(query, thread=thread, store=True)
                 
-                # Continue the run with approvals
-                result = await agent.run(new_input, thread=thread, store=True)
-            
-            response_text = str(result.text)
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
+        # Handle any user input requests (function call approvals)
+        # For demo purposes, we auto-approve all function calls
+        while len(result.user_input_requests) > 0:
+            new_input = []
+            for user_input_needed in result.user_input_requests:
+                # Auto-approve the function call for demo purposes
+                print(f"[DEBUG] Auto-approving Firecrawl function call: {user_input_needed.function_call.name}")
+                new_input.append(
+                    ChatMessage(
+                        role="user",
+                        contents=[user_input_needed.create_response(True)],  # Auto-approve
+                    )
                 )
             
-            # Add Firecrawl indicator and usage stats
-            response_text += f"\n\n🔥 Powered by: Firecrawl MCP (Web Scraper)"
-            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-            
-            return response_text, metadata
+            # Continue the run with approvals
+            result = await agent.run(new_input, thread=thread, store=True)
+    
+    response_text = str(result.text)
+    
+    # Extract timing and token usage
+    elapsed_time = time.time() - start_time
+    metadata = {
+        'elapsed_time': elapsed_time,
+        'prompt_tokens': 0,
+        'completion_tokens': 0,
+        'total_tokens': 0
+    }
+    
+    # Extract token usage from result.usage_details
+    if hasattr(result, 'usage_details') and result.usage_details:
+        usage = result.usage_details
+        metadata['prompt_tokens'] = (
+            getattr(usage, 'input_token_count', None) or
+            getattr(usage, 'input_tokens', None) or
+            getattr(usage, 'prompt_tokens', 0)
+        )
+        metadata['completion_tokens'] = (
+            getattr(usage, 'output_token_count', None) or
+            getattr(usage, 'output_tokens', None) or
+            getattr(usage, 'completion_tokens', 0)
+        )
+        metadata['total_tokens'] = (
+            getattr(usage, 'total_token_count', None) or
+            getattr(usage, 'total_tokens', 0)
+        )
+    
+    # Add Firecrawl indicator and usage stats
+    response_text += f"\n\n🔥 Powered by: Firecrawl MCP (Web Scraper)"
+    response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+    
+    return response_text, metadata
 
 
 async def run_hosted_mcp(query: str) -> tuple[str, dict]:
@@ -799,78 +605,77 @@ async def run_hosted_mcp(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    async with DefaultAzureCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as client:
-            # Create Hosted MCP tool connected to Microsoft Learn MCP server
-            mcp_tool = HostedMCPTool(
-                name="Microsoft Learn MCP",
-                url="https://learn.microsoft.com/api/mcp",
-            )
-            
-            agent = ChatAgent(
-                chat_client=client,
-                name="MCPAgent",
-                instructions="You are a helpful assistant with access to Microsoft Learn documentation through MCP (Model Context Protocol). Use the MCP tool to search Microsoft's official documentation to provide accurate, up-to-date information about Microsoft products, Azure services, and developer technologies.",
-                tools=mcp_tool,
-            )
-            
-            # Create a thread for this conversation
-            thread = agent.get_new_thread()
-            
-            # Run the agent with the query
-            result = await agent.run(query, thread=thread, store=True)
-            
-            # Handle any user input requests (function call approvals)
-            # For demo purposes, we auto-approve all function calls
-            while len(result.user_input_requests) > 0:
-                new_input = []
-                for user_input_needed in result.user_input_requests:
-                    # Auto-approve the function call for demo purposes
-                    print(f"[DEBUG] Auto-approving MCP function call: {user_input_needed.function_call.name}")
-                    new_input.append(
-                        ChatMessage(
-                            role="user",
-                            contents=[user_input_needed.create_response(True)],  # Auto-approve
-                        )
+    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    
+    # Create Hosted MCP tool connected to Microsoft Learn MCP server
+    mcp_tool = HostedMCPTool(
+        name="Microsoft Learn MCP",
+        url="https://learn.microsoft.com/api/mcp",
+    )
+    
+    async with ChatAgent(
+        chat_client=client,
+        name="MCPAgent",
+        instructions="You are a helpful assistant with access to Microsoft Learn documentation through MCP (Model Context Protocol). Use the MCP tool to search Microsoft's official documentation to provide accurate, up-to-date information about Microsoft products, Azure services, and developer technologies.",
+        tools=mcp_tool,
+    ) as agent:
+        # Create a thread for this conversation
+        thread = agent.get_new_thread()
+        
+        # Run the agent with the query
+        result = await agent.run(query, thread=thread, store=True)
+        
+        # Handle any user input requests (function call approvals)
+        # For demo purposes, we auto-approve all function calls
+        while len(result.user_input_requests) > 0:
+            new_input = []
+            for user_input_needed in result.user_input_requests:
+                # Auto-approve the function call for demo purposes
+                print(f"[DEBUG] Auto-approving MCP function call: {user_input_needed.function_call.name}")
+                new_input.append(
+                    ChatMessage(
+                        role="user",
+                        contents=[user_input_needed.create_response(True)],  # Auto-approve
                     )
-                
-                # Continue the run with approvals
-                result = await agent.run(new_input, thread=thread, store=True)
-            
-            response_text = str(result.text)
-            
-            # Extract timing and token usage
-            elapsed_time = time.time() - start_time
-            metadata = {
-                'elapsed_time': elapsed_time,
-                'prompt_tokens': 0,
-                'completion_tokens': 0,
-                'total_tokens': 0
-            }
-            
-            # Extract token usage from result.usage_details
-            if hasattr(result, 'usage_details') and result.usage_details:
-                usage = result.usage_details
-                metadata['prompt_tokens'] = (
-                    getattr(usage, 'input_token_count', None) or
-                    getattr(usage, 'input_tokens', None) or
-                    getattr(usage, 'prompt_tokens', 0)
-                )
-                metadata['completion_tokens'] = (
-                    getattr(usage, 'output_token_count', None) or
-                    getattr(usage, 'output_tokens', None) or
-                    getattr(usage, 'completion_tokens', 0)
-                )
-                metadata['total_tokens'] = (
-                    getattr(usage, 'total_token_count', None) or
-                    getattr(usage, 'total_tokens', 0)
                 )
             
-            # Add MCP indicator and usage stats
-            response_text += f"\n\n🔗 Powered by: Microsoft Learn MCP (Hosted)"
-            response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
-            
-            return response_text, metadata
+            # Continue the run with approvals
+            result = await agent.run(new_input, thread=thread, store=True)
+    
+    response_text = str(result.text)
+    
+    # Extract timing and token usage
+    elapsed_time = time.time() - start_time
+    metadata = {
+        'elapsed_time': elapsed_time,
+        'prompt_tokens': 0,
+        'completion_tokens': 0,
+        'total_tokens': 0
+    }
+    
+    # Extract token usage from result.usage_details
+    if hasattr(result, 'usage_details') and result.usage_details:
+        usage = result.usage_details
+        metadata['prompt_tokens'] = (
+            getattr(usage, 'input_token_count', None) or
+            getattr(usage, 'input_tokens', None) or
+            getattr(usage, 'prompt_tokens', 0)
+        )
+        metadata['completion_tokens'] = (
+            getattr(usage, 'output_token_count', None) or
+            getattr(usage, 'output_tokens', None) or
+            getattr(usage, 'completion_tokens', 0)
+        )
+        metadata['total_tokens'] = (
+            getattr(usage, 'total_token_count', None) or
+            getattr(usage, 'total_tokens', 0)
+        )
+    
+    # Add MCP indicator and usage stats
+    response_text += f"\n\n🔗 Powered by: Microsoft Learn MCP (Hosted)"
+    response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
+    
+    return response_text, metadata
 
 
 def main():

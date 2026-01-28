@@ -12,15 +12,15 @@ from agent_framework import (
     BaseAgent,
     ChatMessage,
     ConcurrentBuilder,
+    Content,
     GroupChatBuilder,
     GroupChatState,
     HandoffBuilder,
     Role,
     SequentialBuilder,
-    TextContent,
     WorkflowRunState,
     WorkflowStatusEvent,
-    ai_function,
+    tool,
 )
 from agent_framework._workflows._const import WORKFLOW_RUN_KWARGS_KEY
 
@@ -28,7 +28,7 @@ from agent_framework._workflows._const import WORKFLOW_RUN_KWARGS_KEY
 _received_kwargs: list[dict[str, Any]] = []
 
 
-@ai_function
+@tool(approval_mode="never_require")
 def tool_with_kwargs(
     action: Annotated[str, "The action to perform"],
     **kwargs: Any,
@@ -67,7 +67,7 @@ class _KwargsCapturingAgent(BaseAgent):
         **kwargs: Any,
     ) -> AsyncIterable[AgentResponseUpdate]:
         self.captured_kwargs.append(dict(kwargs))
-        yield AgentResponseUpdate(contents=[TextContent(text=f"{self.name} response")])
+        yield AgentResponseUpdate(contents=[Content.from_text(text=f"{self.name} response")])
 
 
 # region Sequential Builder Tests
