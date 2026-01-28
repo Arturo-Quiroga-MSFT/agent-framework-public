@@ -9,9 +9,9 @@
 
 The MAF Python framework now has **TWO separate implementations** for Azure AI agents:
 
-| Directory | API | Package | Version | Status |
-|-----------|-----|---------|---------|--------|
-| `azure_ai/` | `AzureAIClient` | `azure-ai-projects` | 2.x (V2) | **Current/Recommended** |
+| Directory | MAF Wrapper Class | Package | Version | Status |
+|-----------|-------------------|---------|---------|--------|
+| `azure_ai/` | `AzureAIProjectAgentProvider` | `azure-ai-projects` | 2.x (V2) | **Current/Recommended** |
 | `azure_ai_agent/` | `AzureAIAgentClient` | `azure-ai-agents` | 1.x (V1) | Legacy/Backward Compatibility |
 
 ---
@@ -21,16 +21,17 @@ The MAF Python framework now has **TWO separate implementations** for Azure AI a
 ### 1. **Client Class Names**
 ```python
 # V2 (azure_ai/) - NEW API
-from agent_framework.azure import AzureAIClient
+from agent_framework.azure import AzureAIProjectAgentProvider
 
 # V1 (azure_ai_agent/) - LEGACY API  
 from agent_framework.azure import AzureAIAgentClient
 ```
 
 ### 2. **Underlying SDK**
-- **V2 (`AzureAIClient`)**: Uses `azure-ai-projects` 2.x SDK
+- **V2 (`AzureAIProjectAgentProvider`)**: Uses `azure-ai-projects` 2.x SDK
   - Released: November 11, 2025 (very recent!)
   - [Changelog](https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/ai/azure-ai-projects/CHANGELOG.md#200b1-2025-11-11)
+  - High-level provider pattern with `create_agent()`, `get_agent()`, `as_agent()` methods
   
 - **V1 (`AzureAIAgentClient`)**: Uses `azure-ai-agents` 1.x SDK
   - Older API surface
@@ -84,16 +85,17 @@ The following samples exist **ONLY** in the V1 directory:
 
 ### V2 API (`azure_ai/`)
 ```python
-from agent_framework.azure import AzureAIClient
+from agent_framework.azure import AzureAIProjectAgentProvider
 
 async with (
     AzureCliCredential() as credential,
-    AzureAIClient(async_credential=credential).create_agent(
+    AzureAIProjectAgentProvider(credential=credential) as provider,
+):
+    agent = await provider.create_agent(
         name="BasicWeatherAgent",
         instructions="You are a helpful weather agent.",
         tools=get_weather,
-    ) as agent,
-):
+    )
     result = await agent.run(query)
 ```
 
@@ -112,13 +114,13 @@ async with (
     result = await agent.run(query)
 ```
 
-**Observation:** The API surface is nearly identical! The main difference is the class name.
+**Observation:** V2 uses a provider pattern (`AzureAIProjectAgentProvider`) that separates agent provider from agent instances. V1 directly creates agents from the client.
 
 ---
 
 ## Migration Strategy
 
-### When to Use V2 (`AzureAIClient`)
+### When to Use V2 (`AzureAIProjectAgentProvider`)
 ✅ **Recommended for:**
 - New projects starting from scratch
 - Projects needing newer features:
@@ -144,16 +146,17 @@ async with (
 from agent_framework.azure import AzureAIAgentClient
 
 # New
-from agent_framework.azure import AzureAIClient
+from agent_framework.azure import AzureAIProjectAgentProvider
 ```
 
-**Step 2:** Update class instantiation
+**Step 2:** Update to provider pattern
 ```python
-# Old
-AzureAIAgentClient(async_credential=credential)
+# Old (V1 - direct agent creation)
+AzureAIAgentClient(async_credential=credential).create_agent(...)
 
-# New
-AzureAIClient(async_credential=credential)
+# New (V2 - provider pattern)
+provider = AzureAIProjectAgentProvider(credential=credential)
+agent = await provider.create_agent(...)  # Note: async!
 ```
 
 **Step 3:** Test functionality
@@ -171,10 +174,17 @@ V2 uses "conversation" terminology more consistently:
 
 ### 2. **Agent Version Management**
 ```python
-# V2 introduces version control
-AzureAIClient().create_agent(
-    use_latest_version=True  # Reuse existing agent instead of creating new version
-)
+# V2 introduces version control via provider methods
+provider = AzureAIProjectAgentProvider(credential=credential)
+
+# Create new agent version
+agent = await provider.create_agent(name="MyAgent", ...)
+
+# Get latest version of existing agent
+agent = await provider.get_agent(name="MyAgent")
+
+# Wrap SDK agent object without HTTP calls
+agent = provider.as_agent(agent_version_details)
 ```
 
 ### 3. **Advanced Search Modes**
@@ -189,7 +199,9 @@ class WeatherResponse(BaseModel):
     temperature: int
     condition: str
 
-agent = AzureAIClient().create_agent(
+provider = AzureAIProjectAgentProvider(credential=credential)
+agent = await provider.create_agent(
+    name="WeatherAgent",
     response_format=WeatherResponse
 )
 ```
@@ -207,7 +219,7 @@ agent = AzureAIClient().create_agent(
 ### For Your Migration
 Since you're comparing code between old and new:
 
-1. ✅ **Adopt V2 (`AzureAIClient`)** for new development
+1. ✅ **Adopt V2 (`AzureAIProjectAgentProvider`)** for new development
 2. ✅ **Reference V1 (`AzureAIAgentClient`)** samples for patterns not yet in V2:
    - Function tools patterns
    - OpenAPI integration
@@ -237,7 +249,7 @@ Since you're comparing code between old and new:
 
 | Aspect | V2 (`azure_ai/`) | V1 (`azure_ai_agent/`) |
 |--------|------------------|------------------------|
-| **Class** | `AzureAIClient` | `AzureAIAgentClient` |
+| **Class** | `AzureAIProjectAgentProvider` | `AzureAIAgentClient` |
 | **SDK** | `azure-ai-projects` 2.x | `azure-ai-agents` 1.x |
 | **Status** | ✅ Current | ⚠️ Legacy |
 | **Release** | Nov 2025 | Earlier |

@@ -11,10 +11,10 @@ Microsoft's documentation shows **different variable names** than what the actua
 
 ## The Three Agent Types & Their Variables
 
-### 1️⃣ Azure AI Agent (`AzureAIClient` or `AzureAIAgentClient`)
+### 1️⃣ Azure AI Agent (`AzureAIProjectAgentProvider` V2 or `AzureAIAgentClient` V1)
 
 **Service**: Azure AI Agents Service (Azure AI Foundry backend)  
-**Chat History**: Service-managed only
+**Chat History**: Service-managed or in-memory (controlled by `store` parameter in V2)
 
 ```bash
 AZURE_AI_PROJECT_ENDPOINT="https://your-ai-services.services.ai.azure.com/api/projects/your-project"
@@ -79,7 +79,7 @@ AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME="gpt-4o"  # ✅ CONFIRMED in source code
 
 ```bash
 # ========================================
-# Azure AI Agent (AzureAIClient)
+# Azure AI Agent (AzureAIProjectAgentProvider - V2)
 # ========================================
 AZURE_AI_PROJECT_ENDPOINT="https://your-ai-services.services.ai.azure.com/api/projects/your-project"
 AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o"
@@ -178,7 +178,8 @@ print(f"AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME: {os.getenv('AZURE_OPENAI_RESPONS
 
 | Agent Type | Client Class | Endpoint Variable | Deployment Variable |
 |-----------|--------------|------------------|---------------------|
-| Azure AI Agent | `AzureAIClient` | `AZURE_AI_PROJECT_ENDPOINT` | `AZURE_AI_MODEL_DEPLOYMENT_NAME` |
+| Azure AI Agent V2 | `AzureAIProjectAgentProvider` | `AZURE_AI_PROJECT_ENDPOINT` | `AZURE_AI_MODEL_DEPLOYMENT_NAME` |
+| Azure AI Agent V1 | `AzureAIAgentClient` | `AZURE_AI_PROJECT_ENDPOINT` | `AZURE_AI_MODEL_DEPLOYMENT_NAME` |
 | Azure OpenAI Chat | `AzureOpenAIChatClient` | `AZURE_OPENAI_ENDPOINT` | `AZURE_OPENAI_CHAT_DEPLOYMENT_NAME` |
 | Azure OpenAI Responses | `AzureOpenAIResponsesClient` | `AZURE_OPENAI_ENDPOINT` | `AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME` |
 
