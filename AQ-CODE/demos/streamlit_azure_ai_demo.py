@@ -6,6 +6,9 @@ This interactive app demonstrates various Azure AI agent capabilities including:
 - Function tools (weather API)
 - Thread management for conversation context
 
+✅ **API Version**: This app uses Azure AI Agents V2 API (AzureAIProjectAgentProvider)
+Matches the latest patterns from agent-framework v2.0.0+
+
 Run with: streamlit run streamlit_azure_ai_demo.py
 """
 
@@ -28,8 +31,9 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_framework import ChatAgent, HostedCodeInterpreterTool, HostedWebSearchTool, HostedFileSearchTool, HostedVectorStoreContent, AgentResponse, HostedMCPTool, ChatMessage
-from agent_framework.azure import AzureAIAgentClient
+from agent_framework.azure import AzureAIProjectAgentProvider
 from azure.identity.aio import DefaultAzureCredential, AzureCliCredential
+from azure.ai.projects import AIProjectClient
 from azure.ai.agents.models import FileInfo, VectorStore
 
 # Load environment variables - use absolute path
@@ -102,96 +106,112 @@ def get_weather(
 
 async def run_basic_chat(user_query: str, demo_type: str) -> str:
     """Run a basic chat interaction without persistent thread."""
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
     if demo_type == "weather":
         instructions = "You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Never apologize or say you can't access weather data - you have the get_weather function available."
     else:
         instructions = "You are a helpful assistant that can answer questions."
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
+        name="BasicChatAgent",
         instructions=instructions,
         tools=[get_weather] if demo_type == "weather" else None,
-    ) as agent:
-        result = await agent.run(user_query)
-        return str(result.text)
+    )
+    result = await agent.run(user_query)
+    return str(result.text)
 
 
 async def run_threaded_chat(user_query: str) -> str:
     """Run chat with persistent thread for conversation context."""
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
+        name="ThreadedChatAgent",
         instructions="You are a helpful weather assistant. When asked about weather, ALWAYS use the get_weather function to fetch real-time weather data. Remember previous conversations in this thread.",
         tools=[get_weather],
-    ) as agent:
-        # Create or reuse thread
-        if st.session_state.service_thread_id:
-            thread = agent.get_new_thread(service_thread_id=st.session_state.service_thread_id)
-        else:
-            thread = agent.get_new_thread()
-        
-        result = await agent.run(user_query, thread=thread, store=True)
-        
-        # Store thread ID for next message
-        if thread.service_thread_id:
-            st.session_state.service_thread_id = thread.service_thread_id
-        
-        return str(result.text)
+    )
+    
+    # Create or reuse thread
+    if st.session_state.service_thread_id:
+        thread = agent.get_new_thread(service_thread_id=st.session_state.service_thread_id)
+    else:
+        thread = agent.get_new_thread()
+    
+    result = await agent.run(user_query, thread=thread, store=True)
+    
+    # Store thread ID for next message
+    if thread.service_thread_id:
+        st.session_state.service_thread_id = thread.service_thread_id
+    
+    return str(result.text)
 
 
 async def run_code_interpreter(user_query: str) -> tuple[str, list[bytes]]:
     """Run agent with code interpreter capability. Returns (text_response, list_of_image_bytes)."""
-    async with AzureCliCredential() as credential:
-        async with AzureAIAgentClient(async_credential=credential) as chat_client:
-            agent = chat_client.create_agent(
-                name="CodingAgent",
-                instructions="You are a helpful assistant that can write and execute Python code to solve problems. When asked to perform calculations or data analysis, write Python code and execute it using the code interpreter. Always describe what the code does and show the results.",
-                tools=HostedCodeInterpreterTool(),
-            )
-            
-            # Create a thread and run the agent
-            thread = agent.get_new_thread()
-            result = await agent.run(user_query, thread=thread, store=True)
-            
-            result_text = str(result.text)
-            image_data_list = []
-            
-            # Get messages from the thread to check for image outputs
-            try:
-                messages_iterator = chat_client.project_client.agents.messages.list(thread_id=thread.service_thread_id)
-                
-                async for message in messages_iterator:
-                    for content_item in message.content:
-                        if hasattr(content_item, 'image_file') and content_item.image_file:
-                            file_id = content_item.image_file.file_id
-                            
-                            try:
-                                file_content_stream = await chat_client.project_client.agents.files.get_content(file_id)
-                                chunks = []
-                                async for chunk in file_content_stream:
-                                    chunks.append(chunk)
-                                
-                                file_content = b''.join(chunks)
-                                image_data_list.append(file_content)
-                                
-                                # Save the image
-                                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                                filename = f"plot_{timestamp}_{file_id}.png"
-                                filepath = OUTPUT_DIR / filename
-                                with open(filepath, 'wb') as f:
-                                    f.write(file_content)
-                                
-                                result_text += f"\n\n📊 **Plot generated successfully!**\n*Saved to: `{filepath.name}`*"
-                            except Exception as e:
-                                result_text += f"\n\n⚠️ **Note:** Found image (ID: {file_id}), but couldn't download: {str(e)}"
-                
-            except Exception as e:
-                print(f"[DEBUG] Error retrieving messages: {e}")
-            
-            return result_text, image_data_list
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=AzureCliCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
+    
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
+        name="CodingAgent",
+        instructions="You are a helpful assistant that can write and execute Python code to solve problems. When asked to perform calculations or data analysis, write Python code and execute it using the code interpreter. Always describe what the code does and show the results.",
+        tools=HostedCodeInterpreterTool(),
+    )
+    
+    # Create a thread and run the agent
+    thread = agent.get_new_thread()
+    result = await agent.run(user_query, thread=thread, store=True)
+        
+    result_text = str(result.text)
+    image_data_list = []
+    
+    # Get messages from the thread to check for image outputs
+    try:
+        messages_iterator = project_client.agents.messages.list(thread_id=thread.service_thread_id)
+        
+        async for message in messages_iterator:
+            for content_item in message.content:
+                if hasattr(content_item, 'image_file') and content_item.image_file:
+                    file_id = content_item.image_file.file_id
+                    
+                    try:
+                        file_content_stream = await project_client.agents.files.get_content(file_id)
+                        chunks = []
+                        async for chunk in file_content_stream:
+                            chunks.append(chunk)
+                        
+                        file_content = b''.join(chunks)
+                        image_data_list.append(file_content)
+                        
+                        # Save the image
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        filename = f"plot_{timestamp}_{file_id}.png"
+                        filepath = OUTPUT_DIR / filename
+                        with open(filepath, 'wb') as f:
+                            f.write(file_content)
+                        
+                        result_text += f"\n\n📊 **Plot generated successfully!**\n*Saved to: `{filepath.name}`*"
+                    except Exception as e:
+                        result_text += f"\n\n⚠️ **Note:** Found image (ID: {file_id}), but couldn't download: {str(e)}"
+    
+    except Exception as e:
+        print(f"[DEBUG] Error retrieving messages: {e}")
+    
+    return result_text, image_data_list
 
 
 async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
@@ -203,33 +223,38 @@ async def run_bing_grounding(user_query: str) -> tuple[str, dict]:
     import time
     start_time = time.time()
     
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
     bing_search_tool = HostedWebSearchTool(
         name="Bing Grounding Search",
         description="Search the web for current information using Bing",
     )
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
         name="BingSearchAgent",
         instructions="You are a helpful assistant that can search the web for current information. Use the Bing search tool to find up-to-date information and provide accurate, well-sourced answers. Always cite your sources when possible. Remember previous searches and questions in this conversation.",
         tools=bing_search_tool,
-    ) as agent:
-        # Create or reuse thread for conversation memory
-        if st.session_state.bing_thread_id:
-            thread = agent.get_new_thread(service_thread_id=st.session_state.bing_thread_id)
-        else:
-            thread = agent.get_new_thread()
-        
-        result = await agent.run(user_query, thread=thread, store=True)
-                
-        # Store thread ID for next message to maintain conversation history
-        if thread.service_thread_id:
-            st.session_state.bing_thread_id = thread.service_thread_id
-        
-        # Get the response text
-        response_text = str(result.text)
+    )
+    
+    # Create or reuse thread for conversation memory
+    if st.session_state.bing_thread_id:
+        thread = agent.get_new_thread(service_thread_id=st.session_state.bing_thread_id)
+    else:
+        thread = agent.get_new_thread()
+    
+    result = await agent.run(user_query, thread=thread, store=True)
+            
+    # Store thread ID for next message to maintain conversation history
+    if thread.service_thread_id:
+        st.session_state.bing_thread_id = thread.service_thread_id
+    
+    # Get the response text
+    response_text = str(result.text)
     
     # Extract timing and token usage
     elapsed_time = time.time() - start_time
@@ -291,7 +316,11 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
     import time
     
     start_time = time.time()
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     file: FileInfo | None = None
     vector_store: VectorStore | None = None
     
@@ -315,13 +344,13 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
         print(f"[DEBUG] Uploading file: {file_path.name}")
         
         # Upload file
-        file = await client.project_client.agents.files.upload_and_poll(
+        file = await project_client.agents.files.upload_and_poll(
             file_path=str(file_path), purpose="assistants"
         )
         print(f"[DEBUG] File uploaded, ID: {file.id}")
         
         # Create vector store
-        vector_store = await client.project_client.agents.vector_stores.create_and_poll(
+        vector_store = await project_client.agents.vector_stores.create_and_poll(
             file_ids=[file.id], name=f"streamlit_demo_{document_name}"
         )
         print(f"[DEBUG] Vector store created, ID: {vector_store.id}")
@@ -332,28 +361,28 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
         )
         print(f"[DEBUG] File search tool created with vector store")
         
-        # Create agent with file search
-        async with ChatAgent(
-            chat_client=client,
+        # V2 pattern: create agent from provider
+        agent = await provider.create_agent(
             name="FileSearchAgent",
             instructions=instructions + " Remember previous questions and answers in this conversation to provide contextual responses.",
             tools=file_search_tool,
-        ) as agent:
-            # Create or reuse thread for conversation memory
-            if st.session_state.filesearch_thread_id:
-                thread = agent.get_new_thread(service_thread_id=st.session_state.filesearch_thread_id)
-            else:
-                thread = agent.get_new_thread()
-            
-            print(f"[DEBUG] Running query against {document_name}...")
-            result: AgentResponse = await agent.run(query, thread=thread, store=True)
-            
-            # Store thread ID for next message to maintain conversation history
-            if thread.service_thread_id:
-                st.session_state.filesearch_thread_id = thread.service_thread_id
-            
-            response_text = str(result.text)
-            print(f"[DEBUG] Got response, length: {len(response_text)} chars")
+        )
+        
+        # Create or reuse thread for conversation memory
+        if st.session_state.filesearch_thread_id:
+            thread = agent.get_new_thread(service_thread_id=st.session_state.filesearch_thread_id)
+        else:
+            thread = agent.get_new_thread()
+        
+        print(f"[DEBUG] Running query against {document_name}...")
+        result: AgentResponse = await agent.run(query, thread=thread, store=True)
+        
+        # Store thread ID for next message to maintain conversation history
+        if thread.service_thread_id:
+            st.session_state.filesearch_thread_id = thread.service_thread_id
+        
+        response_text = str(result.text)
+        print(f"[DEBUG] Got response, length: {len(response_text)} chars")
             
             # Extract timing and token usage
             elapsed_time = time.time() - start_time
@@ -386,18 +415,18 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
             response_text += f"\n\n📄 Source: {document_name}"
             response_text += f"\n⏱️ Time: {elapsed_time:.2f}s | 🔢 Tokens: {metadata['total_tokens']} (↑{metadata['prompt_tokens']} ↓{metadata['completion_tokens']})"
             
-            # Cleanup inside the agent context
-            try:
-                print(f"[DEBUG] Cleaning up vector store and file...")
-                if vector_store:
-                    await client.project_client.agents.vector_stores.delete(vector_store.id)
-                if file:
-                    await client.project_client.agents.files.delete(file.id)
-                print(f"[DEBUG] Cleanup successful")
-            except Exception as e:
-                print(f"[DEBUG] Cleanup error (inside context): {e}")
-            
-            return response_text, metadata
+        # Cleanup
+        try:
+            print(f"[DEBUG] Cleaning up vector store and file...")
+            if vector_store:
+                await project_client.agents.vector_stores.delete(vector_store.id)
+            if file:
+                await project_client.agents.files.delete(file.id)
+            print(f"[DEBUG] Cleanup successful")
+        except Exception as e:
+            print(f"[DEBUG] Cleanup error: {e}")
+        
+        return response_text, metadata
             
     except Exception as e:
         print(f"[DEBUG] Error in file search: {e}")
@@ -407,17 +436,20 @@ async def run_file_search(query: str, document_name: str = "employees.pdf") -> t
         try:
             if vector_store or file:
                 # Refresh client since ChatAgent may have closed it
-                cleanup_client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+                cleanup_project_client = AIProjectClient(
+                    endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+                    credential=DefaultAzureCredential(),
+                )
                 try:
                     if vector_store:
-                        await cleanup_client.project_client.agents.vector_stores.delete(vector_store.id)
+                        await cleanup_project_client.agents.vector_stores.delete(vector_store.id)
                     if file:
-                        await cleanup_client.project_client.agents.files.delete(file.id)
+                        await cleanup_project_client.agents.files.delete(file.id)
                 except Exception as e:
                     # Ignore cleanup errors
                     pass
                 finally:
-                    await cleanup_client.close()
+                    await cleanup_project_client.close()
         except Exception:
             pass
 
@@ -436,7 +468,11 @@ async def run_azure_ai_search(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
     # Create Azure AI Search tool
     azure_ai_search_tool = HostedFileSearchTool(
@@ -447,25 +483,26 @@ async def run_azure_ai_search(query: str) -> tuple[str, dict]:
         },
     )
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
         name="HotelSearchAgent",
         instructions="You are a helpful travel assistant that searches hotel information. Provide detailed, accurate information based on the search results. Remember previous searches and questions in this conversation.",
         tools=azure_ai_search_tool,
-    ) as agent:
-        # Create or reuse thread for conversation memory
-        if st.session_state.azureaisearch_thread_id:
-            thread = agent.get_new_thread(service_thread_id=st.session_state.azureaisearch_thread_id)
-        else:
-            thread = agent.get_new_thread()
-        
-        # Run the agent with the query
-        result = await agent.run(query, thread=thread, store=True)
-        response_text = str(result.text)
-        
-        # Store thread ID for next message to maintain conversation history
-        if thread.service_thread_id:
-            st.session_state.azureaisearch_thread_id = thread.service_thread_id
+    )
+    
+    # Create or reuse thread for conversation memory
+    if st.session_state.azureaisearch_thread_id:
+        thread = agent.get_new_thread(service_thread_id=st.session_state.azureaisearch_thread_id)
+    else:
+        thread = agent.get_new_thread()
+    
+    # Run the agent with the query
+    result = await agent.run(query, thread=thread, store=True)
+    response_text = str(result.text)
+    
+    # Store thread ID for next message to maintain conversation history
+    if thread.service_thread_id:
+        st.session_state.azureaisearch_thread_id = thread.service_thread_id
     
     # Extract timing and token usage
     elapsed_time = time.time() - start_time
@@ -517,7 +554,11 @@ async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
     # Create Firecrawl MCP tool
     # Firecrawl hosted MCP server format: https://mcp.firecrawl.dev/{API_KEY}/v2/mcp
@@ -527,34 +568,35 @@ async def run_firecrawl_mcp(query: str, api_key: str) -> tuple[str, dict]:
         url=firecrawl_url,
     )
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
         name="FirecrawlAgent",
         instructions="You are a helpful web research assistant with access to Firecrawl for web scraping and content extraction. Use Firecrawl to fetch web pages, extract clean content, and provide accurate information from websites. Always cite your sources.",
         tools=firecrawl_tool,
-    ) as agent:
-        # Create a thread for this conversation
-        thread = agent.get_new_thread()
-        
-        # Run the agent with the query
-        result = await agent.run(query, thread=thread, store=True)
-                
-        # Handle any user input requests (function call approvals)
-        # For demo purposes, we auto-approve all function calls
-        while len(result.user_input_requests) > 0:
-            new_input = []
-            for user_input_needed in result.user_input_requests:
-                # Auto-approve the function call for demo purposes
-                print(f"[DEBUG] Auto-approving Firecrawl function call: {user_input_needed.function_call.name}")
-                new_input.append(
-                    ChatMessage(
-                        role="user",
-                        contents=[user_input_needed.create_response(True)],  # Auto-approve
-                    )
-                )
+    )
+    
+    # Create a thread for this conversation
+    thread = agent.get_new_thread()
+    
+    # Run the agent with the query
+    result = await agent.run(query, thread=thread, store=True)
             
-            # Continue the run with approvals
-            result = await agent.run(new_input, thread=thread, store=True)
+    # Handle any user input requests (function call approvals)
+    # For demo purposes, we auto-approve all function calls
+    while len(result.user_input_requests) > 0:
+        new_input = []
+        for user_input_needed in result.user_input_requests:
+            # Auto-approve the function call for demo purposes
+            print(f"[DEBUG] Auto-approving Firecrawl function call: {user_input_needed.function_call.name}")
+            new_input.append(
+                ChatMessage(
+                    role="user",
+                    contents=[user_input_needed.create_response(True)],  # Auto-approve
+                )
+            )
+        
+        # Continue the run with approvals
+        result = await agent.run(new_input, thread=thread, store=True)
     
     response_text = str(result.text)
     
@@ -605,7 +647,11 @@ async def run_hosted_mcp(query: str) -> tuple[str, dict]:
     
     start_time = time.time()
     
-    client = AzureAIAgentClient(async_credential=DefaultAzureCredential())
+    project_client = AIProjectClient(
+        endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+    )
+    provider = AzureAIProjectAgentProvider(project_client=project_client)
     
     # Create Hosted MCP tool connected to Microsoft Learn MCP server
     mcp_tool = HostedMCPTool(
@@ -613,34 +659,35 @@ async def run_hosted_mcp(query: str) -> tuple[str, dict]:
         url="https://learn.microsoft.com/api/mcp",
     )
     
-    async with ChatAgent(
-        chat_client=client,
+    # V2 pattern: create agent from provider
+    agent = await provider.create_agent(
         name="MCPAgent",
         instructions="You are a helpful assistant with access to Microsoft Learn documentation through MCP (Model Context Protocol). Use the MCP tool to search Microsoft's official documentation to provide accurate, up-to-date information about Microsoft products, Azure services, and developer technologies.",
         tools=mcp_tool,
-    ) as agent:
-        # Create a thread for this conversation
-        thread = agent.get_new_thread()
-        
-        # Run the agent with the query
-        result = await agent.run(query, thread=thread, store=True)
-        
-        # Handle any user input requests (function call approvals)
-        # For demo purposes, we auto-approve all function calls
-        while len(result.user_input_requests) > 0:
-            new_input = []
-            for user_input_needed in result.user_input_requests:
-                # Auto-approve the function call for demo purposes
-                print(f"[DEBUG] Auto-approving MCP function call: {user_input_needed.function_call.name}")
-                new_input.append(
-                    ChatMessage(
-                        role="user",
-                        contents=[user_input_needed.create_response(True)],  # Auto-approve
-                    )
+    )
+    
+    # Create a thread for this conversation
+    thread = agent.get_new_thread()
+    
+    # Run the agent with the query
+    result = await agent.run(query, thread=thread, store=True)
+    
+    # Handle any user input requests (function call approvals)
+    # For demo purposes, we auto-approve all function calls
+    while len(result.user_input_requests) > 0:
+        new_input = []
+        for user_input_needed in result.user_input_requests:
+            # Auto-approve the function call for demo purposes
+            print(f"[DEBUG] Auto-approving MCP function call: {user_input_needed.function_call.name}")
+            new_input.append(
+                ChatMessage(
+                    role="user",
+                    contents=[user_input_needed.create_response(True)],  # Auto-approve
                 )
-            
-            # Continue the run with approvals
-            result = await agent.run(new_input, thread=thread, store=True)
+            )
+        
+        # Continue the run with approvals
+        result = await agent.run(new_input, thread=thread, store=True)
     
     response_text = str(result.text)
     
@@ -1206,7 +1253,8 @@ def main():
     st.sidebar.subheader("ℹ️ About")
     st.sidebar.markdown("""
     This demo uses:
-    - **Azure AI Agent Framework**
+    - **Azure AI Agent Framework** (V2 API)
+    - **AzureAIProjectAgentProvider** (latest patterns)
     - **OpenWeatherMap API** (for weather data)
     - **Code Interpreter** (for Python execution)
     - **Bing Grounding** (for web search)

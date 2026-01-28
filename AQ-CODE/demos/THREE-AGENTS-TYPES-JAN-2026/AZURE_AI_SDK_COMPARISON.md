@@ -1,6 +1,6 @@
 # Azure AI Projects SDK vs Azure AI Agents SDK Comparison
 
-> **Last Updated:** January 6, 2026  
+> **Last Updated:** January 28, 2026  
 > **Source Documentation:**  
 > - [azure-ai-projects Microsoft Learn](https://learn.microsoft.com/en-us/python/api/overview/azure/ai-projects-readme?view=azure-python-preview)  
 > - [azure-ai-agents Microsoft Learn](https://learn.microsoft.com/en-us/python/api/overview/azure/ai-agents-readme?view=azure-python-preview)  

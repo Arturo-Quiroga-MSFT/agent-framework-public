@@ -1,6 +1,6 @@
 # Agent Environment Variables - The Complete Guide
 
-**Date**: January 6, 2026  
+**Date**: January 28, 2026  
 **Purpose**: Clarify the confusing environment variable naming across Microsoft Agent Framework
 
 ---

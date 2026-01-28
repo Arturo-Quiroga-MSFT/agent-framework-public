@@ -1,6 +1,6 @@
 # Azure AI vs Azure AI Agent: Detailed Comparison
 
-**Date:** January 6, 2026 (Updated)  
+**Date:** January 28, 2026 (Updated)  
 **Purpose:** Understand the differences between the two Azure AI agent implementations in MAF
 
 ---
