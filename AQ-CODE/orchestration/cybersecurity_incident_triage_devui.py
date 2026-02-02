@@ -41,7 +41,7 @@ START_TIME: datetime | None = None
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -69,16 +69,16 @@ def setup_tracing():
     otlp = os.environ.get("OTLP_ENDPOINT")
     if otlp:
         print(f"📊 Tracing Mode: OTLP ({otlp})")
-        setup_observability(enable_sensitive_data=True, otlp_endpoint=otlp)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     ai_conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if ai_conn:
         print("📊 Tracing Mode: App Insights")
-        setup_observability(enable_sensitive_data=True, applicationinsights_connection_string=ai_conn)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     print("📊 Tracing: Disabled")
 
@@ -91,42 +91,42 @@ async def create_cybersecurity_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
-    threat_intel = client.create_agent(
+    threat_intel = client.as_agent(
         instructions=(
             "You are a Threat Intelligence Analyst. Map provided indicators to campaigns and MITRE ATT&CK techniques. "
             "Output sections: Indicators Observed, Likely TTPs (T#), Possible Attribution (confidence), Intelligence Gaps."
         ),
         name="threat_intel",
     )
-    network_forensics = client.create_agent(
+    network_forensics = client.as_agent(
         instructions=(
             "You are a Network Forensics Specialist. Analyze potential lateral movement, beaconing, C2 channels, exfil paths. "
             "Output: Suspicious Flows, Protocol Anomalies, Lateral Movement Hypotheses, Recommended Network Containment."
         ),
         name="network_forensics",
     )
-    endpoint_analyst = client.create_agent(
+    endpoint_analyst = client.as_agent(
         instructions=(
             "You are an Endpoint / EDR Analyst. Focus on host artifacts: processes, persistence, registry/services, privilege escalation. "
             "Output: Key Host Artifacts, Persistence Mechanisms, Priv Esc Attempts, Host Triage Recommendations."
         ),
         name="endpoint_analyst",
     )
-    malware_analyst = client.create_agent(
+    malware_analyst = client.as_agent(
         instructions=(
             "You are a Malware Analyst. Even without a sample, infer possible behavior patterns. "
             "Output: Behavior Hypotheses, Encryption/Exfil Traits, Evasion Techniques, Needed Forensic Artifacts."
         ),
         name="malware_analyst",
     )
-    compliance = client.create_agent(
+    compliance = client.as_agent(
         instructions=(
             "You are a Risk & Compliance Officer. Identify legal/regulatory impact: breach notification triggers, data classifications, jurisdictional concerns. "
             "Output: Regulatory Considerations, Reporting Deadlines, Data Categories Affected, Compliance Risks."
         ),
         name="compliance",
     )
-    remediation = client.create_agent(
+    remediation = client.as_agent(
         instructions=(
             "You are the Containment & Remediation Lead. Prioritize actions by time horizon. "
             "Output: 0-6h Actions, 6-24h Actions, 1-7d Actions, Longer-Term Hardening, Risk Reduction Rationale."
@@ -277,7 +277,7 @@ def launch_devui():
             entities=[workflow],
             port=8095,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         print("\n🛑 Cybersecurity workflow server stopped")

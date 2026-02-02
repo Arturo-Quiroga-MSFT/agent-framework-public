@@ -42,7 +42,7 @@ from typing import Any
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -160,27 +160,21 @@ def setup_tracing():
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
         print("   Make sure you have an OTLP receiver running (e.g., Jaeger, Zipkin)")
-        setup_observability(
-            enable_sensitive_data=True,
-            otlp_endpoint=otlp_endpoint,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for Application Insights connection string
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights (Direct)")
-        setup_observability(
-            enable_sensitive_data=True,
-            applicationinsights_connection_string=app_insights_conn_str,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for console tracing
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
         print("   Traces will be printed to the console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -206,7 +200,7 @@ async def create_smart_city_workflow():
     )
     
     # Create seven specialized smart city agents
-    urban_planning = chat_client.create_agent(
+    urban_planning = chat_client.as_agent(
         instructions=(
             "You're an urban planner and city development expert specializing in land use and community impact. "
             "Analyze zoning requirements, density, spatial planning, and community integration. "
@@ -219,7 +213,7 @@ async def create_smart_city_workflow():
         name="urban_planning",
     )
 
-    iot_technology = chat_client.create_agent(
+    iot_technology = chat_client.as_agent(
         instructions=(
             "You're an IoT architect and smart city technology expert. "
             "Analyze sensor networks, connectivity, data platforms, and edge computing infrastructure. "
@@ -233,7 +227,7 @@ async def create_smart_city_workflow():
         name="iot_technology",
     )
 
-    sustainability = chat_client.create_agent(
+    sustainability = chat_client.as_agent(
         instructions=(
             "You're a sustainability and climate resilience expert for urban infrastructure. "
             "Analyze environmental impact, renewable energy, circular economy, and climate adaptation. "
@@ -247,7 +241,7 @@ async def create_smart_city_workflow():
         name="sustainability",
     )
     
-    transportation = chat_client.create_agent(
+    transportation = chat_client.as_agent(
         instructions=(
             "You're a transportation planner and mobility expert specializing in smart transportation systems. "
             "Analyze traffic management, public transit, micromobility, and autonomous vehicles. "
@@ -261,7 +255,7 @@ async def create_smart_city_workflow():
         name="transportation",
     )
     
-    municipal_finance = chat_client.create_agent(
+    municipal_finance = chat_client.as_agent(
         instructions=(
             "You're a municipal finance and infrastructure funding expert. "
             "Analyze funding sources, public-private partnerships, grants, and financial feasibility. "
@@ -275,7 +269,7 @@ async def create_smart_city_workflow():
         name="municipal_finance",
     )
     
-    community_engagement = chat_client.create_agent(
+    community_engagement = chat_client.as_agent(
         instructions=(
             "You're a community engagement and equity specialist for urban development. "
             "Analyze stakeholder participation, social equity, accessibility, and digital inclusion. "
@@ -289,7 +283,7 @@ async def create_smart_city_workflow():
         name="community_engagement",
     )
     
-    privacy_security = chat_client.create_agent(
+    privacy_security = chat_client.as_agent(
         instructions=(
             "You're a privacy, data governance, and cybersecurity expert for smart city infrastructure. "
             "Analyze data protection, surveillance ethics, and security architecture. "
@@ -435,7 +429,7 @@ def launch_devui():
             entities=[workflow],
             port=8096,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         # Clean up resources

@@ -47,7 +47,7 @@ START_TIME: datetime | None = None
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -75,16 +75,16 @@ def setup_tracing():
     otlp = os.environ.get("OTLP_ENDPOINT")
     if otlp:
         print(f"📊 Tracing Mode: OTLP ({otlp})")
-        setup_observability(enable_sensitive_data=True, otlp_endpoint=otlp)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     ai_conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if ai_conn:
         print("📊 Tracing Mode: App Insights")
-        setup_observability(enable_sensitive_data=True, applicationinsights_connection_string=ai_conn)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     print("📊 Tracing: Disabled")
 
@@ -97,37 +97,37 @@ async def create_biotech_ip_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
-    patent_landscape = client.create_agent(
+    patent_landscape = client.as_agent(
         instructions=(
             "You perform patent landscape research. Provide: Key Patents (numbers if plausible), Families & Expiration Windows, Prior Art Themes, White Space."
         ),
         name="patent_landscape",
     )
-    fto = client.create_agent(
+    fto = client.as_agent(
         instructions=(
             "You analyze freedom-to-operate. Provide: Potential Blocking Claims (describe), Overlap Risks, Need for Licensing, Design-Around Options."
         ),
         name="freedom_to_operate",
     )
-    competitive = client.create_agent(
+    competitive = client.as_agent(
         instructions=(
             "You evaluate competitive pipeline. Provide: Active Competitors, Clinical Stages, Differentiation Gaps, Competitive Threat Assessment."
         ),
         name="competitive_pipeline",
     )
-    regulatory_exclusivity = client.create_agent(
+    regulatory_exclusivity = client.as_agent(
         instructions=(
             "You assess regulatory exclusivity. Provide: Data Exclusivity Paths (NCE/Biologic/Orphan), Potential Designations, Timeline Advantages, Strategic Considerations."
         ),
         name="reg_exclusivity",
     )
-    differentiation = client.create_agent(
+    differentiation = client.as_agent(
         instructions=(
             "You argue FOR novelty & defensibility. Provide: Novel Features, Technical Advantages, Unexpected Results, Claim Support Arguments."
         ),
         name="differentiation_pro",
     )
-    skeptic = client.create_agent(
+    skeptic = client.as_agent(
         instructions=(
             "You are a Red-Team Skeptic. Challenge novelty & defensibility. Provide: Obviousness Arguments, Prior Art Risk, Enablement Gaps, Potential Claim Rejections."
         ),
@@ -319,7 +319,7 @@ def launch_devui():
             entities=[workflow],
             port=8098,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         print("\n🛑 Biotech IP workflow server stopped")

@@ -67,7 +67,7 @@ from agent_framework import (
     handler,
 )
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -326,10 +326,10 @@ def create_customer_onboarding_workflow() -> WorkflowBuilder:
         credential=credential,
     )
     
-    # Create specialized agents for each stage using chat_client.create_agent()
+    # Create specialized agents for each stage using chat_client.as_agent()
     
     # Stage 1: Initial Intake - Data validation and completeness check
-    intake_agent = chat_client.create_agent(
+    intake_agent = chat_client.as_agent(
         instructions="""
 You are an experienced Customer Intake Specialist for a financial institution.
 
@@ -357,7 +357,7 @@ Format your response with bullet points and clear headers.
     )
     
     # Stage 2: Risk Triage - Preliminary risk scoring and routing
-    triage_agent = chat_client.create_agent(
+    triage_agent = chat_client.as_agent(
         instructions="""
 You are a Risk Triage Specialist who performs preliminary risk assessment.
 
@@ -390,7 +390,7 @@ Review the full conversation history to see the intake specialist's findings.
     )
     
     # Stage 3A: Document Verification (Parallel - Part 1)
-    document_verification_agent = chat_client.create_agent(
+    document_verification_agent = chat_client.as_agent(
         instructions="""
 You are a Document Verification Specialist with expertise in identity verification and fraud detection.
 
@@ -424,7 +424,7 @@ Review the full conversation history including intake and triage findings.
     )
     
     # Stage 3B: Credit Assessment (Parallel - Part 2)
-    credit_assessment_agent = chat_client.create_agent(
+    credit_assessment_agent = chat_client.as_agent(
         instructions="""
 You are a Credit Assessment Analyst specializing in financial risk evaluation.
 
@@ -461,7 +461,7 @@ Review the full conversation history to understand the customer profile.
     )
     
     # Stage 3C: Compliance Screening (Parallel - Part 3)
-    compliance_screening_agent = chat_client.create_agent(
+    compliance_screening_agent = chat_client.as_agent(
         instructions="""
 You are a Compliance Screening Officer specializing in AML, sanctions, and regulatory compliance.
 
@@ -498,7 +498,7 @@ Review the full conversation history to assess risk factors.
     )
     
     # Stage 4: Risk Assessment - Aggregate results and final risk score
-    risk_assessment_agent = chat_client.create_agent(
+    risk_assessment_agent = chat_client.as_agent(
         instructions="""
 You are a Senior Risk Assessment Manager who makes final onboarding decisions.
 
@@ -535,7 +535,7 @@ Be thorough and reference specific findings from each verification agent.
     )
     
     # Stage 5: Account Setup - Product configuration and provisioning
-    account_setup_agent = chat_client.create_agent(
+    account_setup_agent = chat_client.as_agent(
         instructions="""
 You are an Account Setup Specialist who configures products and services.
 
@@ -579,7 +579,7 @@ Review the risk assessment decision and ensure setup aligns with approved condit
     )
     
     # Stage 6: Communications - Welcome package and customer notification
-    communications_agent = chat_client.create_agent(
+    communications_agent = chat_client.as_agent(
         instructions="""
 You are a Customer Communications Specialist who creates onboarding materials.
 
@@ -726,7 +726,7 @@ def launch_devui():
             entities=[workflow],
             port=8098,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     except KeyboardInterrupt:
         print("\n🛑 Shutting down customer onboarding workflow server...")

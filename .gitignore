@@ -239,3 +239,8 @@ structured_data_extraction-main/
 
 # Internal documents
 internal-docs/
+
+# profisee artifacts in root directory
+PROFISEE_SYNC_GUIDE.md
+sync_to_profisee_private.sh
+

@@ -42,7 +42,7 @@ from typing import Any
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import get_tracer, setup_observability
+from agent_framework.observability import get_tracer, configure_otel_providers
 from azure.identity import AzureCliCredential
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.span import format_trace_id
@@ -194,27 +194,21 @@ def setup_tracing():
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
         print("   Make sure you have an OTLP receiver running (e.g., Jaeger, Zipkin)")
-        setup_observability(
-            enable_sensitive_data=True,
-            otlp_endpoint=otlp_endpoint,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for Application Insights connection string
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights (Direct)")
-        setup_observability(
-            enable_sensitive_data=True,
-            applicationinsights_connection_string=app_insights_conn_str,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for console tracing
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
         print("   Traces will be printed to the console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -240,7 +234,7 @@ async def create_clinical_trial_workflow():
     )
     
     # Create seven specialized clinical trial agents
-    clinical_research = chat_client.create_agent(
+    clinical_research = chat_client.as_agent(
         instructions=(
             "You're a clinical research scientist and protocol designer with expertise in clinical trial methodology. "
             "Analyze trial design, endpoints, inclusion/exclusion criteria, and scientific validity. "
@@ -253,7 +247,7 @@ async def create_clinical_trial_workflow():
         name="clinical_research",
     )
 
-    site_operations = chat_client.create_agent(
+    site_operations = chat_client.as_agent(
         instructions=(
             "You're a clinical trial site operations and patient recruitment expert. "
             "Analyze site selection, patient enrollment strategies, and operational logistics. "
@@ -266,7 +260,7 @@ async def create_clinical_trial_workflow():
         name="site_operations",
     )
 
-    regulatory_affairs = chat_client.create_agent(
+    regulatory_affairs = chat_client.as_agent(
         instructions=(
             "You're a regulatory affairs specialist with expertise in FDA, EMA, and global clinical trial regulations. "
             "Analyze regulatory pathways, submission requirements, and compliance obligations. "
@@ -279,7 +273,7 @@ async def create_clinical_trial_workflow():
         name="regulatory_affairs",
     )
     
-    drug_development = chat_client.create_agent(
+    drug_development = chat_client.as_agent(
         instructions=(
             "You're a drug development and pharmacology expert specializing in PK/PD and formulation. "
             "Analyze dosing strategy, pharmacokinetics, safety profile, and drug-specific considerations. "
@@ -292,7 +286,7 @@ async def create_clinical_trial_workflow():
         name="drug_development",
     )
     
-    clinical_finance = chat_client.create_agent(
+    clinical_finance = chat_client.as_agent(
         instructions=(
             "You're a clinical trial finance and budget expert. "
             "Analyze trial costs, CRO contracts, patient compensation, and financial feasibility. "
@@ -306,7 +300,7 @@ async def create_clinical_trial_workflow():
         name="clinical_finance",
     )
     
-    biostatistics = chat_client.create_agent(
+    biostatistics = chat_client.as_agent(
         instructions=(
             "You're a biostatistician and clinical data management expert. "
             "Analyze statistical design, sample size, data management, and analysis plans. "
@@ -320,7 +314,7 @@ async def create_clinical_trial_workflow():
         name="biostatistics",
     )
     
-    patient_advocacy = chat_client.create_agent(
+    patient_advocacy = chat_client.as_agent(
         instructions=(
             "You're a patient advocacy and engagement expert focused on patient-centered trial design. "
             "Analyze informed consent, patient burden, diversity, and patient experience. "
@@ -472,7 +466,7 @@ def launch_devui():
             entities=[workflow],
             port=8095,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         # Clean up resources

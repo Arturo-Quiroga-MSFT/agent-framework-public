@@ -34,7 +34,7 @@ from typing import Any
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import get_tracer, setup_observability
+from agent_framework.observability import get_tracer, configure_otel_providers
 from azure.identity import AzureCliCredential
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.span import format_trace_id
@@ -136,27 +136,21 @@ def setup_tracing():
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
         print("   Make sure you have an OTLP receiver running (e.g., Jaeger, Zipkin)")
-        setup_observability(
-            enable_sensitive_data=True,
-            otlp_endpoint=otlp_endpoint,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for Application Insights connection string
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights (Direct)")
-        setup_observability(
-            enable_sensitive_data=True,
-            applicationinsights_connection_string=app_insights_conn_str,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for console tracing
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
         print("   Traces will be printed to the console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -182,7 +176,7 @@ async def create_concurrent_workflow():
     )
     
     # Create five specialized agents for comprehensive product analysis
-    researcher = chat_client.create_agent(
+    researcher = chat_client.as_agent(
         instructions=(
             "You're an expert market and product researcher. Given a prompt, provide concise, factual insights,"
             " opportunities, and risks. Keep your response focused and actionable."
@@ -190,7 +184,7 @@ async def create_concurrent_workflow():
         name="researcher",
     )
 
-    marketer = chat_client.create_agent(
+    marketer = chat_client.as_agent(
         instructions=(
             "You're a creative marketing strategist. Craft compelling value propositions and target messaging"
             " aligned to the prompt. Be creative but practical."
@@ -198,7 +192,7 @@ async def create_concurrent_workflow():
         name="marketer",
     )
 
-    legal = chat_client.create_agent(
+    legal = chat_client.as_agent(
         instructions=(
             "You're a cautious legal/compliance reviewer. Highlight constraints, disclaimers, and policy concerns"
             " based on the prompt. Be thorough but concise."
@@ -206,7 +200,7 @@ async def create_concurrent_workflow():
         name="legal",
     )
     
-    finance = chat_client.create_agent(
+    finance = chat_client.as_agent(
         instructions=(
             "You're a financial analyst and business strategist. Analyze financial viability, revenue models,"
             " cost structures, pricing strategies, and ROI projections. Provide actionable financial insights"
@@ -215,7 +209,7 @@ async def create_concurrent_workflow():
         name="finance",
     )
     
-    technical = chat_client.create_agent(
+    technical = chat_client.as_agent(
         instructions=(
             "You're a technical architect and engineering lead. Evaluate technical feasibility, architecture requirements,"
             " technology stack recommendations, scalability considerations, and implementation challenges."
@@ -336,7 +330,7 @@ def launch_devui():
             entities=[workflow], 
             port=8093, 
             auto_open=True,
-            tracing_enabled=enable_devui_tracing
+            instrumentation_enabled=enable_devui_tracing
         )
     finally:
         # Clean up resources
