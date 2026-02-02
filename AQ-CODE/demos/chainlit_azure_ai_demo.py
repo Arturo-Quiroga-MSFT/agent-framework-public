@@ -27,7 +27,7 @@ from pydantic import Field
 from azure.identity.aio import DefaultAzureCredential
 from azure.ai.projects.aio import AIProjectClient
 from agent_framework_azure_ai import AzureAIProjectAgentProvider
-from agent_framework import HostedCodeInterpreterTool, TextContent, CitationAnnotation, HostedFileContent
+from agent_framework import HostedCodeInterpreterTool, TextContent, CitationAnnotation, HostedFileContent, AgentThread
 
 # Load environment variables from script's directory
 script_dir = Path(__file__).parent
@@ -298,49 +298,41 @@ Try one of the suggested prompts, or ask about any topic!""",
         content=welcome_messages.get(profile, welcome_messages["Basic Chat"]),
     ).send()
     
-    # Store chat history for context
+    # Store chat history for context (fallback)
     cl.user_session.set("chat_history", [])
+    # Store thread_id for conversation persistence with Azure AI Agents
+    cl.user_session.set("thread_id", None)
 
 
 @cl.on_message
 async def on_message(message: cl.Message):
     """Handle incoming messages."""
     chat_profile = cl.user_session.get("chat_profile") or "Basic Chat"
-    chat_history = cl.user_session.get("chat_history") or []
+    thread_id = cl.user_session.get("thread_id")  # Get existing thread_id
     
     # Create thinking indicator
     thinking_msg = cl.Message(content="Thinking...")
     await thinking_msg.send()
     
     try:
-        # Build context from history (last 6 messages = 3 exchanges)
-        context = ""
-        if chat_history:
-            context = "\n\nPrevious conversation:\n"
-            for msg in chat_history[-6:]:
-                role = "User" if msg["role"] == "user" else "Assistant"
-                context += f"{role}: {msg['content']}\n"
-        
-        # Route to appropriate agent
+        # Route to appropriate agent with thread persistence
         if chat_profile == "Basic Chat":
-            response = await run_basic_chat(message.content, context)
+            response, new_thread_id = await run_basic_chat(message.content, thread_id)
             images = []
         elif chat_profile == "Weather Tool":
-            response = await run_weather_chat(message.content, context)
+            response, new_thread_id = await run_weather_chat(message.content, thread_id)
             images = []
         elif chat_profile == "Code Interpreter":
-            response, images = await run_code_interpreter_chat(message.content, context)
+            response, images, new_thread_id = await run_code_interpreter_chat(message.content, thread_id)
         elif chat_profile == "Bing Grounding":
-            response = await run_bing_chat(message.content, context)
+            response, new_thread_id = await run_bing_chat(message.content, thread_id)
             images = []
         else:
-            response = await run_basic_chat(message.content, context)
+            response, new_thread_id = await run_basic_chat(message.content, thread_id)
             images = []
         
-        # Update history
-        chat_history.append({"role": "user", "content": message.content})
-        chat_history.append({"role": "assistant", "content": response})
-        cl.user_session.set("chat_history", chat_history)
+        # Save thread_id for conversation continuity
+        cl.user_session.set("thread_id", new_thread_id)
         
         # Update the thinking message with response
         thinking_msg.content = response
@@ -367,59 +359,15 @@ async def on_message(message: cl.Message):
 
 # ================== Agent Runners ==================
 
-async def run_basic_chat(user_query: str, context: str) -> str:
-    """Run basic chat agent."""
-    async with DefaultAzureCredential() as credential:
-        async with AIProjectClient(
-            endpoint=AZURE_AI_PROJECT_ENDPOINT,
-            credential=credential,
-        ) as client:
-            provider = AzureAIProjectAgentProvider(project_client=client)
-            
-            instructions = f"""You are a friendly and knowledgeable assistant. 
-            Provide helpful, accurate, and engaging responses.
-            Be concise but thorough.{context}"""
-            
-            agent = await provider.create_agent(
-                name="BasicChatAgent",
-                instructions=instructions,
-            )
-            
-            thread = agent.get_new_thread()
-            result = await agent.run(user_query, thread=thread, store=False)
-            return str(result.text) if hasattr(result, 'text') else str(result)
-
-
-async def run_weather_chat(user_query: str, context: str) -> str:
-    """Run weather agent with function tool."""
-    async with DefaultAzureCredential() as credential:
-        async with AIProjectClient(
-            endpoint=AZURE_AI_PROJECT_ENDPOINT,
-            credential=credential,
-        ) as client:
-            provider = AzureAIProjectAgentProvider(project_client=client)
-            
-            instructions = f"""You are a helpful weather assistant. 
-            When asked about weather, ALWAYS use the get_weather function to fetch weather data.
-            Never apologize or say you can't access weather data - you have the get_weather function available.
-            Provide friendly, informative weather reports based on the data returned.{context}"""
-            
-            agent = await provider.create_agent(
-                name="WeatherAgent",
-                instructions=instructions,
-                tools=[get_weather],
-            )
-            
-            thread = agent.get_new_thread()
-            result = await agent.run(user_query, thread=thread, store=False)
-            return str(result.text) if hasattr(result, 'text') else str(result)
-
-
-async def run_code_interpreter_chat(user_query: str, context: str) -> tuple[str, list[bytes]]:
-    """Run code interpreter agent. Returns (text_response, list_of_image_bytes).
+async def run_basic_chat(user_query: str, thread_id: str | None = None) -> tuple[str, str]:
+    """Run basic chat agent with conversation history.
     
-    Uses V2 pattern: extract files from result.messages annotations and download
-    via OpenAI containers API.
+    Args:
+        user_query: The user's message
+        thread_id: Optional existing thread ID for conversation continuity
+        
+    Returns:
+        Tuple of (response_text, thread_id)
     """
     async with DefaultAzureCredential() as credential:
         async with AIProjectClient(
@@ -428,14 +376,97 @@ async def run_code_interpreter_chat(user_query: str, context: str) -> tuple[str,
         ) as client:
             provider = AzureAIProjectAgentProvider(project_client=client)
             
-            instructions = f"""You are a data analysis and coding assistant.
+            instructions = """You are a friendly and knowledgeable assistant. 
+            Provide helpful, accurate, and engaging responses.
+            Be concise but thorough.
+            Remember context from earlier in our conversation."""
+            
+            agent = await provider.create_agent(
+                name="BasicChatAgent",
+                instructions=instructions,
+            )
+            
+            # Use existing thread or create new one
+            if thread_id:
+                thread = AgentThread(service_thread_id=thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
+            result = await agent.run(user_query, thread=thread, store=True)
+            response = str(result.text) if hasattr(result, 'text') else str(result)
+            return response, thread.service_thread_id
+
+
+async def run_weather_chat(user_query: str, thread_id: str | None = None) -> tuple[str, str]:
+    """Run weather agent with function tool and conversation history.
+    
+    Args:
+        user_query: The user's message
+        thread_id: Optional existing thread ID for conversation continuity
+        
+    Returns:
+        Tuple of (response_text, thread_id)
+    """
+    async with DefaultAzureCredential() as credential:
+        async with AIProjectClient(
+            endpoint=AZURE_AI_PROJECT_ENDPOINT,
+            credential=credential,
+        ) as client:
+            provider = AzureAIProjectAgentProvider(project_client=client)
+            
+            instructions = """You are a helpful weather assistant. 
+            When asked about weather, ALWAYS use the get_weather function to fetch weather data.
+            Never apologize or say you can't access weather data - you have the get_weather function available.
+            Provide friendly, informative weather reports based on the data returned.
+            Remember context from earlier in our conversation - if a user asks about "there" or "that city", 
+            refer to previously mentioned locations."""
+            
+            agent = await provider.create_agent(
+                name="WeatherAgent",
+                instructions=instructions,
+                tools=[get_weather],
+            )
+            
+            # Use existing thread or create new one
+            if thread_id:
+                thread = AgentThread(service_thread_id=thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
+            result = await agent.run(user_query, thread=thread, store=True)
+            response = str(result.text) if hasattr(result, 'text') else str(result)
+            return response, thread.service_thread_id
+
+
+async def run_code_interpreter_chat(user_query: str, thread_id: str | None = None) -> tuple[str, list[bytes], str]:
+    """Run code interpreter agent with conversation history. Returns (text_response, list_of_image_bytes, thread_id).
+    
+    Uses V2 pattern: extract files from result.messages annotations and download
+    via OpenAI containers API.
+    
+    Args:
+        user_query: The user's message
+        thread_id: Optional existing thread ID for conversation continuity
+        
+    Returns:
+        Tuple of (response_text, list_of_image_bytes, thread_id)
+    """
+    async with DefaultAzureCredential() as credential:
+        async with AIProjectClient(
+            endpoint=AZURE_AI_PROJECT_ENDPOINT,
+            credential=credential,
+        ) as client:
+            provider = AzureAIProjectAgentProvider(project_client=client)
+            
+            instructions = """You are a data analysis and coding assistant.
             Use the code interpreter tool to execute Python code for:
             - Mathematical calculations
             - Data analysis
             - Creating visualizations
             - Processing data
             Always show intermediate steps and explain your approach.
-            When creating visualizations, always use matplotlib to generate and display the chart.{context}"""
+            When creating visualizations, always use matplotlib to generate and display the chart.
+            Remember context from earlier in our conversation - refer to previous data or calculations when relevant."""
             
             agent = await provider.create_agent(
                 name="CodeInterpreterAgent",
@@ -443,7 +474,13 @@ async def run_code_interpreter_chat(user_query: str, context: str) -> tuple[str,
                 tools=HostedCodeInterpreterTool(),
             )
             
-            result = await agent.run(user_query)
+            # Use existing thread or create new one
+            if thread_id:
+                thread = AgentThread(service_thread_id=thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
+            result = await agent.run(user_query, thread=thread, store=True)
             
             result_text = str(result.text) if hasattr(result, 'text') else str(result)
             image_data_list = []
@@ -507,14 +544,22 @@ async def run_code_interpreter_chat(user_query: str, context: str) -> tuple[str,
             except Exception as e:
                 print(f"[DEBUG] Error extracting files: {e}")
             
-            return result_text, image_data_list
+            return result_text, image_data_list, thread.service_thread_id
 
 
-async def run_bing_chat(user_query: str, context: str) -> str:
-    """Run Bing grounded agent."""
+async def run_bing_chat(user_query: str, thread_id: str | None = None) -> tuple[str, str | None]:
+    """Run Bing grounded agent with conversation history.
+    
+    Args:
+        user_query: The user's message
+        thread_id: Optional existing thread ID for conversation continuity
+        
+    Returns:
+        Tuple of (response_text, thread_id)
+    """
     bing_connection = os.getenv("BING_PROJECT_CONNECTION_ID")
     if not bing_connection:
-        return "Bing grounding not configured. Set BING_PROJECT_CONNECTION_ID environment variable."
+        return "Bing grounding not configured. Set BING_PROJECT_CONNECTION_ID environment variable.", None
     
     async with DefaultAzureCredential() as credential:
         async with AIProjectClient(
@@ -523,10 +568,11 @@ async def run_bing_chat(user_query: str, context: str) -> str:
         ) as client:
             provider = AzureAIProjectAgentProvider(project_client=client)
             
-            instructions = f"""You are a research assistant with access to web search.
+            instructions = """You are a research assistant with access to web search.
             Use Bing search to find current, accurate information.
             Always cite your sources when providing information from the web.
-            Synthesize information from multiple sources when relevant.{context}"""
+            Synthesize information from multiple sources when relevant.
+            Remember context from earlier in our conversation when relevant."""
             
             agent = await provider.create_agent(
                 name="BingGroundedAgent",
@@ -541,9 +587,15 @@ async def run_bing_chat(user_query: str, context: str) -> str:
                 },
             )
             
-            thread = agent.get_new_thread()
-            result = await agent.run(user_query, thread=thread, store=False)
-            return str(result.text) if hasattr(result, 'text') else str(result)
+            # Use existing thread or create new one
+            if thread_id:
+                thread = AgentThread(service_thread_id=thread_id)
+            else:
+                thread = agent.get_new_thread()
+            
+            result = await agent.run(user_query, thread=thread, store=True)
+            response = str(result.text) if hasattr(result, 'text') else str(result)
+            return response, thread.service_thread_id
 
 
 # ================== Main Entry Point ==================
@@ -553,7 +605,7 @@ if __name__ == "__main__":
     import asyncio
     
     async def test():
-        result = await run_weather_chat("What's the weather in Tokyo?", "")
+        result, _ = await run_weather_chat("What's the weather in Tokyo?", None)
         print(result)
     
     asyncio.run(test())

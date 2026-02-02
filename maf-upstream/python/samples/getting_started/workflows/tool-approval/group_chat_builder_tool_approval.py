@@ -5,7 +5,7 @@ from typing import Annotated
 
 from agent_framework import (
     AgentRunUpdateEvent,
-    FunctionApprovalRequestContent,
+    Content,
     GroupChatBuilder,
     GroupChatRequestSentEvent,
     GroupChatState,
@@ -119,8 +119,7 @@ async def main() -> None:
     # 4. Build a group chat workflow with the selector function
     workflow = (
         GroupChatBuilder()
-        # Optionally, use `.set_manager(...)` to customize the group chat manager
-        .with_select_speaker_func(select_next_speaker)
+        .with_orchestrator(selection_func=select_next_speaker)
         .participants([qa_engineer, devops_engineer])
         # Set a hard limit to 4 rounds
         # First round: QAEngineer speaks
@@ -145,7 +144,7 @@ async def main() -> None:
     ):
         if isinstance(event, RequestInfoEvent):
             request_info_events.append(event)
-            if isinstance(event.data, FunctionApprovalRequestContent):
+            if isinstance(event.data, Content) and event.data.type == "function_approval_request":
                 print("\n[APPROVAL REQUIRED] From agent:", event.source_executor_id)
                 print(f"  Tool: {event.data.function_call.name}")
                 print(f"  Arguments: {event.data.function_call.arguments}")
@@ -165,7 +164,7 @@ async def main() -> None:
     # 6. Handle approval requests
     if request_info_events:
         for request_event in request_info_events:
-            if isinstance(request_event.data, FunctionApprovalRequestContent):
+            if isinstance(request_event.data, Content) and request_event.data.type == "function_approval_request":
                 print("\n" + "=" * 60)
                 print("Human review required for production deployment!")
                 print("In a real scenario, you would review the deployment details here.")
@@ -173,7 +172,7 @@ async def main() -> None:
                 print("=" * 60)
 
                 # Create approval response
-                approval_response = request_event.data.create_response(approved=True)
+                approval_response = request_event.data.to_function_approval_response(approved=True)
 
                 # Phase 2: Send approval and continue workflow
                 # Keep track of the response to format output nicely in streaming mode
