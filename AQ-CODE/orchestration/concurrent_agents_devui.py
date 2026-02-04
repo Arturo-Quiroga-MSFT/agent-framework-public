@@ -75,30 +75,25 @@ def format_concurrent_results(results) -> str:
     
     # Process each agent's response
     for result in results:
-        # Get the agent's messages
-        messages = getattr(result.agent_run_response, "messages", [])
+        # Get the agent name from executor_id and response text from agent_response
+        agent_name = getattr(result, "executor_id", "unknown").upper()
+        response_text = getattr(result.agent_response, "text", "") if hasattr(result, "agent_response") else ""
         
-        # Find the final assistant message
-        for msg in reversed(messages):
-            if hasattr(msg, "author_name") and msg.author_name and msg.author_name != "user":
-                agent_name = msg.author_name.upper()
-                
-                # Add emoji based on agent type
-                emoji = {
-                    "RESEARCHER": "🔬",
-                    "MARKETER": "📢",
-                    "LEGAL": "⚖️",
-                    "FINANCE": "💰",
-                    "TECHNICAL": "🏗️"
-                }.get(agent_name, "👤")
-                
-                output_lines.append("─" * 80)
-                output_lines.append(f"{emoji} {agent_name} ANALYSIS")
-                output_lines.append("─" * 80)
-                output_lines.append("")
-                output_lines.append(msg.text)
-                output_lines.append("")
-                break  # Only use the final message
+        # Add emoji based on agent type
+        emoji = {
+            "RESEARCHER": "🔬",
+            "MARKETER": "📢",
+            "LEGAL": "⚖️",
+            "FINANCE": "💰",
+            "TECHNICAL": "🏗️"
+        }.get(agent_name, "👤")
+        
+        output_lines.append("─" * 80)
+        output_lines.append(f"{emoji} {agent_name} ANALYSIS")
+        output_lines.append("─" * 80)
+        output_lines.append("")
+        output_lines.append(response_text if response_text else "(No response)")
+        output_lines.append("")
     
     output_lines.append("=" * 80)
     output_lines.append("✅ Analysis Complete - All perspectives reviewed")
