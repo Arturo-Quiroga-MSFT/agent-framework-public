@@ -56,7 +56,7 @@ from agent_framework import (
     handler,
 )
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -102,18 +102,18 @@ def setup_tracing():
     otlp_endpoint = os.environ.get("OTLP_ENDPOINT")
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
-        setup_observability(enable_sensitive_data=True, otlp_endpoint=otlp_endpoint)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights")
-        setup_observability(enable_sensitive_data=True, applicationinsights_connection_string=app_insights_conn_str)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -140,7 +140,7 @@ async def create_sequential_agents():
     
     # Create seven specialized AgTech agents in sequential order
     # Agent 1: Agronomy foundation
-    agronomy = client.create_agent(
+    agronomy = client.as_agent(
         instructions=(
             "You're an agronomist and crop science expert. Analyze the agricultural and biological aspects. "
             "Focus on: crop selection, growing conditions, yield potential, soil requirements, "
@@ -151,7 +151,7 @@ async def create_sequential_agents():
     )
     
     # Agent 2: Engineering builds on agronomy
-    engineering = client.create_agent(
+    engineering = client.as_agent(
         instructions=(
             "You're an AgTech engineer specializing in automation and precision agriculture. "
             "Building on the agronomy analysis above, focus on: technology implementation, automation systems, "
@@ -163,7 +163,7 @@ async def create_sequential_agents():
     )
     
     # Agent 3: Food science builds on agronomy + engineering
-    food_science = client.create_agent(
+    food_science = client.as_agent(
         instructions=(
             "You're a food scientist analyzing product quality and safety. "
             "Considering the agronomy and engineering insights above, focus on: nutritional profile, "
@@ -175,7 +175,7 @@ async def create_sequential_agents():
     )
     
     # Agent 4: Sustainability builds on previous three
-    sustainability = client.create_agent(
+    sustainability = client.as_agent(
         instructions=(
             "You're a sustainability and environmental impact expert. "
             "Building on the technical and product analyses above, evaluate: water usage, "
@@ -187,7 +187,7 @@ async def create_sequential_agents():
     )
     
     # Agent 5: Economics builds on all technical/environmental factors
-    ag_economics = client.create_agent(
+    ag_economics = client.as_agent(
         instructions=(
             "You're an agricultural economist analyzing market viability. "
             "Considering all technical, product, and environmental factors above, assess: "
@@ -199,7 +199,7 @@ async def create_sequential_agents():
     )
     
     # Agent 6: Supply chain builds on complete technical + economic picture
-    supply_chain = client.create_agent(
+    supply_chain = client.as_agent(
         instructions=(
             "You're a food supply chain and distribution expert. "
             "Considering the complete product, sustainability, and economics analysis above, focus on: "
@@ -211,7 +211,7 @@ async def create_sequential_agents():
     )
     
     # Agent 7: Regulations - final compliance layer
-    regulations = client.create_agent(
+    regulations = client.as_agent(
         instructions=(
             "You're a food and agriculture regulatory compliance expert. "
             "Reviewing the complete analysis above (production, product, distribution), identify: "
@@ -475,7 +475,7 @@ def launch_devui():
             entities=[workflow],
             port=8097,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         print("\n🛑 AgTech workflow server stopped")

@@ -39,7 +39,7 @@ from typing import Any, List
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -70,16 +70,16 @@ def setup_tracing():
     otlp = os.environ.get("OTLP_ENDPOINT")
     if otlp:
         print(f"📊 Tracing Mode: OTLP ({otlp})")
-        setup_observability(enable_sensitive_data=True, otlp_endpoint=otlp)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     ai_conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if ai_conn:
         print("📊 Tracing Mode: App Insights")
-        setup_observability(enable_sensitive_data=True, applicationinsights_connection_string=ai_conn)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     print("📊 Tracing: Disabled")
 
@@ -132,49 +132,49 @@ async def create_ml_production_workflow():
     }
 
     # Create base agents
-    problem_framing = client.create_agent(
+    problem_framing = client.as_agent(
         instructions=(
             "You are the Problem Framing Reviewer. Provide: Business Objectives, KPIs/Target Metrics, Success Criteria,\n"
             "Scope/Out-of-Scope, Assumptions, Open Clarifications. Return bullet lists where possible."
         ),
         name="problem_framing",
     )
-    data_readiness = client.create_agent(
+    data_readiness = client.as_agent(
         instructions=(
             "You are the Data Readiness Assessor. Provide: Data Sources & Ownership, Volume/Freshness, Quality Issues,\n"
             "Labeling & Ground Truth, Bias / Coverage Gaps, Drift Risks, Mitigation Actions."
         ),
         name="data_readiness",
     )
-    feature_engineering = client.create_agent(
+    feature_engineering = client.as_agent(
         instructions=(
             "You are the Feature Engineering Auditor. Provide: Key Feature Groups, Transformations, Potential Leakage,\n"
             "Missingness Handling, Feature Importance Expectations, Risks & Mitigations."
         ),
         name="feature_engineering",
     )
-    model_performance = client.create_agent(
+    model_performance = client.as_agent(
         instructions=(
             "You are the Model Performance Reviewer. Provide: Candidate Algorithms/Architectures, Evaluation Metrics vs KPIs,\n"
             "Validation Strategy, Generalization / Overfitting Risks, Error Analysis Priorities, Improvement Levers."
         ),
         name="model_performance",
     )
-    responsible_ai = client.create_agent(
+    responsible_ai = client.as_agent(
         instructions=(
             "You are the Responsible AI & Fairness Gate. Provide: Sensitive Attributes (if any), Potential Harm Scenarios,\n"
             "Fairness Metrics Needed, Bias Detection Plan, Mitigation Strategies, Governance / Review Requirements."
         ),
         name="responsible_ai",
     )
-    security_robustness = client.create_agent(
+    security_robustness = client.as_agent(
         instructions=(
             "You are the Security & Robustness Analyst. Provide: Threat Model (adversarial evasion/poisoning), Supply Chain Risks,\n"
             "Model/Artifact Integrity Controls, Credential/Secret Safeguards, Runtime Abuse Scenarios, Hardening Actions."
         ),
         name="security_robustness",
     )
-    deployment_monitoring = client.create_agent(
+    deployment_monitoring = client.as_agent(
         instructions=(
             "You are the Deployment & Monitoring Planner. Provide: Rollout Strategy (staging/canary/gradual), Monitoring Metrics (latency, drift, quality),\n"
             "Alert Thresholds, Retraining Triggers, On-call / Ownership, Post-launch Success Review Plan."
@@ -399,7 +399,7 @@ def launch_devui():
             entities=[workflow],
             port=8099,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         print("\n🛑 ML gate review workflow server stopped")

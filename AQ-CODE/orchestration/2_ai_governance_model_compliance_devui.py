@@ -36,7 +36,7 @@ START_TIME: datetime | None = None
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 from pydantic import BaseModel, Field
 
@@ -64,16 +64,16 @@ def setup_tracing():
     otlp = os.environ.get("OTLP_ENDPOINT")
     if otlp:
         print(f"📊 Tracing Mode: OTLP ({otlp})")
-        setup_observability(enable_sensitive_data=True, otlp_endpoint=otlp)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     ai_conn = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if ai_conn:
         print("📊 Tracing Mode: App Insights")
-        setup_observability(enable_sensitive_data=True, applicationinsights_connection_string=ai_conn)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     print("📊 Tracing: Disabled")
 
@@ -86,34 +86,34 @@ async def create_ai_governance_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
-    governance_planner = client.create_agent(
+    governance_planner = client.as_agent(
         instructions=(
             "You are an AI Governance Planner. Derive a structured evaluation checklist: Domains, Key Questions, Risk Categories. "
             "Provide: Context Summary, Applicable Standards (ISO 42001, NIST AI RMF), Evaluation Checklist, Critical Risk Domains."
         ),
         name="governance_planner",
     )
-    data_provenance = client.create_agent(
+    data_provenance = client.as_agent(
         instructions=(
             "You review data provenance & quality. Provide: Data Sources & Lineage, Labeling & QA, Quality Metrics, Drift Risks, Mitigations."),
         name="data_provenance",
     )
-    fairness_bias = client.create_agent(
+    fairness_bias = client.as_agent(
         instructions=(
             "You audit fairness & bias. Provide: Sensitive Attributes Considered, Potential Disparities, Metrics Needed, Bias Mitigation Strategies."),
         name="fairness_bias",
     )
-    privacy_specialist = client.create_agent(
+    privacy_specialist = client.as_agent(
         instructions=(
             "You analyze privacy & data minimization. Provide: Personal Data Types, Minimization Approach, Anonymization/Pseudonymization, Retention & Consent, Privacy Risks."),
         name="privacy_specialist",
     )
-    security_engineer = client.create_agent(
+    security_engineer = client.as_agent(
         instructions=(
             "You evaluate security & robustness. Provide: Threat Model Summary, Adversarial Risks, Supply Chain Concerns, Hardening & Monitoring Controls."),
         name="security_engineer",
     )
-    regulatory_analyst = client.create_agent(
+    regulatory_analyst = client.as_agent(
         instructions=(
             "You map to regulations. Provide: Jurisdictional Scope (EU AI Act Level, FDA/FINRA/etc.), Required Documentation, Conformance Gaps, Upcoming Regulatory Changes."),
         name="regulatory_analyst",
@@ -271,7 +271,7 @@ def launch_devui():
             entities=[workflow],
             port=8096,
             auto_open=True,
-            tracing_enabled=enable_devui_tracing,
+            instrumentation_enabled=enable_devui_tracing,
         )
     finally:
         print("\n🛑 AI Governance workflow server stopped")

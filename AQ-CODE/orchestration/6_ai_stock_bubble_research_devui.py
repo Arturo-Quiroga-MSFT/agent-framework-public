@@ -41,7 +41,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from agent_framework import ChatMessage, Executor, Role, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse, HostedWebSearchTool
 from agent_framework.azure import AzureAIAgentClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from agent_framework._workflows import WorkflowBuilder
 from azure.identity.aio import DefaultAzureCredential
 from pydantic import BaseModel, Field
@@ -168,27 +168,21 @@ def setup_tracing():
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
         print("   Make sure you have an OTLP receiver running (e.g., Jaeger, Zipkin)")
-        setup_observability(
-            enable_sensitive_data=True,
-            otlp_endpoint=otlp_endpoint,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for Application Insights connection string
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights (Direct)")
-        setup_observability(
-            enable_sensitive_data=True,
-            applicationinsights_connection_string=app_insights_conn_str,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for console tracing
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
         print("   Traces will be printed to the console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -216,7 +210,7 @@ async def create_ai_stock_research_workflow():
     )
     
     # Create five specialized financial research agents with web search capability
-    market_analyst = agent_client.create_agent(
+    market_analyst = agent_client.as_agent(
         instructions=(
             "You're a senior market analyst specializing in technology stock valuations and bubble detection. "
             "Use web search to find current stock prices, P/E ratios, market caps, and valuation metrics for major AI companies "
@@ -231,7 +225,7 @@ async def create_ai_stock_research_workflow():
         tools=bing_search_tool,
     )
 
-    technical_analyst = agent_client.create_agent(
+    technical_analyst = agent_client.as_agent(
         instructions=(
             "You're a technical analyst and market sentiment expert focusing on AI stock momentum and crowd behavior. "
             "Use web search to find: recent price movements, trading volumes, RSI indicators, moving averages, "
@@ -246,7 +240,7 @@ async def create_ai_stock_research_workflow():
         tools=bing_search_tool,
     )
 
-    fundamental_analyst = agent_client.create_agent(
+    fundamental_analyst = agent_client.as_agent(
         instructions=(
             "You're a fundamental analyst specializing in AI company business models and profitability. "
             "Use web search to find: quarterly earnings, revenue growth, profit margins, cash flow, "
@@ -262,7 +256,7 @@ async def create_ai_stock_research_workflow():
         tools=bing_search_tool,
     )
     
-    economic_historian = agent_client.create_agent(
+    economic_historian = agent_client.as_agent(
         instructions=(
             "You're an economic historian and bubble expert specializing in tech market cycles. "
             "Use web search to compare current AI stock situation to historical bubbles: "
@@ -278,7 +272,7 @@ async def create_ai_stock_research_workflow():
         tools=bing_search_tool,
     )
     
-    risk_analyst = agent_client.create_agent(
+    risk_analyst = agent_client.as_agent(
         instructions=(
             "You're a risk management specialist focusing on systemic market risks and portfolio exposure. "
             "Use web search to analyze: AI stock concentration in major indices (S&P 500, NASDAQ), "
@@ -444,7 +438,7 @@ def launch_devui():
         entities=[workflow],
         port=8095,
         auto_open=True,
-        tracing_enabled=enable_devui_tracing,
+        instrumentation_enabled=enable_devui_tracing,
     )
 
 

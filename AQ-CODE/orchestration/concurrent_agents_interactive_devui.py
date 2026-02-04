@@ -45,7 +45,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
+from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
 
 # Load environment variables from workflows/.env file
@@ -65,27 +65,21 @@ def setup_tracing():
     if otlp_endpoint:
         print(f"📊 Tracing Mode: OTLP Endpoint ({otlp_endpoint})")
         print("   Make sure you have an OTLP receiver running (e.g., Jaeger, Zipkin)")
-        setup_observability(
-            enable_sensitive_data=True,
-            otlp_endpoint=otlp_endpoint,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for Application Insights connection string
     app_insights_conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
     if app_insights_conn_str:
         print("📊 Tracing Mode: Application Insights (Direct)")
-        setup_observability(
-            enable_sensitive_data=True,
-            applicationinsights_connection_string=app_insights_conn_str,
-        )
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     # Check for console tracing
     if os.environ.get("ENABLE_CONSOLE_TRACING", "").lower() == "true":
         print("📊 Tracing Mode: Console Output")
         print("   Traces will be printed to the console")
-        setup_observability(enable_sensitive_data=True)
+        configure_otel_providers(enable_sensitive_data=True)
         return
     
     print("📊 Tracing: Disabled")
@@ -107,7 +101,7 @@ async def create_interactive_agents():
     )
     
     # Create five specialized agents with enhanced instructions for interactive dialogue
-    researcher = chat_client.create_agent(
+    researcher = chat_client.as_agent(
         instructions=(
             "You're an expert market and product researcher with deep knowledge of consumer behavior, "
             "competitive landscapes, and market trends. Your role is to provide data-driven insights, "
@@ -130,7 +124,7 @@ async def create_interactive_agents():
         name="Market_Researcher",
     )
 
-    marketer = chat_client.create_agent(
+    marketer = chat_client.as_agent(
         instructions=(
             "You're a creative marketing strategist with expertise in brand positioning, messaging, "
             "and go-to-market strategies. You help users craft compelling narratives and effective "
@@ -154,7 +148,7 @@ async def create_interactive_agents():
         name="Marketing_Strategist",
     )
 
-    legal = chat_client.create_agent(
+    legal = chat_client.as_agent(
         instructions=(
             "You're a careful legal and compliance advisor specializing in business law, regulations, "
             "and risk management. You help users identify legal considerations, compliance requirements, "
@@ -182,7 +176,7 @@ async def create_interactive_agents():
         name="Legal_Compliance_Advisor",
     )
     
-    finance = chat_client.create_agent(
+    finance = chat_client.as_agent(
         instructions=(
             "You're a financial analyst and business strategist with expertise in financial modeling, "
             "business economics, and investment analysis. You help users understand the financial "
@@ -207,7 +201,7 @@ async def create_interactive_agents():
         name="Financial_Analyst",
     )
     
-    technical = chat_client.create_agent(
+    technical = chat_client.as_agent(
         instructions=(
             "You're a technical architect and engineering lead with expertise in system design, "
             "technology selection, and software development. You help users make informed technical "
@@ -315,7 +309,7 @@ def launch_devui():
         entities=agents,
         port=8092,
         auto_open=True,
-        tracing_enabled=enable_devui_tracing,
+        instrumentation_enabled=enable_devui_tracing,
     )
 
 
