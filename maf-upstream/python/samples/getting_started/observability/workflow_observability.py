@@ -6,9 +6,8 @@ from agent_framework import (
     Executor,
     WorkflowBuilder,
     WorkflowContext,
-    WorkflowOutputEvent,
+    
     handler,
-    tool,
 )
 from agent_framework.observability import configure_otel_providers, get_tracer
 from opentelemetry.trace import SpanKind
@@ -93,8 +92,8 @@ async def run_sequential_workflow() -> None:
     print(f"Starting workflow with input: '{input_text}'")
 
     output_event = None
-    async for event in workflow.run_stream("Hello world"):
-        if isinstance(event, WorkflowOutputEvent):
+    async for event in workflow.run("Hello world", stream=True):
+        if event.type == "output":
             # The WorkflowOutputEvent contains the final result.
             output_event = event
 

@@ -11,10 +11,8 @@ from agent_framework import (
     WorkflowBuilder,
     WorkflowContext,
     WorkflowExecutor,
-    WorkflowOutputEvent,
     handler,
     response_handler,
-    tool,
 )
 from typing_extensions import Never
 
@@ -303,8 +301,8 @@ async def main() -> None:
     # Execute the workflow
     for email in test_emails:
         print(f"\n🚀 Processing email to '{email.recipient}'")
-        async for event in workflow.run_stream(email):
-            if isinstance(event, WorkflowOutputEvent):
+        async for event in workflow.run(email, stream=True):
+            if event.type == "output":
                 print(f"🎉 Final result for '{email.recipient}': {'Delivered' if event.data else 'Blocked'}")
 
 

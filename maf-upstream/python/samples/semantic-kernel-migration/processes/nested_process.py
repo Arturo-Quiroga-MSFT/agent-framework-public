@@ -17,9 +17,8 @@ from agent_framework import (
     WorkflowBuilder,
     WorkflowContext,
     WorkflowExecutor,
-    WorkflowOutputEvent,
+    
     handler,
-    tool,
 )
 from pydantic import BaseModel, Field
 
@@ -257,8 +256,8 @@ async def run_agent_framework_nested_workflow(initial_message: str) -> Sequence[
     )
 
     results: list[str] = []
-    async for event in outer_workflow.run_stream(initial_message):
-        if isinstance(event, WorkflowOutputEvent):
+    async for event in outer_workflow.run(initial_message, stream=True):
+        if event.type == "output":
             results.append(cast(str, event.data))
 
     return results

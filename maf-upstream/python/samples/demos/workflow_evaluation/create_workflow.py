@@ -48,16 +48,12 @@ from _tools import (
 from agent_framework import (
     AgentExecutorResponse,
     AgentResponseUpdate,
-    AgentRunUpdateEvent,
     ChatMessage,
     Executor,
-    Role,
     WorkflowBuilder,
     WorkflowContext,
-    WorkflowOutputEvent,
     executor,
     handler,
-    tool,
 )
 from agent_framework.azure import AzureAIClient
 from azure.ai.projects.aio import AIProjectClient
@@ -71,7 +67,7 @@ load_dotenv()
 @executor(id="start_executor")
 async def start_executor(input: str, ctx: WorkflowContext[list[ChatMessage]]) -> None:
     """Initiates the workflow by sending the user query to all specialized agents."""
-    await ctx.send_message([ChatMessage(role="user", text=input)])
+    await ctx.send_message([ChatMessage("user", [input])])
 
 
 class ResearchLead(Executor):
@@ -107,11 +103,11 @@ class ResearchLead(Executor):
         # Generate comprehensive travel plan summary
         messages = [
             ChatMessage(
-                role=Role.SYSTEM,
+                role="system",
                 text="You are a travel planning coordinator. Summarize findings from multiple specialized travel agents and provide a clear, comprehensive travel plan based on the user's query.",
             ),
             ChatMessage(
-                role=Role.USER,
+                role="user",
                 text=f"Original query: {user_query}\n\nFindings from specialized travel agents:\n{summary_text}\n\nPlease provide a comprehensive travel plan based on these findings.",
             ),
         ]
@@ -136,7 +132,7 @@ class ResearchLead(Executor):
             findings = []
             if response.agent_response and response.agent_response.messages:
                 for msg in response.agent_response.messages:
-                    if msg.role == Role.ASSISTANT and msg.text and msg.text.strip():
+                    if msg.role == "assistant" and msg.text and msg.text.strip():
                         findings.append(msg.text.strip())
 
             if findings:
@@ -191,7 +187,7 @@ async def _run_workflow_with_client(query: str, chat_client: AzureAIClient) -> d
     workflow, agent_map = await _create_workflow(chat_client.project_client, chat_client.credential)
 
     # Process workflow events
-    events = workflow.run_stream(query)
+    events = workflow.run(query, stream=True)
     workflow_output = await _process_workflow_events(events, conversation_ids, response_ids)
 
     return {
@@ -357,7 +353,7 @@ async def _process_workflow_events(events, conversation_ids, response_ids):
     workflow_output = None
 
     async for event in events:
-        if isinstance(event, WorkflowOutputEvent):
+        if event.type == "output":
             workflow_output = event.data
             # Handle Unicode characters that may not be displayable in Windows console
             try:
@@ -366,7 +362,7 @@ async def _process_workflow_events(events, conversation_ids, response_ids):
                 output_str = str(event.data).encode("ascii", "replace").decode("ascii")
                 print(f"\nWorkflow Output: {output_str}\n")
 
-        elif isinstance(event, AgentRunUpdateEvent):
+        elif event.type == "output" and isinstance(event.data, AgentResponseUpdate):
             _track_agent_ids(event, event.executor_id, response_ids, conversation_ids)
 
     return workflow_output
