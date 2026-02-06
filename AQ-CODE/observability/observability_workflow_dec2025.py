@@ -1,58 +1,47 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Workflow Observability Demo - Customer Feedback Analysis (Updated February 2026)
+Workflow Observability Demo - Customer Feedback Analysis
 
-This sample demonstrates the telemetry collected when running an Agent Framework
-workflow. It shows a realistic business scenario with a 3-stage customer feedback
-analysis pipeline.
+This sample demonstrates the telemetry collected when running an Agent Framework workflow.
+It shows a realistic business scenario with a 3-stage customer feedback analysis pipeline.
 
 BUSINESS SCENARIO:
 Process customer feedback through automated analysis:
 1. Sentiment Analysis - Determine positive/negative/neutral sentiment
-2. Category Classification - Tag with business categories
+2. Category Classification - Tag with business categories (pricing, features, bugs, etc.)
 3. Action Recommendation - Generate follow-up actions based on analysis
-
-OBSERVABILITY SETUP:
-Uses configure_otel_providers() which automatically reads standard OpenTelemetry
-environment variables to configure exporters. This is the RECOMMENDED approach
-for non-Azure-specific projects.
-
-Five patterns are supported (from simplest to most advanced):
-1. Standard OTEL env vars (OTEL_EXPORTER_OTLP_ENDPOINT) - recommended
-2. Custom exporters passed to configure_otel_providers()
-3. Third-party setup (Azure Monitor, Langfuse) + enable_instrumentation()
-4. Manual setup of exporters and providers
-5. Zero-code auto-instrumentation via opentelemetry CLI
 
 FEATURES:
 - Sequential workflow pattern (3 executors)
 - Detailed span tracking for each executor
 - Message passing telemetry with enriched data
 - Workflow build and execution spans
-- Configurable telemetry backends
-- Compatible with Aspire Dashboard for local dev
+- Realistic business logic with visual output
+- Configurable telemetry backends (Console, OTLP, Application Insights)
 
-WHAT CHANGED FROM DEC 2025:
-- configure_otel_providers() replaces deprecated setup_observability()
-- Standard OTEL env vars replace custom OTLP_ENDPOINT
-- ENABLE_INSTRUMENTATION replaces ENABLE_OTEL
-- ENABLE_CONSOLE_EXPORTERS is now opt-in (was automatic fallback)
-- New: Aspire Dashboard support for local dev
-- New: AI Toolkit for VS Code tracing via VS_CODE_EXTENSION_PORT
-- New: Grafana dashboards: https://aka.ms/amg/dash/af-workflow
+TELEMETRY COLLECTED:
+- Overall workflow build & execution spans
+- Individual executor processing spans
+- Message publishing between executors
+- Workflow input and output events
+- Business metrics (sentiment scores, categories, priorities)
 
 PREREQUISITES:
-- Choose tracing backend in .env:
-  * OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 (Aspire/Jaeger)
-  * ENABLE_CONSOLE_EXPORTERS=true (simplest - console output)
-  * Or use AzureAIClient for Azure Monitor (see agent demo)
+- Azure CLI authentication: Run 'az login' (if using Azure AI tracing)
+- AZURE_AI_PROJECT_ENDPOINT configured in .env (optional)
+- Choose tracing option in .env:
+  * ENABLE_CONSOLE_TRACING=true (simplest - outputs to console)
+  * ENABLE_AZURE_AI_TRACING=true (requires Application Insights)
+  * OTLP_ENDPOINT=http://localhost:4317 (for Jaeger/Zipkin)
+  * APPLICATIONINSIGHTS_CONNECTION_STRING=... (direct connection)
 
 WORKSHOP NOTES:
 - Run this to see how workflows generate telemetry
 - Compare the trace structure with observability_azure_ai_agent.py
-- Try Aspire Dashboard: docker run -p 18888:18888 -p 4317:18889 mcr.microsoft.com/dotnet/aspire-dashboard:latest
-- Grafana workflow dashboard: https://aka.ms/amg/dash/af-workflow
+- Try different tracing backends by modifying .env
+- Observe the parent-child span relationships
+- See how messages flow between executors
 """
 
 import asyncio
@@ -67,12 +56,12 @@ from agent_framework import (
     WorkflowOutputEvent,
     handler,
 )
-from agent_framework.observability import configure_otel_providers, get_tracer
+from agent_framework.observability import get_tracer, setup_observability
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.span import format_trace_id
 from typing_extensions import Never
 
-# Load environment variables from .env in this directory
+# Load environment variables from AQ-CODE/.env
 load_dotenv(Path(__file__).parent / ".env")
 
 
@@ -274,27 +263,27 @@ def check_tracing_config():
     print("-" * 80)
     
     configs = [
-        ("OTEL_EXPORTER_OTLP_ENDPOINT", "OTLP Endpoint (Aspire/Jaeger/Zipkin)"),
-        ("ENABLE_CONSOLE_EXPORTERS", "Console output exporters"),
-        ("ENABLE_INSTRUMENTATION", "Agent Framework instrumentation"),
-        ("ENABLE_SENSITIVE_DATA", "Sensitive data logging"),
-        ("VS_CODE_EXTENSION_PORT", "AI Toolkit for VS Code tracing"),
+        ("ENABLE_CONSOLE_TRACING", "Console output tracing"),
+        ("ENABLE_AZURE_AI_TRACING", "Azure AI Application Insights"),
+        ("OTLP_ENDPOINT", "OTLP Endpoint (Jaeger/Zipkin)"),
+        ("APPLICATIONINSIGHTS_CONNECTION_STRING", "Application Insights Direct"),
+        ("ENABLE_DEVUI_TRACING", "DevUI tracing"),
     ]
     
     enabled = False
     for var_name, description in configs:
         value = os.getenv(var_name)
         if value and value.lower() not in ["false", "0", ""]:
-            display = value if len(value) < 50 else f"{value[:47]}..."
-            print(f"  {description}: {display}")
+            print(f"✓ {description}: Enabled")
             enabled = True
     
     if not enabled:
-        print("  No tracing configured in .env file")
+        print("⚠ No tracing configured in .env file")
         print("  Add one of the following to your .env:")
-        print("    OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317")
-        print("    ENABLE_CONSOLE_EXPORTERS=true")
-        print("  Or use AzureAIClient for Azure Monitor (see agent demo)")
+        print("  - ENABLE_CONSOLE_TRACING=true")
+        print("  - ENABLE_AZURE_AI_TRACING=true")
+        print("  - OTLP_ENDPOINT=http://localhost:4317")
+        print("  - APPLICATIONINSIGHTS_CONNECTION_STRING=...")
     
     print("-" * 80)
     print()
@@ -310,19 +299,10 @@ async def main():
     # Check tracing configuration
     check_tracing_config()
     
-    # =====================================================================
-    # NEW: configure_otel_providers() replaces deprecated setup_observability()
-    #
-    # Reads standard OTEL env vars automatically:
-    #   OTEL_EXPORTER_OTLP_ENDPOINT - for Aspire/Jaeger/Zipkin
-    #   ENABLE_CONSOLE_EXPORTERS    - for console output
-    #   ENABLE_SENSITIVE_DATA       - for prompt/response logging
-    #   VS_CODE_EXTENSION_PORT      - for AI Toolkit tracing
-    #
-    # For Azure Monitor, use AzureAIClient.configure_azure_monitor() instead.
-    # =====================================================================
-    configure_otel_providers()
-    print("Observability setup completed via configure_otel_providers()")
+    # This will enable tracing and create the necessary tracing, logging and metrics providers
+    # based on environment variables from the .env file
+    setup_observability()
+    print("✓ Observability setup completed")
     print()
 
     with get_tracer().start_as_current_span("Customer Feedback Analysis Workflow", kind=SpanKind.CLIENT) as current_span:
@@ -336,25 +316,29 @@ async def main():
     
     print()
     print("=" * 80)
-    print("Demo completed successfully!")
+    print("✅ Demo completed successfully!")
     print("=" * 80)
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if otlp_endpoint:
-        print(f"View telemetry at your OTLP endpoint: {otlp_endpoint}")
-        if "4317" in otlp_endpoint or "18889" in otlp_endpoint:
-            print("  Aspire Dashboard: http://localhost:18888")
-    if os.getenv("ENABLE_CONSOLE_EXPORTERS"):
-        print("Console exporters enabled - check terminal output above for spans")
-    print()
-    print("Grafana dashboards (if configured):")
-    print("  Workflow Overview: https://aka.ms/amg/dash/af-workflow")
-    print("  Agent Overview:    https://aka.ms/amg/dash/af-agent")
-    print()
-    print("You'll see in telemetry:")
-    print("  - 3 executor spans (SentimentAnalyzer -> CategoryClassifier -> ActionRecommender)")
-    print("  - Message passing events between executors")
-    print("  - Custom properties (sentiment, categories, priority)")
-    print("  - Performance metrics for each stage")
+    if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+        print(f"📊 View telemetry: Azure Portal > Application Insights > Transaction Search")
+        print(f"🔍 Filter by Trace ID: {trace_id}")
+        print()
+        print(f"   ⏱️  NOTE: Traces may take 2-5 minutes to appear in Application Insights")
+        print(f"   💡 TIP: Try 'Oldest first' sorting and wait a moment if no data shows initially")
+        print()
+        print("   You'll see:")
+        print("   • 3 executor spans (SentimentAnalyzer → CategoryClassifier → ActionRecommender)")
+        print("   • Message passing events between executors")
+        print("   • Custom properties (sentiment, categories, priority)")
+        print("   • Performance metrics for each stage")
+        print()
+        print("   Alternative views:")
+        print("   • Live Metrics: Real-time telemetry stream")
+        print("   • Application Map: Visual workflow topology")
+        print("   • Performance: Analyze operation durations")
+    if os.getenv("OTLP_ENDPOINT"):
+        print(f"📊 Check your OTLP endpoint: {os.getenv('OTLP_ENDPOINT')}")
+    if os.getenv("ENABLE_CONSOLE_TRACING"):
+        print(f"📝 Console tracing enabled - check terminal output above for spans")
     print("=" * 80)
 
 

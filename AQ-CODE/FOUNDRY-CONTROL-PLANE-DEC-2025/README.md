@@ -1,16 +1,55 @@
-# Control Plane Integration
+# Control Plane Integration (Updated February 2026)
 
-This module provides integration with the Microsoft Foundry Control Plane for monitoring and managing your AI agent fleet.
+This module provides integration with the **Microsoft Foundry Control Plane** for monitoring and managing your AI agent fleet.
+
+> **Docs**: https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/overview?view=foundry  
+> **Portal**: https://ai.azure.com > Operate tab (upper right)
+
+## What's New (Feb 2026 vs Dec 2025)
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| **Supported platforms** | Expanded | Foundry agents, Azure SRE Agent, Logic Apps agent loop, Custom agents |
+| **Agent lifecycle** | New | Start/Stop/Block/Unblock agents from Control Plane |
+| **Continuous Evaluation** | Preview | Automated quality/safety scoring with AI-assisted evaluators |
+| **AI Red Teaming Agent** | New | Automated vulnerability probing and regression testing |
+| **Cluster Analysis** | New | Error root-cause discovery across agent runs |
+| **Custom agent registration** | New | Register non-Foundry agents for fleet visibility |
+| **Grafana dashboards** | New | Agent + Workflow overview dashboards |
+| **Agent identity (Entra ID)** | New | Service principal for agent-to-agent auth |
+| **Observability API** | Updated | `configure_otel_providers()` replaces `setup_observability()` |
+| **Naming** | Updated | "Microsoft Foundry Control Plane" (was "Azure AI Foundry Control Plane") |
 
 ## Overview
 
-The Control Plane integration enables:
+The Foundry Control Plane is accessed via the **Operate** tab in the upper-right navigation of the Foundry portal. It provides:
 
-- **Fleet Health Monitoring**: Real-time visibility into agent health scores, success rates, and performance metrics
-- **Alert Aggregation**: Consolidated view of alerts from Application Insights and Defender
-- **Cost Tracking**: Token usage and estimated cost analysis across all agents
-- **Compliance Posture**: Policy violation tracking and governance status
-- **Agent Inventory**: Centralized view of all agents with version and configuration details
+- **Fleet Overview**: Health scores, active agents, cost trends, run completion rate, prevented behaviors
+- **Assets (Inventory)**: Unified table of all agents across projects in a subscription with metadata, health indicators, and inline recommendations
+- **Compliance**: Policy management with Azure Policy, Defender, and Purview integrations
+- **Quota**: Model deployment quota usage and management
+- **Admin**: Enterprise-level project, user, and resource management
+
+### Core Capabilities
+
+| Capability | Description |
+|-----------|-------------|
+| **Fleet Management** | Agent discovery, inventory, lifecycle (start/stop/block), version tracking |
+| **Observability** | Traces, evaluations, metrics via Application Insights + Grafana dashboards |
+| **Compliance** | Guardrails, policies, Azure Policy + Defender + Purview integration |
+| **Security** | Red teaming scans, drift monitoring, rate limit tracking, Defender alerts |
+| **Cost** | Token usage tracking, cost anomaly detection, optimization recommendations |
+
+### Supported Agent Platforms
+
+| Platform | Auto-discovered | Lifecycle | Observability |
+|----------|----------------|-----------|---------------|
+| **Foundry agents** (prompt, workflow, hosted) | Yes | Start/Stop (hosted + published) | Full |
+| **Azure SRE Agent** | Yes | Start/Stop | Full |
+| **Azure Logic Apps agent loop** | Yes | Start/Stop | Limited (no traces/metrics) |
+| **Custom agents** | Manual registration | Block/Unblock | Full (with instrumentation) |
+
+> **Note**: Foundry classic agents and Azure OpenAI Assistants are NOT supported.
 
 ## Architecture
 
@@ -246,10 +285,18 @@ logging.basicConfig(level=logging.DEBUG)
 
 ## Related Resources
 
-- [Azure AI Foundry Control Plane Overview](https://learn.microsoft.com/azure/ai-foundry/concepts/control-plane-overview)
-- [Monitoring AI Applications](https://learn.microsoft.com/azure/ai-foundry/concepts/control-plane-monitoring-observability)
-- [Cost Optimization Guide](https://learn.microsoft.com/azure/ai-foundry/how-to/control-plane-cost-optimization)
-- [Custom Agent Registration](https://learn.microsoft.com/azure/ai-foundry/how-to/custom-agent-registration)
+- [Foundry Control Plane Overview](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/overview?view=foundry)
+- [Manage agents across platforms](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/how-to-manage-agents?view=foundry)
+- [Monitor agents across your fleet](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/monitoring-across-fleet?view=foundry)
+- [Ensure compliance and security](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/how-to-manage-compliance-security?view=foundry)
+- [Optimize cost and performance](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/how-to-optimize-cost-performance?view=foundry)
+- [Continuous evaluation for agents](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/continuous-evaluation-agents?view=foundry)
+- [Register custom agents](https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/register-custom-agent?view=foundry)
+- [AI Red Teaming Agent](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/ai-red-teaming-agent?view=foundry)
+- [Agent evaluators](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/evaluation-evaluators/agent-evaluators?view=foundry)
+- [Cluster analysis](https://learn.microsoft.com/en-us/azure/ai-foundry/observability/how-to/cluster-analysis?view=foundry)
+- Grafana Agent dashboard: https://aka.ms/amg/dash/af-agent
+- Grafana Workflow dashboard: https://aka.ms/amg/dash/af-workflow
 
 ## Persistent Agents & Portal Visibility
 

@@ -2,6 +2,24 @@
 
 Workshop-ready observability demonstrations for Microsoft Agent Framework with Azure AI Foundry.
 
+**Last Updated**: February 2026  
+**MAF Observability API**: Current (configure_otel_providers / enable_instrumentation)
+
+## What Changed (Feb 2026 vs Dec 2025)
+
+| Area | December 2025 (Old) | February 2026 (Current) |
+|------|---------------------|------------------------|
+| **Azure setup** | `setup_observability(appinsights_conn_str=...)` | `AzureAIClient.configure_azure_monitor()` |
+| **Generic setup** | `setup_observability()` | `configure_otel_providers()` |
+| **OTLP env var** | `OTLP_ENDPOINT` | `OTEL_EXPORTER_OTLP_ENDPOINT` (standard) |
+| **Instrumentation** | `ENABLE_OTEL=true` | `ENABLE_INSTRUMENTATION=true` |
+| **Console output** | Automatic fallback | `ENABLE_CONSOLE_EXPORTERS=true` (opt-in) |
+| **Tool decorator** | Plain function | `@tool(approval_mode="never_require")` |
+| **Agent identity** | No `id` param | `id="weather-agent"` for Control Plane |
+| **Client class** | `AzureAIAgentClient` + `AgentsClient` | `AzureAIClient(project_client=...)` |
+| **Local dev** | DevUI only | Aspire Dashboard, AI Toolkit, DevUI |
+| **Dashboards** | Azure Portal only | + Grafana (aka.ms/amg/dash/af-agent) |
+
 ## 📁 Contents
 
 | File | Description | Workshop Module |
@@ -57,26 +75,46 @@ python redis_demo_multi_agent_devui.py      # http://localhost:8002 & 8003
 ```bash
 # Required for both samples
 AZURE_AI_PROJECT_ENDPOINT="https://your-project.services.ai.azure.com/..."
-AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
-
-# Required for Azure OpenAI (Redis demos)
-AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 
 # Required for observability_azure_ai_agent.py
 OPENWEATHER_API_KEY="your-key-here"  # Get free key at openweathermap.org/api
 
-# Tracing configuration (choose one or more)
-APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=xxx;..."
-ENABLE_DEVUI_TRACING=true
-ENABLE_OTEL=true
-ENABLE_SENSITIVE_DATA=true
+# Tracing configuration (standard OTEL env vars)
+# Option 1: OTLP (Aspire Dashboard, Jaeger, Zipkin)
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+
+# Option 2: Console output (simplest for debugging)
+ENABLE_CONSOLE_EXPORTERS=true
+
+# Agent Framework instrumentation
+ENABLE_INSTRUMENTATION=true
+ENABLE_SENSITIVE_DATA=true  # WARNING: dev/test only
+
+# Optional: AI Toolkit for VS Code tracing
+# VS_CODE_EXTENSION_PORT=5678
+
+# Optional: Service identification
+# OTEL_SERVICE_NAME="my-agent-app"
+# OTEL_SERVICE_VERSION="1.0.0"
 ```
 
 ### Azure Setup
 
 1. **Azure CLI Authentication**: `az login`
-2. **Application Insights**: Attached to your Azure AI project
+2. **Application Insights**: Attached to your Azure AI Foundry project
 3. **OpenWeather API**: Free key from https://openweathermap.org/api
+4. **Packages**: `pip install agent-framework[azure] azure-monitor-opentelemetry`
+
+### Local Development (no Azure required)
+
+For the workflow demo, you can use **Aspire Dashboard** locally:
+```bash
+docker run --rm -d -p 18888:18888 -p 4317:18889 --name aspire mcr.microsoft.com/dotnet/aspire-dashboard:latest
+# Set OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 in .env
+# View at http://localhost:18888
+```
+
+Or use **AI Toolkit for VS Code** tracing (set `VS_CODE_EXTENSION_PORT` in .env).
 
 ### Redis Setup (for persistence demos)
 
@@ -88,28 +126,32 @@ ENABLE_SENSITIVE_DATA=true
 ## 📊 What Each Demo Shows
 
 ### `observability_azure_ai_agent.py`
-**Single Agent with Tool Calling**
+**Single Agent with Tool Calling (AzureAIClient Pattern)**
 
-- ✅ Automatic Application Insights configuration
-- ✅ Real OpenWeatherMap API integration
-- ✅ Multi-turn conversation tracking
-- ✅ Tool call telemetry
-- ✅ Trace ID for Azure Portal investigation
+- AzureAIClient.configure_azure_monitor() for one-line setup
+- Agent `id` parameter for Foundry Control Plane fleet tracking
+- @tool decorator with approval_mode for production safety
+- Real OpenWeatherMap API integration (async httpx)
+- Multi-turn conversation tracking
+- Trace ID for Azure Portal + Foundry Portal investigation
+- Compatible with Grafana Agent dashboard
 
-**Use Case**: Production agent monitoring, debugging LLM interactions
+**Use Case**: Production agent monitoring, Foundry fleet management, debugging LLM interactions
 
 ---
 
 ### `observability_workflow.py`
-**3-Stage Customer Feedback Pipeline**
+**3-Stage Customer Feedback Pipeline (configure_otel_providers Pattern)**
 
-- ✅ SentimentAnalyzer → CategoryClassifier → ActionRecommender
-- ✅ Workflow build and execution spans
-- ✅ Message passing telemetry
-- ✅ Business metrics (sentiment, categories, priority)
-- ✅ Realistic business scenario
+- configure_otel_providers() with standard OTEL env vars
+- SentimentAnalyzer -> CategoryClassifier -> ActionRecommender
+- Workflow build and execution spans
+- Message passing telemetry
+- Business metrics (sentiment, categories, priority)
+- Works with Aspire Dashboard, Jaeger, Zipkin, console
+- Compatible with Grafana Workflow dashboard
 
-**Use Case**: Workflow debugging, performance optimization, multi-stage monitoring
+**Use Case**: Workflow debugging, performance analysis, multi-stage monitoring
 
 ---
 
@@ -171,12 +213,29 @@ See `REDIS_PERSISTENCE_SAMPLES.md` for comprehensive documentation.
 
 ## 🔍 Viewing Traces
 
-### Azure Portal
-1. Navigate to **Application Insights** → **Transaction search**
+### Azure Portal (Application Insights)
+1. Navigate to **Application Insights** > **Transaction search**
 2. Copy Trace ID from console output
 3. Paste into search box
 4. **Wait 2-5 minutes** for ingestion
 5. Try "Oldest first" sorting
+
+### Foundry Portal (Control Plane)
+1. Navigate to **Foundry Portal** > **Operate** tab (upper right)
+2. Select **Assets** in the left pane
+3. Select your agent
+4. Select the **Traces** tab
+5. Click any Trace ID for the full span tree
+
+### Aspire Dashboard (Local Development)
+1. Start dashboard: `docker run -p 18888:18888 -p 4317:18889 mcr.microsoft.com/dotnet/aspire-dashboard:latest`
+2. Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317` in .env
+3. Run your sample
+4. Navigate to http://localhost:18888
+
+### Grafana Dashboards (Azure Managed Grafana)
+- **Agent Overview**: https://aka.ms/amg/dash/af-agent
+- **Workflow Overview**: https://aka.ms/amg/dash/af-workflow
 
 ### What You'll See
 - Request timeline with all operations
@@ -242,6 +301,6 @@ After running Redis demos, attendees should understand:
 
 ---
 
-**Last Updated**: November 2025  
+**Last Updated**: February 2026  
 **Workshop**: Microsoft Agent Framework with Azure AI Foundry  
 **Module**: 4 - Production & Operations

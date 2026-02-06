@@ -1,38 +1,51 @@
 # Copyright (c) Microsoft. All rights reserved.
 
 """
-Azure AI Agent Observability Demo
+Azure AI Agent Observability Demo (Updated February 2026)
 
-This sample demonstrates how to setup telemetry for an Azure AI agent using Application Insights.
-It shows how the Azure AI project automatically configures tracing to send telemetry data to
-the Application Insights instance attached to your Azure AI project.
+This sample demonstrates how to setup telemetry for an Azure AI agent using
+the AzureAIClient and Application Insights via the Foundry Control Plane.
+
+RECOMMENDED PATTERN: AzureAIClient.configure_azure_monitor()
+This single call automatically:
+1. Retrieves Application Insights connection string from Foundry project
+2. Configures Azure Monitor OpenTelemetry exporters (traces, logs, metrics)
+3. Enables Agent Framework instrumentation
+4. Optionally enables Live Metrics streaming
 
 FEATURES:
-- Automatic telemetry setup from Azure AI Project
-- Application Insights integration
-- Traces sent to Azure Monitor
-- Weather tool function calls
+- AzureAIClient-based setup (current recommended pattern)
+- Automatic Application Insights configuration from Foundry project
+- Live Metrics support for real-time monitoring in Azure Portal
+- Agent `id` parameter for Foundry Control Plane fleet tracking
+- @tool decorator with approval_mode for production safety
+- Real OpenWeatherMap API integration with async httpx
 - Multi-turn conversation tracking
-- Trace ID output for investigation in Azure Portal
+- Trace ID output for Azure Portal + Foundry Portal investigation
+- Compatible with Grafana dashboards (https://aka.ms/amg/dash/af-agent)
 
 PREREQUISITES:
-- Azure AI Project with Application Insights attached
+- Azure AI Foundry Project with Application Insights attached
 - Azure CLI authentication: Run 'az login'
 - AZURE_AI_PROJECT_ENDPOINT configured in .env file
-- AZURE_AI_MODEL_DEPLOYMENT_NAME configured in .env file
-- OPENWEATHER_API_KEY configured in .env file (get free key at https://openweathermap.org/api)
+- OPENWEATHER_API_KEY configured in .env file (https://openweathermap.org/api)
+- pip install agent-framework[azure] azure-monitor-opentelemetry
 
-TRACING:
-This sample uses setup_azure_ai_observability() which automatically:
-1. Retrieves Application Insights connection string from Azure AI Project
-2. Configures OpenTelemetry to send traces to Application Insights
-3. Enables full distributed tracing for the agent workflow
+WHAT CHANGED FROM DEC 2025:
+- AzureAIClient replaces separate AgentsClient + manual setup_observability()
+- configure_azure_monitor() replaces deprecated setup_observability()
+- @tool(approval_mode=...) decorator replaces plain function definition
+- Agent `id` parameter enables Foundry Control Plane fleet visibility
+- Standard OTEL env vars (OTEL_EXPORTER_OTLP_ENDPOINT) replace custom vars
+- agent.name replaces agent.display_name
 
 WORKSHOP NOTES:
 - Run this after setting up your .env file
-- Check Azure Portal > Application Insights > Transaction Search to see traces
-- Use the Trace ID printed to the console to find specific executions
-- Compare with workflow_observability.py to see different telemetry patterns
+- Traces visible in: Azure Portal > App Insights > Transaction Search
+- Also visible in: Foundry Portal > Operate > Assets > [agent] > Traces
+- Use the Trace ID printed to console to find specific executions
+- Grafana dashboards: https://aka.ms/amg/dash/af-agent
+- Compare with workflow_observability.py for workflow telemetry patterns
 """
 
 import asyncio
@@ -42,42 +55,51 @@ from typing import Annotated
 
 import httpx
 from dotenv import load_dotenv
-from agent_framework import ChatAgent
-from agent_framework.azure import AzureAIAgentClient
+from agent_framework import ChatAgent, tool
+from agent_framework.azure import AzureAIClient
 from agent_framework.observability import get_tracer
-from azure.ai.agents.aio import AgentsClient
 from azure.ai.projects.aio import AIProjectClient
-from azure.core.exceptions import ResourceNotFoundError
 from azure.identity.aio import AzureCliCredential
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.span import format_trace_id
 from pydantic import Field
 
-# Load environment variables from AQ-CODE/.env
+# Load environment variables from .env in this directory
 load_dotenv(Path(__file__).parent / ".env")
 
 
-def get_weather(
+# NOTE: approval_mode="never_require" is for sample brevity.
+# Use "always_require" in production for tools that perform sensitive actions.
+# See: samples/getting_started/tools/function_tool_with_approval.py
+@tool(approval_mode="never_require")
+async def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
 ) -> str:
     """Get the current weather for a given location using OpenWeatherMap API."""
     api_key = os.getenv("OPENWEATHER_API_KEY")
-    
+
     if not api_key:
-        return f"Error: OPENWEATHER_API_KEY not found in environment variables. Get a free API key at https://openweathermap.org/api"
-    
+        return (
+            "Error: OPENWEATHER_API_KEY not found in environment variables. "
+            "Get a free API key at https://openweathermap.org/api"
+        )
+
     try:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={api_key}&units=metric"
-        response = httpx.get(url, timeout=10.0)
-        response.raise_for_status()
-        data = response.json()
-        
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(url, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+
         temp = data["main"]["temp"]
         feels_like = data["main"]["feels_like"]
         description = data["weather"][0]["description"]
         humidity = data["main"]["humidity"]
-        
-        return f"The weather in {location} is {description} with a temperature of {temp}°C (feels like {feels_like}°C) and {humidity}% humidity."
+
+        return (
+            f"The weather in {location} is {description} with a temperature of "
+            f"{temp}°C (feels like {feels_like}°C) and {humidity}% humidity."
+        )
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
             return f"Error: Location '{location}' not found."
@@ -86,79 +108,80 @@ def get_weather(
         return f"Error: {str(e)}"
 
 
-async def setup_azure_ai_observability(
-    project_client: AIProjectClient, enable_sensitive_data: bool | None = None
-) -> None:
-    """Use this method to setup tracing in your Azure AI Project.
-
-    This will take the connection string from the AIProjectClient.
-    It will override any connection string that is set in the environment variables.
-    It will disable any OTLP endpoint that might have been set.
-    """
-    try:
-        conn_string = await project_client.telemetry.get_application_insights_connection_string()
-        print(f"✓ Application Insights connection string retrieved from Azure AI Project")
-    except ResourceNotFoundError:
-        print("✗ No Application Insights connection string found for the Azure AI Project.")
-        print("  Please attach Application Insights to your Azure AI project in Azure AI Studio.")
-        return
-    
-    from agent_framework.observability import setup_observability
-
-    setup_observability(applicationinsights_connection_string=conn_string, enable_sensitive_data=enable_sensitive_data)
-    print(f"✓ Observability configured - telemetry will be sent to Application Insights")
-
-
 async def main():
     print("=" * 80)
     print("Azure AI Agent Observability Demo")
+    print("  Pattern: AzureAIClient + configure_azure_monitor() (Feb 2026)")
     print("=" * 80)
     print()
-    
+
     # Validate environment variables
     endpoint = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
     if not endpoint:
-        print("✗ ERROR: AZURE_AI_PROJECT_ENDPOINT not found in environment variables")
-        print("  Please configure your .env file in AQ-CODE/.env")
+        print("ERROR: AZURE_AI_PROJECT_ENDPOINT not found in environment variables")
+        print("  Please configure your .env file")
         return
-    
-    print(f"Azure AI Project: {endpoint}")
+
+    print(f"Azure AI Foundry Project: {endpoint}")
     print()
-    
+
     async with (
         AzureCliCredential() as credential,
         AIProjectClient(endpoint=endpoint, credential=credential) as project_client,
-        AgentsClient(endpoint=endpoint, credential=credential) as agents_client,
-        AzureAIAgentClient(agents_client=agents_client) as client,
+        AzureAIClient(project_client=project_client) as client,
     ):
-        # This will enable tracing and configure the application to send telemetry data to the
-        # Application Insights instance attached to the Azure AI project.
-        # This will override any existing configuration.
-        await setup_azure_ai_observability(project_client, enable_sensitive_data=True)
+        # =====================================================================
+        # NEW RECOMMENDED PATTERN (replaces deprecated setup_observability())
+        #
+        # AzureAIClient.configure_azure_monitor() does everything in one call:
+        #   1. Gets App Insights connection string from the Foundry project
+        #   2. Calls azure-monitor-opentelemetry's configure_azure_monitor()
+        #   3. Calls enable_instrumentation() for Agent Framework telemetry
+        #   4. Optionally enables Live Metrics streaming
+        #
+        # For non-Azure projects, use configure_otel_providers() instead.
+        # See: maf-upstream/python/samples/getting_started/observability/
+        # =====================================================================
+        await client.configure_azure_monitor(enable_live_metrics=True)
+        print("Observability configured via AzureAIClient.configure_azure_monitor()")
+        print("  - Application Insights: connected")
+        print("  - Live Metrics: enabled")
+        print("  - Sensitive data: controlled via ENABLE_SENSITIVE_DATA env var")
+        print()
 
         questions = [
             "What's the weather in Amsterdam?",
             "and in Paris, and which is better?",
-            "Why is the sky blue?"
+            "Why is the sky blue?",
         ]
 
-        with get_tracer().start_as_current_span("Single Agent Chat", kind=SpanKind.CLIENT) as current_span:
+        with get_tracer().start_as_current_span(
+            "Single Agent Chat", kind=SpanKind.CLIENT
+        ) as current_span:
             trace_id = format_trace_id(current_span.get_span_context().trace_id)
             print(f"Trace ID: {trace_id}")
-            print(f"Use this Trace ID to find this execution in Azure Portal > Application Insights")
+            print("Use this Trace ID to find this execution in:")
+            print("  - Azure Portal > Application Insights > Transaction Search")
+            print("  - Foundry Portal > Operate > Assets > [agent] > Traces tab")
             print()
 
+            # =====================================================================
+            # The `id` parameter is KEY for Foundry Control Plane integration.
+            # When set, the agent appears in Operate > Assets and traces link
+            # back to the registered agent for fleet-wide monitoring.
+            # =====================================================================
             agent = ChatAgent(
                 chat_client=client,
                 tools=get_weather,
                 name="WeatherAgent",
                 instructions="You are a weather assistant.",
+                id="weather-agent",
             )
             thread = agent.get_new_thread()
-            
+
             for question in questions:
                 print(f"User: {question}")
-                print(f"{agent.display_name}: ", end="")
+                print(f"{agent.name}: ", end="")
                 async for update in agent.run_stream(
                     question,
                     thread=thread,
@@ -167,11 +190,18 @@ async def main():
                         print(update.text, end="")
                 print()
                 print()
-    
+
     print("=" * 80)
     print("Demo completed!")
-    print("Check Azure Portal > Application Insights > Transaction Search")
-    print(f"Filter by Trace ID: {trace_id}")
+    print()
+    print("View traces:")
+    print(f"  Trace ID: {trace_id}")
+    print("  Azure Portal > Application Insights > Transaction Search")
+    print("  Foundry Portal > Operate > Assets > WeatherAgent > Traces")
+    print()
+    print("Grafana dashboards (if configured):")
+    print("  Agent Overview:    https://aka.ms/amg/dash/af-agent")
+    print("  Workflow Overview:  https://aka.ms/amg/dash/af-workflow")
     print("=" * 80)
 
 
