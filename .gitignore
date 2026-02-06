@@ -245,3 +245,5 @@ PROFISEE_SYNC_GUIDE.md
 sync_to_profisee_private.sh
 
 AQ-CODE/AZURE_DEPLOYMENTS_INFO/
+.env.old
+
