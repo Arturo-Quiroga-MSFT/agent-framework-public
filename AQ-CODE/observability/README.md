@@ -23,7 +23,7 @@ Workshop-ready observability demonstrations for Microsoft Agent Framework with A
 ## 📁 Contents
 
 | File | Description | Workshop Module |
-|------|-------------|-----------------||
+|------|-------------|-----------------|
 | `observability_azure_ai_agent.py` | Azure AI agent with Application Insights integration | Module 4 |
 | `observability_workflow.py` | Customer feedback analysis workflow with telemetry | Module 4 |
 | `redis_demo_preferences.py` | RedisProvider demo - smart preference memory (console) | Module 5 |
