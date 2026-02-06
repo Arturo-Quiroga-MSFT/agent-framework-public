@@ -4,9 +4,10 @@ List V2 Agents (Current - New Portal)
 
 This script lists all V2 agents created with the AIProjectClient API.
 These agents:
-- Have GUID format IDs: a1b2c3d4-5678-90ab-cdef-1234567890ab
+- Have human-readable names as IDs
 - Show in NEW Microsoft Foundry portal (ai.azure.com)
 - Do NOT show in old Azure AI Foundry portal
+- Can be 'prompt', 'hosted', or 'workflow' kind
 
 PREREQUISITES:
     - Azure CLI: az login
@@ -16,6 +17,8 @@ USAGE:
     python list_v2_agents.py
     python list_v2_agents.py --json
     python list_v2_agents.py --detailed
+
+UPDATED: February 2026
 """
 
 import os
@@ -68,7 +71,8 @@ def list_v2_agents(output_json: bool = False, detailed: bool = False):
             agent_data = {
                 "id": version_id,
                 "name": getattr(agent, 'name', '(unnamed)'),
-                "model": definition.get('model', 'unknown'),
+                "model": definition.get('model') or '(none)',
+                "kind": definition.get('kind', 'unknown'),
                 "version": latest.get('version', 'unknown'),
                 "created_at": latest.get('created_at', None),
                 "description": latest.get('description', ''),
@@ -136,15 +140,16 @@ def list_v2_agents(output_json: bool = False, detailed: bool = False):
                 print(f"   Instructions: {instructions}")
             print()
     else:
-        print(f"{'#':<4} {'Name':<30} {'ID':<38} {'Model':<20} {'Ver':<5}")
+        print(f"{'#':<4} {'Name':<30} {'ID':<38} {'Model':<20} {'Kind':<10} {'Ver':<5}")
         print("-" * 120)
         
         for i, agent in enumerate(agents, 1):
             name = agent["name"][:29]
             agent_id = agent["id"][:37]
             model = agent["model"][:19]
+            kind = agent.get("kind", "?")[:9]
             version = str(agent["version"])[:4]
-            print(f"{i:<4} {name:<30} {agent_id:<38} {model:<20} {version:<5}")
+            print(f"{i:<4} {name:<30} {agent_id:<38} {model:<20} {kind:<10} {version:<5}")
         print()
     
     print("=" * 70)

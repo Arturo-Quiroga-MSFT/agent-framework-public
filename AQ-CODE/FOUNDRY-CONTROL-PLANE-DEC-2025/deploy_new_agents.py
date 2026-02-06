@@ -2,9 +2,13 @@
 """
 Deploy New Agents to Azure AI Foundry
 
-This script deploys 8 diverse agents to your Azure AI project to reach a total of 10 agents.
+This script deploys 8 diverse V2 agents to your Azure AI project.
 These agents cover various use cases: data analysis, research, customer support,
 financial analysis, technical documentation, HR assistance, marketing, and project management.
+
+Agents are created via AIProjectClient.agents.create_version() (V2 API)
+and show in the NEW Microsoft Foundry portal at ai.azure.com.
+Existing agents with the same name are skipped (not duplicated).
 
 USAGE:
     python deploy_new_agents.py
@@ -12,6 +16,8 @@ USAGE:
 PREREQUISITES:
     - Azure CLI authenticated: az login
     - .env file configured with AZURE_AI_PROJECT_ENDPOINT
+
+UPDATED: February 2026
 """
 
 import asyncio
@@ -290,6 +296,8 @@ def deploy_agents():
     print("\n💡 Next steps:")
     print("   1. Restart the Fleet Health Dashboard to see the new agents")
     print("   2. Run exercise_agents_v2.py to generate telemetry data")
+    print("      python exercise_agents_v2.py --list              # list exercisable agents")
+    print("      python exercise_agents_v2.py --agents 5          # exercise first 5")
     print("   3. View the dashboard at http://127.0.0.1:8099")
     
     return success_count > 0

@@ -21,10 +21,15 @@ USAGE:
 FEATURES:
 - Modern responsive UI with Bootstrap theming
 - Fleet Overview with health scores and KPIs
-- Interactive agent inventory with filtering/sorting
+- Interactive agent inventory with filtering/sorting  
 - Real-time alerts with drill-down
 - Compliance posture tracking
 - Cost analysis visualizations
+- Continuous Evaluation summary (Feb 2026)
+- Grafana dashboard links
+- Agent lifecycle actions (start/stop/block)
+
+Updated: February 2026 - aligned with Foundry Control Plane GA-track features
 """
 
 import os
@@ -193,20 +198,6 @@ def fetch_fleet_data_sync() -> Optional[FleetHealthSummary]:
         from azure.identity import DefaultAzureCredential
         from azure.ai.projects import AIProjectClient
         
-        # Only show agents that exist in the Foundry portal
-        VALID_AGENTS = {
-            "ProjectManagerAgent",
-            "MarketingStrategistAgent", 
-            "HRAssistantAgent",
-            "TechnicalWriterAgent",
-            "FinancialAnalystAgent",
-            "CustomerSupportAgent",
-            "ResearchAgent",
-            "DataAnalysisAgent",
-            "BingSearchAgent",
-            "CodeInterpreterAgent",
-        }
-        
         endpoint = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
         if not endpoint:
             print("No endpoint configured")
@@ -215,11 +206,11 @@ def fetch_fleet_data_sync() -> Optional[FleetHealthSummary]:
         credential = DefaultAzureCredential()
         client = AIProjectClient(endpoint=endpoint, credential=credential)
         
-        # Get agents synchronously - sync client uses .list() not .list_agents()
+        # Get all agents from the project (no hardcoded filter - show everything from Foundry)
         all_agents = list(client.agents.list())
-        # Filter to only valid agents from Foundry portal
-        agents_list = [a for a in all_agents if getattr(a, 'name', '') in VALID_AGENTS]
-        print(f"📡 Found {len(all_agents)} agents from Azure, filtered to {len(agents_list)} valid agents")
+        # Filter out agents with no name or placeholder names
+        agents_list = [a for a in all_agents if getattr(a, 'name', '') and getattr(a, 'name', '') not in ('ONE', 'NONE', '')]
+        print(f"📡 Found {len(all_agents)} agents from Azure, showing {len(agents_list)} valid agents")
         
         if not agents_list:
             return None
@@ -373,13 +364,13 @@ async def fetch_fleet_data() -> Optional[FleetHealthSummary]:
 
 
 def create_demo_data() -> FleetHealthSummary:
-    """Create demo data for testing without Azure connection."""
+    """Create demo data for testing without Azure connection (Feb 2026 scenario)."""
     demo_agents = [
         AgentHealthMetrics(
             agent_id="demo-agent-1",
             agent_name="Market_Researcher",
             agent_version="2",
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             status=HealthStatus.HEALTHY,
             health_score=92.0,
             tools=["web_search", "file_search"],
@@ -400,7 +391,7 @@ def create_demo_data() -> FleetHealthSummary:
             agent_id="demo-agent-2",
             agent_name="Marketing_Strategist",
             agent_version="1",
-            model="gpt-4o",
+            model="gpt-4.1",
             status=HealthStatus.HEALTHY,
             health_score=88.0,
             tools=["code_interpreter"],
@@ -421,7 +412,7 @@ def create_demo_data() -> FleetHealthSummary:
             agent_id="demo-agent-3",
             agent_name="Legal_Compliance_Advisor",
             agent_version="3",
-            model="gpt-4o",
+            model="gpt-4.1",
             status=HealthStatus.WARNING,
             health_score=72.0,
             tools=["file_search"],
@@ -442,7 +433,7 @@ def create_demo_data() -> FleetHealthSummary:
             agent_id="demo-agent-4",
             agent_name="Financial_Analyst",
             agent_version="1",
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             status=HealthStatus.HEALTHY,
             health_score=95.0,
             tools=["code_interpreter", "file_search"],
@@ -463,7 +454,7 @@ def create_demo_data() -> FleetHealthSummary:
             agent_id="demo-agent-5",
             agent_name="Technical_Architect",
             agent_version="2",
-            model="gpt-4o",
+            model="gpt-4.1",
             status=HealthStatus.CRITICAL,
             health_score=45.0,
             tools=["code_interpreter", "web_search"],
@@ -484,7 +475,7 @@ def create_demo_data() -> FleetHealthSummary:
             agent_id="demo-agent-6",
             agent_name="Customer_Support_Bot",
             agent_version="4",
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             status=HealthStatus.HEALTHY,
             health_score=91.0,
             tools=["file_search"],
@@ -498,6 +489,48 @@ def create_demo_data() -> FleetHealthSummary:
             prompt_tokens=80000,
             completion_tokens=45000,
             estimated_cost_usd=0.125,
+            compliance_status="compliant",
+            policy_violations=0
+        ),
+        AgentHealthMetrics(
+            agent_id="demo-agent-7",
+            agent_name="SRE_Monitoring_Agent",
+            agent_version="1",
+            model="gpt-4.1",
+            status=HealthStatus.HEALTHY,
+            health_score=94.0,
+            tools=["code_interpreter", "web_search"],
+            total_runs=320,
+            successful_runs=315,
+            failed_runs=5,
+            error_rate=0.016,
+            avg_latency_ms=1100,
+            p95_latency_ms=1800,
+            total_tokens=89000,
+            prompt_tokens=58000,
+            completion_tokens=31000,
+            estimated_cost_usd=0.89,
+            compliance_status="compliant",
+            policy_violations=0
+        ),
+        AgentHealthMetrics(
+            agent_id="demo-agent-8",
+            agent_name="Custom_RAG_Agent",
+            agent_version="2",
+            model="gpt-4o",
+            status=HealthStatus.HEALTHY,
+            health_score=87.0,
+            tools=["file_search", "web_search"],
+            total_runs=178,
+            successful_runs=170,
+            failed_runs=8,
+            error_rate=0.045,
+            avg_latency_ms=1450,
+            p95_latency_ms=2400,
+            total_tokens=96000,
+            prompt_tokens=62000,
+            completion_tokens=34000,
+            estimated_cost_usd=0.96,
             compliance_status="compliant",
             policy_violations=0
         ),
@@ -530,20 +563,20 @@ def create_demo_data() -> FleetHealthSummary:
     ]
     
     return FleetHealthSummary(
-        total_agents=6,
-        active_agents=6,
-        healthy_agents=4,
+        total_agents=8,
+        active_agents=8,
+        healthy_agents=6,
         warning_agents=1,
         critical_agents=1,
-        fleet_health_score=80.5,
-        avg_success_rate=0.927,
-        total_runs_24h=1103,
-        total_errors_24h=40,
-        total_cost_24h=2.36,
-        total_cost_7d=16.52,
-        total_tokens_24h=397000,
-        cost_trend_pct=-5.2,
-        compliant_agents=4,
+        fleet_health_score=83.0,
+        avg_success_rate=0.940,
+        total_runs_24h=1601,
+        total_errors_24h=53,
+        total_cost_24h=4.21,
+        total_cost_7d=29.47,
+        total_tokens_24h=582000,
+        cost_trend_pct=-3.8,
+        compliant_agents=6,
         non_compliant_agents=2,
         total_policy_violations=3,
         critical_alerts=1,
@@ -1036,6 +1069,7 @@ def create_layout() -> html.Div:
                 dbc.Tab(label="🚨 Alerts", tab_id="tab-alerts"),
                 dbc.Tab(label="🛡️ Compliance", tab_id="tab-compliance"),
                 dbc.Tab(label="💰 Cost Analysis", tab_id="tab-cost"),
+                dbc.Tab(label="🔍 Evaluation", tab_id="tab-evaluation"),
             ], id="main-tabs", active_tab="tab-overview", className="mb-4"),
             
             # Tab content
@@ -1047,12 +1081,22 @@ def create_layout() -> html.Div:
                 html.Div([
                     html.A("📊 Azure Portal", href="https://portal.azure.com", 
                           target="_blank", className="me-4"),
-                    html.A("🤖 AI Foundry", href="https://ai.azure.com", 
+                    html.A("🤖 Foundry Portal (Operate)", href="https://ai.azure.com", 
                           target="_blank", className="me-4"),
                     html.A("📈 Application Insights", 
                           href="https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents",
+                          target="_blank", className="me-4"),
+                    html.A("📊 Grafana Agent Dashboard", 
+                          href="https://aka.ms/amg/dash/af-agent",
+                          target="_blank", className="me-4"),
+                    html.A("📊 Grafana Workflow Dashboard", 
+                          href="https://aka.ms/amg/dash/af-workflow",
                           target="_blank"),
-                ], className="text-center text-muted")
+                ], className="text-center text-muted"),
+                html.Div([
+                    html.Small("Microsoft Foundry Control Plane • February 2026", 
+                              className="text-muted")
+                ], className="text-center mt-2")
             ], className="mt-5 mb-3")
             
         ], fluid=True)
@@ -1165,16 +1209,22 @@ def create_overview_content(summary: FleetHealthSummary) -> html.Div:
                         href="https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents",
                         target="_blank"),
                         dbc.Button([
+                            html.I(className="bi bi-robot me-2"),
+                            "Foundry Operate Tab"
+                        ], color="dark", outline=True, className="me-2 mb-2",
+                        href="https://ai.azure.com",
+                        target="_blank"),
+                        dbc.Button([
+                            html.I(className="bi bi-bar-chart me-2"),
+                            "Grafana Agent Dashboard"
+                        ], color="info", outline=True, className="me-2 mb-2",
+                        href="https://aka.ms/amg/dash/af-agent",
+                        target="_blank"),
+                        dbc.Button([
                             html.I(className="bi bi-shield-check me-2"),
                             "Security Overview"
                         ], color="success", outline=True, className="me-2 mb-2",
                         href="https://portal.azure.com/#blade/Microsoft_Azure_Security/SecurityMenuBlade/overview",
-                        target="_blank"),
-                        dbc.Button([
-                            html.I(className="bi bi-robot me-2"),
-                            "AI Foundry"
-                        ], color="info", outline=True, className="mb-2",
-                        href="https://ai.azure.com",
                         target="_blank"),
                     ])
                 ], className="shadow-sm h-100")
@@ -1189,7 +1239,14 @@ def create_overview_content(summary: FleetHealthSummary) -> html.Div:
                             html.Li([html.Strong("Latency < 2s"), " - Fast response times"]),
                             html.Li([html.Strong("No violations"), " - Compliance maintained"]),
                             html.Li([html.Strong("Active in 24h"), " - Recent activity"]),
-                        ], className="mb-0")
+                            html.Li([html.Strong("Has instructions"), " - System prompt defined"]),
+                        ], className="mb-0"),
+                        html.Hr(),
+                        html.Small([
+                            html.Strong("New in Feb 2026: "), 
+                            "Continuous Evaluation, AI Red Teaming Agent, Grafana dashboards, ",
+                            "Agent lifecycle (start/stop/block), Custom agent registration"
+                        ], className="text-muted")
                     ])
                 ], className="shadow-sm h-100")
             ], md=6, className="mb-4"),
@@ -1405,6 +1462,155 @@ def create_cost_content(summary: FleetHealthSummary) -> html.Div:
 # CALLBACKS
 # =============================================================================
 
+def create_evaluation_content(summary: FleetHealthSummary) -> html.Div:
+    """Create the Continuous Evaluation tab content (Feb 2026)."""
+    return html.Div([
+        html.H4("🔍 Continuous Evaluation (Preview)", className="mb-3"),
+        dbc.Alert([
+            html.Strong("New in Feb 2026: "),
+            "Continuous Evaluation runs AI-assisted evaluators automatically on agent sessions ",
+            "in production. Results appear in the Foundry Portal under Operate > Assets > [agent] > Evaluations."
+        ], color="info", className="mb-4"),
+        
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("📊 Evaluation Metrics"),
+                    dbc.CardBody([
+                        html.P("Continuous Evaluation measures agent quality in production using these evaluators:", 
+                               className="text-muted"),
+                        dbc.Table([
+                            html.Thead(html.Tr([
+                                html.Th("Evaluator"), html.Th("What It Measures"), html.Th("Category")
+                            ])),
+                            html.Tbody([
+                                html.Tr([html.Td("Task Adherence"), html.Td("Did the agent follow its instructions?"), html.Td(dbc.Badge("Quality", color="primary"))]),
+                                html.Tr([html.Td("Intent Resolution"), html.Td("Did the agent resolve the user's intent?"), html.Td(dbc.Badge("Quality", color="primary"))]),
+                                html.Tr([html.Td("Tool Call Accuracy"), html.Td("Were the right tools called correctly?"), html.Td(dbc.Badge("Quality", color="primary"))]),
+                                html.Tr([html.Td("Groundedness"), html.Td("Are responses grounded in retrieved data?"), html.Td(dbc.Badge("Safety", color="success"))]),
+                                html.Tr([html.Td("Harmful Content"), html.Td("Hate, sexual, violent, self-harm content detection"), html.Td(dbc.Badge("Safety", color="danger"))]),
+                                html.Tr([html.Td("Protected Material"), html.Td("Copyrighted content detection"), html.Td(dbc.Badge("Safety", color="warning"))]),
+                                html.Tr([html.Td("Code Vulnerability"), html.Td("Security issues in generated code"), html.Td(dbc.Badge("Safety", color="danger"))]),
+                            ])
+                        ], striped=True, bordered=True, hover=True, responsive=True, size="sm")
+                    ])
+                ], className="shadow-sm h-100")
+            ], md=7),
+            
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("🚀 Setup Guide"),
+                    dbc.CardBody([
+                        html.P("Enable via Foundry Portal or SDK:", className="text-muted"),
+                        html.Ol([
+                            html.Li("Go to Foundry Portal > Operate > Assets"),
+                            html.Li("Select your agent"),
+                            html.Li("Click 'Evaluations' tab"),
+                            html.Li("Enable Continuous Evaluation"),
+                            html.Li("Select evaluators and sampling rate"),
+                        ]),
+                        html.Hr(),
+                        html.P(html.Strong("SDK (Python):")),
+                        html.Pre(
+                            html.Code(
+"""from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import (
+    AgentEvaluationRequest,
+    EvaluatorConfiguration,
+)
+
+client = AIProjectClient(endpoint=endpoint, credential=cred)
+client.evaluations.create_agent_evaluation(
+    AgentEvaluationRequest(
+        agent_id="your-agent-id",
+        evaluators={
+            "task_adherence": EvaluatorConfiguration(
+                id="azureml://registries/..."
+            ),
+        },
+        num_session=5,
+    )
+)""",
+                                style={"fontSize": "0.75em"}
+                            ),
+                            style={"backgroundColor": "#f8f9fa", "padding": "10px", "borderRadius": "4px"}
+                        ),
+                    ])
+                ], className="shadow-sm h-100"),
+                
+                dbc.Card([
+                    dbc.CardHeader("🔗 Related Features"),
+                    dbc.CardBody([
+                        dbc.ListGroup([
+                            dbc.ListGroupItem([
+                                html.Strong("AI Red Teaming Agent"),
+                                html.P("Automated vulnerability probing and regression testing", 
+                                      className="mb-0 text-muted small")
+                            ]),
+                            dbc.ListGroupItem([
+                                html.Strong("Cluster Analysis"),
+                                html.P("Error root-cause discovery across agent runs", 
+                                      className="mb-0 text-muted small")
+                            ]),
+                            dbc.ListGroupItem([
+                                html.Strong("Grafana Dashboards"),
+                                html.P("Pre-built agent and workflow monitoring dashboards", 
+                                      className="mb-0 text-muted small")
+                            ]),
+                        ], flush=True)
+                    ])
+                ], className="shadow-sm mt-3")
+            ], md=5),
+        ]),
+        
+        # Documentation links
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader("📚 Documentation"),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col([
+                                html.A("📖 Continuous Evaluation Docs", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/continuous-evaluation-agents?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("🛡️ AI Red Teaming Agent", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/ai-red-teaming-agent?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("📊 Agent Evaluators", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/evaluation-evaluators/agent-evaluators?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                            ], md=4),
+                            dbc.Col([
+                                html.A("🔍 Cluster Analysis", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/observability/how-to/cluster-analysis?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("📊 Grafana Agent Dashboard", 
+                                      href="https://aka.ms/amg/dash/af-agent",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("📊 Grafana Workflow Dashboard", 
+                                      href="https://aka.ms/amg/dash/af-workflow",
+                                      target="_blank", className="d-block mb-2"),
+                            ], md=4),
+                            dbc.Col([
+                                html.A("🎛️ Control Plane Overview", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/overview?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("📋 Register Custom Agents", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/register-custom-agent?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                                html.A("🔧 Manage Agents", 
+                                      href="https://learn.microsoft.com/en-us/azure/ai-foundry/control-plane/how-to-manage-agents?view=foundry",
+                                      target="_blank", className="d-block mb-2"),
+                            ], md=4),
+                        ])
+                    ])
+                ], className="shadow-sm")
+            ])
+        ], className="mt-4"),
+    ])
+
+
 def register_callbacks(app: Dash):
     """Register all Dash callbacks."""
     
@@ -1515,6 +1721,8 @@ def register_callbacks(app: Dash):
             return create_compliance_content(summary)
         elif active_tab == "tab-cost":
             return create_cost_content(summary)
+        elif active_tab == "tab-evaluation":
+            return create_evaluation_content(summary)
         
         return dbc.Alert("Unknown tab", color="warning")
     
@@ -1644,7 +1852,12 @@ def main():
     parser.add_argument("--port", type=int, default=8099, help="Port to run the server on")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--demo", action="store_true", help="Use demo data (skip Azure)")
     args = parser.parse_args()
+    
+    # If --demo flag passed, set global override
+    if args.demo:
+        os.environ.pop("AZURE_AI_PROJECT_ENDPOINT", None)  # Force demo mode
     
     print(f"""
 ╔═══════════════════════════════════════════════════════════════╗
