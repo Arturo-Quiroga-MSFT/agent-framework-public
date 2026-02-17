@@ -366,8 +366,7 @@ async def create_agtech_workflow():
     output_formatter = SequentialOutputFormatter(id="output_formatter")
     
     # Build the workflow with sequential edges
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher, name="workflow_agtech_sequential")
     
     # Chain all agents sequentially
     builder.add_edge(dispatcher, agronomy_executor)

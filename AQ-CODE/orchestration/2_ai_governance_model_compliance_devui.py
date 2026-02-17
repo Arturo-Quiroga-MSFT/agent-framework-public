@@ -232,8 +232,7 @@ async def create_ai_governance_workflow():
     dispatcher = GovernanceDispatcher(id="governance_dispatcher")
     aggregator = _CallbackAggregator(format_results)
 
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     builder.add_fan_out_edges(dispatcher, agents)
     builder.add_fan_in_edges(agents, aggregator)
     workflow = builder.build()

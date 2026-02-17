@@ -253,8 +253,7 @@ async def create_concurrent_workflow():
     aggregator = ProductAggregator(id="product_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all agent participants
     agents = [researcher, marketer, legal, finance, technical]

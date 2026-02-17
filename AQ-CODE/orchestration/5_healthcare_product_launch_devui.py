@@ -290,8 +290,7 @@ async def create_healthcare_workflow():
     aggregator = HealthcareAggregator(id="healthcare_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all healthcare agent participants
     agents = [

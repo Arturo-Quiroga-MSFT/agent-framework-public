@@ -378,8 +378,7 @@ async def create_clinical_trial_workflow():
         return format_clinical_trial_results(results, start_time=workflow_start_time)
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all clinical trial agent participants
     agents = [

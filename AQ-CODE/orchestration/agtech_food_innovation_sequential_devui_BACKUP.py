@@ -391,8 +391,7 @@ async def create_agtech_workflow():
     output_formatter = SequentialOutputFormatter(id="output_formatter")
     
     # Build the workflow: dispatcher -> sequential executor -> formatter
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     builder.add_edge(dispatcher, sequential_executor)
     builder.add_edge(sequential_executor, output_formatter)
     

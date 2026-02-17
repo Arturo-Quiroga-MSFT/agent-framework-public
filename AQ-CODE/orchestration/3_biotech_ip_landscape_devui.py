@@ -280,8 +280,7 @@ async def create_biotech_ip_workflow():
     dispatcher = IPDispatcher(id="ip_dispatcher")
     aggregator = IPAggregator(id="ip_aggregator")
 
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     builder.add_fan_out_edges(dispatcher, agents)
     builder.add_fan_in_edges(agents, aggregator)
     workflow = builder.build()

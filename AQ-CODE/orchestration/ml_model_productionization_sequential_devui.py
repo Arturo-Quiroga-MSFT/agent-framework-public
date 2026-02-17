@@ -353,8 +353,7 @@ async def create_ml_production_workflow():
     ]
     formatter = FinalFormatter(id="gate_final_formatter")
 
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     # Chain steps
     prev = dispatcher
     for s in step_execs:

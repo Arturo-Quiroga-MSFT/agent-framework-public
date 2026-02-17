@@ -330,8 +330,7 @@ async def create_ai_stock_research_workflow():
     aggregator = ResearchAggregator(id="research_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all research agent participants
     agents = [

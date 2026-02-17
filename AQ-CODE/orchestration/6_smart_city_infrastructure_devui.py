@@ -337,8 +337,7 @@ async def create_smart_city_workflow():
     aggregator = SmartCityAggregator(id="smart_city_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all smart city agent participants
     agents = [

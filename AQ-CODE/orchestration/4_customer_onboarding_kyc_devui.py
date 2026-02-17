@@ -633,8 +633,7 @@ Review the account setup details and risk assessment to ensure accurate informat
     # Build the workflow - using fan-out/fan-in pattern for parallel processing
     # Note: The agents are designed to work sequentially via conversation history
     # but DevUI will visualize them as parallel for this demo
-    builder = WorkflowBuilder()
-    builder.set_start_executor(dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher)
     
     # Add all agents in fan-out pattern (they will process in sequence via context)
     all_agents = [
