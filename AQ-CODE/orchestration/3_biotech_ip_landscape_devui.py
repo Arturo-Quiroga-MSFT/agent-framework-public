@@ -97,41 +97,55 @@ async def create_biotech_ip_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
+    agent_options = {"max_tokens": 600}
+
     patent_landscape = client.as_agent(
         instructions=(
-            "You perform patent landscape research. Provide: Key Patents (numbers if plausible), Families & Expiration Windows, Prior Art Themes, White Space."
+            "You perform patent landscape research. Provide: Key Patents (numbers if plausible), Families & Expiration Windows, Prior Art Themes, White Space. "
+            "Keep your analysis focused and concise."
         ),
         name="patent_landscape",
+        default_options=agent_options,
     )
     fto = client.as_agent(
         instructions=(
-            "You analyze freedom-to-operate. Provide: Potential Blocking Claims (describe), Overlap Risks, Need for Licensing, Design-Around Options."
+            "You analyze freedom-to-operate. Provide: Potential Blocking Claims (describe), Overlap Risks, Need for Licensing, Design-Around Options. "
+            "Keep your analysis focused and concise."
         ),
         name="freedom_to_operate",
+        default_options=agent_options,
     )
     competitive = client.as_agent(
         instructions=(
-            "You evaluate competitive pipeline. Provide: Active Competitors, Clinical Stages, Differentiation Gaps, Competitive Threat Assessment."
+            "You evaluate competitive pipeline. Provide: Active Competitors, Clinical Stages, Differentiation Gaps, Competitive Threat Assessment. "
+            "Keep your analysis focused and concise."
         ),
         name="competitive_pipeline",
+        default_options=agent_options,
     )
     regulatory_exclusivity = client.as_agent(
         instructions=(
-            "You assess regulatory exclusivity. Provide: Data Exclusivity Paths (NCE/Biologic/Orphan), Potential Designations, Timeline Advantages, Strategic Considerations."
+            "You assess regulatory exclusivity. Provide: Data Exclusivity Paths (NCE/Biologic/Orphan), Potential Designations, Timeline Advantages, Strategic Considerations. "
+            "Keep your analysis focused and concise."
         ),
         name="reg_exclusivity",
+        default_options=agent_options,
     )
     differentiation = client.as_agent(
         instructions=(
-            "You argue FOR novelty & defensibility. Provide: Novel Features, Technical Advantages, Unexpected Results, Claim Support Arguments."
+            "You argue FOR novelty & defensibility. Provide: Novel Features, Technical Advantages, Unexpected Results, Claim Support Arguments. "
+            "Keep your analysis focused and concise."
         ),
         name="differentiation_pro",
+        default_options=agent_options,
     )
     skeptic = client.as_agent(
         instructions=(
-            "You are a Red-Team Skeptic. Challenge novelty & defensibility. Provide: Obviousness Arguments, Prior Art Risk, Enablement Gaps, Potential Claim Rejections."
+            "You are a Red-Team Skeptic. Challenge novelty & defensibility. Provide: Obviousness Arguments, Prior Art Risk, Enablement Gaps, Potential Claim Rejections. "
+            "Keep your analysis focused and concise."
         ),
         name="skeptic_con",
+        default_options=agent_options,
     )
 
     agents = [
@@ -189,7 +203,7 @@ async def create_biotech_ip_workflow():
         }
         clips: Dict[str, str] = {}
         for r in results:
-            msgs = getattr(r.agent_run_response, "messages", [])
+            msgs = getattr(r.agent_response, "messages", [])
             for msg in reversed(msgs):
                 if getattr(msg, "author_name", None) and msg.author_name != "user":
                     clips[msg.author_name] = msg.text

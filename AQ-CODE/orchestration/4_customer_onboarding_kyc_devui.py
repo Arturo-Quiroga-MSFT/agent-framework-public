@@ -196,8 +196,8 @@ class OnboardingOutputFormatter(Executor):
         for idx, response in enumerate(results, 1):
             # Get agent name from the response
             agent_name = "Unknown Agent"
-            if hasattr(response, 'agent_run_response') and hasattr(response.agent_run_response, 'messages'):
-                messages = response.agent_run_response.messages
+            if hasattr(response, 'agent_response') and hasattr(response.agent_response, 'messages'):
+                messages = response.agent_response.messages
                 if messages and hasattr(messages[0], 'author_name'):
                     agent_name = messages[0].author_name or "Unknown Agent"
             
@@ -215,8 +215,8 @@ class OnboardingOutputFormatter(Executor):
             output_lines.append("-" * 80)
             
             # Extract the agent's response content
-            if hasattr(response, 'agent_run_response'):
-                messages = getattr(response.agent_run_response, "messages", [])
+            if hasattr(response, 'agent_response'):
+                messages = getattr(response.agent_response, "messages", [])
                 
                 # Find the assistant's response (not the user prompt)
                 agent_response = None
@@ -325,6 +325,7 @@ def create_customer_onboarding_workflow() -> WorkflowBuilder:
     )
     
     # Create specialized agents for each stage using chat_client.as_agent()
+    agent_options = {"max_tokens": 600}
     
     # Stage 1: Initial Intake - Data validation and completeness check
     intake_agent = chat_client.as_agent(
@@ -350,8 +351,10 @@ Analyze the customer onboarding request and validate the information provided:
 
 Provide a structured assessment with clear sections for each area.
 Format your response with bullet points and clear headers.
+Keep your analysis focused and concise.
 """,
-        name="intake_specialist"
+        name="intake_specialist",
+        default_options=agent_options,
     )
     
     # Stage 2: Risk Triage - Preliminary risk scoring and routing
@@ -383,8 +386,10 @@ Based on the intake specialist's assessment and the original customer informatio
 
 Provide your risk triage decision with clear reasoning.
 Review the full conversation history to see the intake specialist's findings.
+Keep your analysis focused and concise.
 """,
-        name="risk_triage"
+        name="risk_triage",
+        default_options=agent_options,
     )
     
     # Stage 3A: Document Verification (Parallel - Part 1)
@@ -417,8 +422,10 @@ Perform document verification analysis for this customer onboarding:
 
 Provide a detailed verification report with your decision and reasoning.
 Review the full conversation history including intake and triage findings.
+Keep your analysis focused and concise.
 """,
-        name="document_verification"
+        name="document_verification",
+        default_options=agent_options,
     )
     
     # Stage 3B: Credit Assessment (Parallel - Part 2)
@@ -454,8 +461,10 @@ Perform credit and financial risk assessment for this customer:
 
 Provide a comprehensive credit assessment with your recommendation.
 Review the full conversation history to understand the customer profile.
+Keep your analysis focused and concise.
 """,
-        name="credit_assessment"
+        name="credit_assessment",
+        default_options=agent_options,
     )
     
     # Stage 3C: Compliance Screening (Parallel - Part 3)
@@ -491,8 +500,10 @@ Perform comprehensive compliance screening for this customer:
 
 Provide detailed compliance screening results with clear decision.
 Review the full conversation history to assess risk factors.
+Keep your analysis focused and concise.
 """,
-        name="compliance_screening"
+        name="compliance_screening",
+        default_options=agent_options,
     )
     
     # Stage 4: Risk Assessment - Aggregate results and final risk score
@@ -528,8 +539,10 @@ Review ALL previous agent findings and make the final risk assessment and onboar
 
 Make your final decision based on the COMPLETE conversation history.
 Be thorough and reference specific findings from each verification agent.
+Keep your analysis focused and concise.
 """,
-        name="risk_assessment"
+        name="risk_assessment",
+        default_options=agent_options,
     )
     
     # Stage 5: Account Setup - Product configuration and provisioning
@@ -572,8 +585,10 @@ Based on the risk assessment decision and customer requirements, configure the a
 
 Provide a detailed account setup specification.
 Review the risk assessment decision and ensure setup aligns with approved conditions.
+Keep your analysis focused and concise.
 """,
-        name="account_setup"
+        name="account_setup",
+        default_options=agent_options,
     )
     
     # Stage 6: Communications - Welcome package and customer notification
@@ -622,8 +637,10 @@ Create a comprehensive welcome package and onboarding communication:
 
 Create a warm, professional welcome package that sets the customer up for success.
 Review the account setup details and risk assessment to ensure accurate information.
+Keep your analysis focused and concise.
 """,
-        name="customer_communications"
+        name="customer_communications",
+        default_options=agent_options,
     )
     
     # Create dispatcher and aggregator

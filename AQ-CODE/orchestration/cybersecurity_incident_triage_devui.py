@@ -91,47 +91,61 @@ async def create_cybersecurity_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
+    agent_options = {"max_tokens": 600}
+
     threat_intel = client.as_agent(
         instructions=(
             "You are a Threat Intelligence Analyst. Map provided indicators to campaigns and MITRE ATT&CK techniques. "
-            "Output sections: Indicators Observed, Likely TTPs (T#), Possible Attribution (confidence), Intelligence Gaps."
+            "Output sections: Indicators Observed, Likely TTPs (T#), Possible Attribution (confidence), Intelligence Gaps. "
+            "Keep your analysis focused and concise."
         ),
         name="threat_intel",
+        default_options=agent_options,
     )
     network_forensics = client.as_agent(
         instructions=(
             "You are a Network Forensics Specialist. Analyze potential lateral movement, beaconing, C2 channels, exfil paths. "
-            "Output: Suspicious Flows, Protocol Anomalies, Lateral Movement Hypotheses, Recommended Network Containment."
+            "Output: Suspicious Flows, Protocol Anomalies, Lateral Movement Hypotheses, Recommended Network Containment. "
+            "Keep your analysis focused and concise."
         ),
         name="network_forensics",
+        default_options=agent_options,
     )
     endpoint_analyst = client.as_agent(
         instructions=(
             "You are an Endpoint / EDR Analyst. Focus on host artifacts: processes, persistence, registry/services, privilege escalation. "
-            "Output: Key Host Artifacts, Persistence Mechanisms, Priv Esc Attempts, Host Triage Recommendations."
+            "Output: Key Host Artifacts, Persistence Mechanisms, Priv Esc Attempts, Host Triage Recommendations. "
+            "Keep your analysis focused and concise."
         ),
         name="endpoint_analyst",
+        default_options=agent_options,
     )
     malware_analyst = client.as_agent(
         instructions=(
             "You are a Malware Analyst. Even without a sample, infer possible behavior patterns. "
-            "Output: Behavior Hypotheses, Encryption/Exfil Traits, Evasion Techniques, Needed Forensic Artifacts."
+            "Output: Behavior Hypotheses, Encryption/Exfil Traits, Evasion Techniques, Needed Forensic Artifacts. "
+            "Keep your analysis focused and concise."
         ),
         name="malware_analyst",
+        default_options=agent_options,
     )
     compliance = client.as_agent(
         instructions=(
             "You are a Risk & Compliance Officer. Identify legal/regulatory impact: breach notification triggers, data classifications, jurisdictional concerns. "
-            "Output: Regulatory Considerations, Reporting Deadlines, Data Categories Affected, Compliance Risks."
+            "Output: Regulatory Considerations, Reporting Deadlines, Data Categories Affected, Compliance Risks. "
+            "Keep your analysis focused and concise."
         ),
         name="compliance",
+        default_options=agent_options,
     )
     remediation = client.as_agent(
         instructions=(
             "You are the Containment & Remediation Lead. Prioritize actions by time horizon. "
-            "Output: 0-6h Actions, 6-24h Actions, 1-7d Actions, Longer-Term Hardening, Risk Reduction Rationale."
+            "Output: 0-6h Actions, 6-24h Actions, 1-7d Actions, Longer-Term Hardening, Risk Reduction Rationale. "
+            "Keep your analysis focused and concise."
         ),
         name="remediation",
+        default_options=agent_options,
     )
 
     agents = [
@@ -166,7 +180,7 @@ async def create_cybersecurity_workflow():
         }
         # Collect last assistant message per result
         for r in results:
-            msgs = getattr(r.agent_run_response, "messages", [])
+            msgs = getattr(r.agent_response, "messages", [])
             for msg in reversed(msgs):
                 if getattr(msg, "author_name", None) and msg.author_name != "user":
                     tag = msg.author_name

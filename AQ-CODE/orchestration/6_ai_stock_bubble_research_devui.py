@@ -91,7 +91,7 @@ def format_research_report(results) -> str:
     # Process each agent's response
     for result in results:
         # Get the agent's messages
-        messages = getattr(result.agent_run_response, "messages", [])
+        messages = getattr(result.agent_response, "messages", [])
         
         # Find the final assistant message
         for msg in reversed(messages):
@@ -210,6 +210,8 @@ async def create_ai_stock_research_workflow():
     )
     
     # Create five specialized financial research agents with web search capability
+    agent_options = {"max_tokens": 600}
+
     market_analyst = agent_client.as_agent(
         instructions=(
             "You're a senior market analyst specializing in technology stock valuations and bubble detection. "
@@ -219,10 +221,12 @@ async def create_ai_stock_research_workflow():
             "Calculate metrics like: Price-to-Earnings ratios, Price-to-Sales ratios, market cap as % of GDP, "
             "revenue multiples, and growth rates. Identify overvaluation warning signs. "
             "Provide specific numbers, company names, and current market data from your web searches. "
-            "Be analytical and cite your sources with recent dates."
+            "Be analytical and cite your sources with recent dates. "
+            "Keep your analysis focused and concise."
         ),
         name="market_analyst",
         tools=bing_search_tool,
+        default_options=agent_options,
     )
 
     technical_analyst = agent_client.as_agent(
@@ -234,10 +238,12 @@ async def create_ai_stock_research_workflow():
             "retail euphoria, insider selling, excessive IPO activity, and FOMO buying patterns. "
             "Search for recent news about AI stock market sentiment, Reddit/Twitter discussions, "
             "and institutional investor positioning. Provide current market psychology insights. "
-            "Be data-driven and reference recent technical signals with dates."
+            "Be data-driven and reference recent technical signals with dates. "
+            "Keep your analysis focused and concise."
         ),
         name="technical_analyst",
         tools=bing_search_tool,
+        default_options=agent_options,
     )
 
     fundamental_analyst = agent_client.as_agent(
@@ -250,10 +256,12 @@ async def create_ai_stock_research_workflow():
             "Search for recent earnings reports, revenue projections, competitive threats, "
             "and business model sustainability. Compare AI company fundamentals to their stock prices. "
             "Look for red flags: unprofitable growth, unsustainable burn rates, or revenue-valuation gaps. "
-            "Provide specific financial metrics from recent quarters with sources."
+            "Provide specific financial metrics from recent quarters with sources. "
+            "Keep your analysis focused and concise."
         ),
         name="fundamental_analyst",
         tools=bing_search_tool,
+        default_options=agent_options,
     )
     
     economic_historian = agent_client.as_agent(
@@ -266,10 +274,12 @@ async def create_ai_stock_research_workflow():
             "Identify common bubble characteristics: irrational exuberance, 'new paradigm' narratives, "
             "extreme valuations, leverage buildup, and contagion risks. "
             "Draw parallels between past bubbles and current AI stock market. "
-            "Provide historical comparisons with specific years, events, and data points from your research."
+            "Provide historical comparisons with specific years, events, and data points from your research. "
+            "Keep your analysis focused and concise."
         ),
         name="economic_historian",
         tools=bing_search_tool,
+        default_options=agent_options,
     )
     
     risk_analyst = agent_client.as_agent(
@@ -284,10 +294,12 @@ async def create_ai_stock_research_workflow():
             "Are pension funds, mutual funds, and retail investors over-exposed? "
             "Look for liquidity risks, crowding, and contagion pathways. "
             "Provide risk metrics, concentration data, and potential scenario impacts from your research. "
-            "Quantify portfolio exposure and diversification risks."
+            "Quantify portfolio exposure and diversification risks. "
+            "Keep your analysis focused and concise."
         ),
         name="risk_analyst",
         tools=bing_search_tool,
+        default_options=agent_options,
     )
     
     # Build the research workflow with structured input handling

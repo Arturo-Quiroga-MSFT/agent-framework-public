@@ -101,6 +101,8 @@ async def create_interactive_agents():
     )
     
     # Create five specialized agents with enhanced instructions for interactive dialogue
+    agent_options = {"max_tokens": 600}
+
     researcher = chat_client.as_agent(
         instructions=(
             "You're an expert market and product researcher with deep knowledge of consumer behavior, "
@@ -119,9 +121,11 @@ async def create_interactive_agents():
             "- Market entry strategies\n"
             "- Risk assessment and opportunity identification\n\n"
             "Remember: You're having a conversation, not writing a one-shot report. Engage with the user, "
-            "ask follow-up questions, and help them explore their ideas deeply."
+            "ask follow-up questions, and help them explore their ideas deeply. "
+            "Keep your analysis focused and concise."
         ),
         name="Market_Researcher",
+        default_options=agent_options,
     )
 
     marketer = chat_client.as_agent(
@@ -143,9 +147,11 @@ async def create_interactive_agents():
             "- Campaign concepts and creative direction\n"
             "- Messaging frameworks and communication strategies\n\n"
             "Remember: Great marketing comes from understanding the audience and the product deeply. "
-            "Don't hesitate to ask questions that will help you provide better recommendations."
+            "Don't hesitate to ask questions that will help you provide better recommendations. "
+            "Keep your analysis focused and concise."
         ),
         name="Marketing_Strategist",
+        default_options=agent_options,
     )
 
     legal = chat_client.as_agent(
@@ -171,9 +177,11 @@ async def create_interactive_agents():
             "- Recommend consulting with licensed attorneys for specific legal matters\n"
             "- Be clear about areas where regulations are complex or jurisdiction-dependent\n\n"
             "Remember: Your goal is to raise awareness of legal considerations and help users "
-            "ask the right questions when they consult with their legal team."
+            "ask the right questions when they consult with their legal team. "
+            "Keep your analysis focused and concise."
         ),
         name="Legal_Compliance_Advisor",
+        default_options=agent_options,
     )
     
     finance = chat_client.as_agent(
@@ -196,9 +204,11 @@ async def create_interactive_agents():
             "- Funding requirements and capital structure\n"
             "- Key financial metrics and KPIs\n\n"
             "Remember: Good financial analysis requires understanding the business context. "
-            "Ask questions to gather the information you need for meaningful insights."
+            "Ask questions to gather the information you need for meaningful insights. "
+            "Keep your analysis focused and concise."
         ),
         name="Financial_Analyst",
+        default_options=agent_options,
     )
     
     technical = chat_client.as_agent(
@@ -221,9 +231,11 @@ async def create_interactive_agents():
             "- DevOps, CI/CD, and deployment strategies\n"
             "- Technical debt and maintenance considerations\n\n"
             "Remember: The best technical solution depends on context - team capabilities, "
-            "timeline, budget, and specific requirements. Ask questions to understand these factors."
+            "timeline, budget, and specific requirements. Ask questions to understand these factors. "
+            "Keep your analysis focused and concise."
         ),
         name="Technical_Architect",
+        default_options=agent_options,
     )
     
     # Return all agents as a list

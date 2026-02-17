@@ -136,15 +136,19 @@ async def create_sequential_agents():
     client = get_chat_client()
     
     # Create seven specialized AgTech agents in sequential order
+    agent_options = {"max_tokens": 600}
+
     # Agent 1: Agronomy foundation
     agronomy = client.as_agent(
         instructions=(
             "You're an agronomist and crop science expert. Analyze the agricultural and biological aspects. "
             "Focus on: crop selection, growing conditions, yield potential, soil requirements, "
             "plant genetics, pest/disease management, growing cycles, and agronomic feasibility. "
-            "Provide your analysis concisely (3-5 key points). Your insights will inform the engineering team."
+            "Provide your analysis concisely (3-5 key points). Your insights will inform the engineering team. "
+            "Keep your analysis focused and concise."
         ),
         name="agronomy",
+        default_options=agent_options,
     )
     
     # Agent 2: Engineering builds on agronomy
@@ -154,9 +158,11 @@ async def create_sequential_agents():
             "Building on the agronomy analysis above, focus on: technology implementation, automation systems, "
             "robotics, AI/ML applications, sensor networks, drones, precision irrigation, "
             "IoT infrastructure, and technical scalability. "
-            "Provide concise technical recommendations (3-5 key points). Your analysis informs food science."
+            "Provide concise technical recommendations (3-5 key points). Your analysis informs food science. "
+            "Keep your analysis focused and concise."
         ),
         name="engineering",
+        default_options=agent_options,
     )
     
     # Agent 3: Food science builds on agronomy + engineering
@@ -166,9 +172,11 @@ async def create_sequential_agents():
             "Considering the agronomy and engineering insights above, focus on: nutritional profile, "
             "taste and texture, shelf life, food safety requirements, quality control, "
             "processing needs, packaging, and consumer acceptance. "
-            "Provide key food science considerations (3-5 points). Your analysis guides sustainability review."
+            "Provide key food science considerations (3-5 points). Your analysis guides sustainability review. "
+            "Keep your analysis focused and concise."
         ),
         name="food_science",
+        default_options=agent_options,
     )
     
     # Agent 4: Sustainability builds on previous three
@@ -178,9 +186,11 @@ async def create_sequential_agents():
             "Building on the technical and product analyses above, evaluate: water usage, "
             "carbon footprint, energy consumption, biodiversity impact, waste streams, "
             "regenerative practices, climate resilience, and circular economy potential. "
-            "Provide sustainability assessment (3-5 key metrics/impacts). Your analysis informs economics."
+            "Provide sustainability assessment (3-5 key metrics/impacts). Your analysis informs economics. "
+            "Keep your analysis focused and concise."
         ),
         name="sustainability",
+        default_options=agent_options,
     )
     
     # Agent 5: Economics builds on all technical/environmental factors
@@ -190,9 +200,11 @@ async def create_sequential_agents():
             "Considering all technical, product, and environmental factors above, assess: "
             "production costs, pricing strategy, farm-level economics, adoption barriers, "
             "subsidy programs, market demand, competitive positioning, and ROI for farmers. "
-            "Provide economic analysis (3-5 key financial considerations). Your insights guide supply chain planning."
+            "Provide economic analysis (3-5 key financial considerations). Your insights guide supply chain planning. "
+            "Keep your analysis focused and concise."
         ),
         name="economics",
+        default_options=agent_options,
     )
     
     # Agent 6: Supply chain builds on complete technical + economic picture
@@ -202,9 +214,11 @@ async def create_sequential_agents():
             "Considering the complete product, sustainability, and economics analysis above, focus on: "
             "cold chain requirements, logistics, transportation, storage, retail partnerships, "
             "direct-to-consumer channels, shelf life constraints, and distribution scalability. "
-            "Provide supply chain strategy (3-5 key logistics considerations). Your analysis informs regulatory review."
+            "Provide supply chain strategy (3-5 key logistics considerations). Your analysis informs regulatory review. "
+            "Keep your analysis focused and concise."
         ),
         name="supply_chain",
+        default_options=agent_options,
     )
     
     # Agent 7: Regulations - final compliance layer
@@ -215,9 +229,11 @@ async def create_sequential_agents():
             "FDA food safety requirements, USDA regulations, organic certification needs, "
             "labeling requirements, international standards, environmental permits, "
             "and compliance roadmap. "
-            "Provide final regulatory guidance (3-5 critical compliance requirements for go-to-market)."
+            "Provide final regulatory guidance (3-5 critical compliance requirements for go-to-market). "
+            "Keep your analysis focused and concise."
         ),
         name="regulations",
+        default_options=agent_options,
     )
     
     # Return the agents in sequential order

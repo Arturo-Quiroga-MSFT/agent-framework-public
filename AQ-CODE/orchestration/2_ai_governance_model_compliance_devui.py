@@ -86,37 +86,56 @@ async def create_ai_governance_workflow():
         deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
     )
 
+    agent_options = {"max_tokens": 600}
+
     governance_planner = client.as_agent(
         instructions=(
             "You are an AI Governance Planner. Derive a structured evaluation checklist: Domains, Key Questions, Risk Categories. "
-            "Provide: Context Summary, Applicable Standards (ISO 42001, NIST AI RMF), Evaluation Checklist, Critical Risk Domains."
+            "Provide: Context Summary, Applicable Standards (ISO 42001, NIST AI RMF), Evaluation Checklist, Critical Risk Domains. "
+            "Keep your analysis focused and concise."
         ),
         name="governance_planner",
+        default_options=agent_options,
     )
     data_provenance = client.as_agent(
         instructions=(
-            "You review data provenance & quality. Provide: Data Sources & Lineage, Labeling & QA, Quality Metrics, Drift Risks, Mitigations."),
+            "You review data provenance & quality. Provide: Data Sources & Lineage, Labeling & QA, Quality Metrics, Drift Risks, Mitigations. "
+            "Keep your analysis focused and concise."
+        ),
         name="data_provenance",
+        default_options=agent_options,
     )
     fairness_bias = client.as_agent(
         instructions=(
-            "You audit fairness & bias. Provide: Sensitive Attributes Considered, Potential Disparities, Metrics Needed, Bias Mitigation Strategies."),
+            "You audit fairness & bias. Provide: Sensitive Attributes Considered, Potential Disparities, Metrics Needed, Bias Mitigation Strategies. "
+            "Keep your analysis focused and concise."
+        ),
         name="fairness_bias",
+        default_options=agent_options,
     )
     privacy_specialist = client.as_agent(
         instructions=(
-            "You analyze privacy & data minimization. Provide: Personal Data Types, Minimization Approach, Anonymization/Pseudonymization, Retention & Consent, Privacy Risks."),
+            "You analyze privacy & data minimization. Provide: Personal Data Types, Minimization Approach, Anonymization/Pseudonymization, Retention & Consent, Privacy Risks. "
+            "Keep your analysis focused and concise."
+        ),
         name="privacy_specialist",
+        default_options=agent_options,
     )
     security_engineer = client.as_agent(
         instructions=(
-            "You evaluate security & robustness. Provide: Threat Model Summary, Adversarial Risks, Supply Chain Concerns, Hardening & Monitoring Controls."),
+            "You evaluate security & robustness. Provide: Threat Model Summary, Adversarial Risks, Supply Chain Concerns, Hardening & Monitoring Controls. "
+            "Keep your analysis focused and concise."
+        ),
         name="security_engineer",
+        default_options=agent_options,
     )
     regulatory_analyst = client.as_agent(
         instructions=(
-            "You map to regulations. Provide: Jurisdictional Scope (EU AI Act Level, FDA/FINRA/etc.), Required Documentation, Conformance Gaps, Upcoming Regulatory Changes."),
+            "You map to regulations. Provide: Jurisdictional Scope (EU AI Act Level, FDA/FINRA/etc.), Required Documentation, Conformance Gaps, Upcoming Regulatory Changes. "
+            "Keep your analysis focused and concise."
+        ),
         name="regulatory_analyst",
+        default_options=agent_options,
     )
 
     agents = [
@@ -153,7 +172,7 @@ async def create_ai_governance_workflow():
 
         collected_text = {}
         for r in results:
-            msgs = getattr(r.agent_run_response, "messages", [])
+            msgs = getattr(r.agent_response, "messages", [])
             for msg in reversed(msgs):
                 if getattr(msg, "author_name", None) and msg.author_name != "user":
                     name = msg.author_name

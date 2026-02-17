@@ -85,7 +85,7 @@ def format_healthcare_results(results) -> str:
     # Process each agent's response
     for result in results:
         # Get the agent's messages
-        messages = getattr(result.agent_run_response, "messages", [])
+        messages = getattr(result.agent_response, "messages", [])
         
         # Find the final assistant message
         for msg in reversed(messages):
@@ -193,15 +193,19 @@ async def create_healthcare_workflow():
     )
     
     # Create five specialized healthcare agents
+    agent_options = {"max_tokens": 600}
+
     clinical_researcher = chat_client.as_agent(
         instructions=(
             "You're a clinical researcher and medical scientist specializing in evidence-based medicine. "
             "Analyze the clinical validity, scientific evidence, and medical efficacy of healthcare products. "
             "Consider: clinical trial requirements, evidence standards, efficacy metrics, patient outcomes, "
             "safety profiles, adverse events, contraindications, and peer-reviewed research needs. "
-            "Evaluate the strength of clinical evidence and identify gaps. Be rigorous but practical."
+            "Evaluate the strength of clinical evidence and identify gaps. Be rigorous but practical. "
+            "Keep your analysis focused and concise."
         ),
         name="clinical_researcher",
+        default_options=agent_options,
     )
 
     compliance_officer = chat_client.as_agent(
@@ -210,9 +214,11 @@ async def create_healthcare_workflow():
             "Analyze regulatory pathways, compliance requirements, and legal constraints for healthcare products. "
             "Consider: FDA classification (510k, PMA, De Novo), HIPAA privacy rules, medical device regulations, "
             "clinical trial requirements (IRB approval), state licensing, international standards (CE mark, ISO 13485), "
-            "advertising restrictions, and post-market surveillance. Provide clear compliance roadmaps."
+            "advertising restrictions, and post-market surveillance. Provide clear compliance roadmaps. "
+            "Keep your analysis focused and concise."
         ),
         name="compliance_officer",
+        default_options=agent_options,
     )
 
     economics_analyst = chat_client.as_agent(
@@ -221,9 +227,11 @@ async def create_healthcare_workflow():
             "reimbursement strategies, and healthcare business models. Consider: insurance coverage (Medicare, Medicaid, private), "
             "CPT/HCPCS codes, value-based care models, cost-effectiveness analysis (QALY), "
             "provider adoption barriers, patient out-of-pocket costs, pricing strategies, "
-            "payer negotiations, and revenue cycle management. Focus on sustainable healthcare economics."
+            "payer negotiations, and revenue cycle management. Focus on sustainable healthcare economics. "
+            "Keep your analysis focused and concise."
         ),
         name="economics_analyst",
+        default_options=agent_options,
     )
     
     patient_experience = chat_client.as_agent(
@@ -233,9 +241,11 @@ async def create_healthcare_workflow():
             "accessibility standards (ADA, WCAG), cultural competency, patient engagement, "
             "user interface for diverse populations (elderly, disabled, non-English speakers), "
             "informed consent processes, patient education materials, usability testing needs, "
-            "and patient safety protocols. Prioritize patient-centered design and health equity."
+            "and patient safety protocols. Prioritize patient-centered design and health equity. "
+            "Keep your analysis focused and concise."
         ),
         name="patient_experience",
+        default_options=agent_options,
     )
     
     data_security = chat_client.as_agent(
@@ -245,9 +255,11 @@ async def create_healthcare_workflow():
             "Consider: HIPAA Security Rule requirements, encryption standards (at rest and in transit), "
             "access controls, audit logging, breach notification procedures, Business Associate Agreements (BAA), "
             "cloud security (HITRUST, SOC 2), mobile device security, authentication mechanisms, "
-            "and cybersecurity threats to medical devices. Provide comprehensive security architecture guidance."
+            "and cybersecurity threats to medical devices. Provide comprehensive security architecture guidance. "
+            "Keep your analysis focused and concise."
         ),
         name="data_security",
+        default_options=agent_options,
     )
     
     # Build the healthcare workflow with structured input handling

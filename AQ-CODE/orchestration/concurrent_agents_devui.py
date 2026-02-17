@@ -171,46 +171,58 @@ async def create_concurrent_workflow():
     )
     
     # Create five specialized agents for comprehensive product analysis
+    agent_options = {"max_tokens": 600}
+
     researcher = chat_client.as_agent(
         instructions=(
             "You're an expert market and product researcher. Given a prompt, provide concise, factual insights,"
-            " opportunities, and risks. Keep your response focused and actionable."
+            " opportunities, and risks. Keep your response focused and actionable. "
+            "Keep your analysis focused and concise."
         ),
         name="researcher",
+        default_options=agent_options,
     )
 
     marketer = chat_client.as_agent(
         instructions=(
             "You're a creative marketing strategist. Craft compelling value propositions and target messaging"
-            " aligned to the prompt. Be creative but practical."
+            " aligned to the prompt. Be creative but practical. "
+            "Keep your analysis focused and concise."
         ),
         name="marketer",
+        default_options=agent_options,
     )
 
     legal = chat_client.as_agent(
         instructions=(
             "You're a cautious legal/compliance reviewer. Highlight constraints, disclaimers, and policy concerns"
-            " based on the prompt. Be thorough but concise."
+            " based on the prompt. Be thorough but concise. "
+            "Keep your analysis focused and concise."
         ),
         name="legal",
+        default_options=agent_options,
     )
     
     finance = chat_client.as_agent(
         instructions=(
             "You're a financial analyst and business strategist. Analyze financial viability, revenue models,"
             " cost structures, pricing strategies, and ROI projections. Provide actionable financial insights"
-            " and identify key financial risks and opportunities."
+            " and identify key financial risks and opportunities. "
+            "Keep your analysis focused and concise."
         ),
         name="finance",
+        default_options=agent_options,
     )
     
     technical = chat_client.as_agent(
         instructions=(
             "You're a technical architect and engineering lead. Evaluate technical feasibility, architecture requirements,"
             " technology stack recommendations, scalability considerations, and implementation challenges."
-            " Focus on practical, actionable technical guidance."
+            " Focus on practical, actionable technical guidance. "
+            "Keep your analysis focused and concise."
         ),
         name="technical",
+        default_options=agent_options,
     )
     
     # Build the concurrent workflow with structured input handling

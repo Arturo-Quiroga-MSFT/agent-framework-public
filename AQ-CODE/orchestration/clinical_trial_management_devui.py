@@ -101,7 +101,7 @@ def format_clinical_trial_results(results, start_time: datetime | None = None) -
     # Process each agent's response
     for result in results:
         # Get the agent's messages
-        messages = getattr(result.agent_run_response, "messages", [])
+        messages = getattr(result.agent_response, "messages", [])
         
         # Find the final assistant message
         for msg in reversed(messages):
@@ -234,6 +234,8 @@ async def create_clinical_trial_workflow():
     )
     
     # Create seven specialized clinical trial agents
+    agent_options = {"max_tokens": 600}
+
     clinical_research = chat_client.as_agent(
         instructions=(
             "You're a clinical research scientist and protocol designer with expertise in clinical trial methodology. "
@@ -242,9 +244,11 @@ async def create_clinical_trial_workflow():
             "sample size and statistical power, comparator selection, visit schedule, "
             "outcome measures (efficacy and safety), trial phases (I/II/III/IV), "
             "adaptive designs, biomarkers, and scientific rationale. "
-            "Provide rigorous but practical protocol recommendations."
+            "Provide rigorous but practical protocol recommendations. "
+            "Keep your analysis focused and concise."
         ),
         name="clinical_research",
+        default_options=agent_options,
     )
 
     site_operations = chat_client.as_agent(
@@ -255,9 +259,11 @@ async def create_clinical_trial_workflow():
             "retention plans, site initiation and monitoring, protocol deviations, "
             "source data verification, patient screening and enrollment timelines, "
             "geographic distribution, centralized vs local labs, home health visits, "
-            "and operational feasibility. Focus on enrollment success and site performance."
+            "and operational feasibility. Focus on enrollment success and site performance. "
+            "Keep your analysis focused and concise."
         ),
         name="site_operations",
+        default_options=agent_options,
     )
 
     regulatory_affairs = chat_client.as_agent(
@@ -268,9 +274,11 @@ async def create_clinical_trial_workflow():
             "informed consent forms, investigator brochure, protocol amendments, "
             "adverse event reporting (SAEs, SUSARs), DSMB requirements, "
             "21 CFR Part 11 compliance, ICH-GCP guidelines, pediatric plans (PREA), "
-            "orphan drug designations, and post-market commitments. Provide clear regulatory roadmaps."
+            "orphan drug designations, and post-market commitments. Provide clear regulatory roadmaps. "
+            "Keep your analysis focused and concise."
         ),
         name="regulatory_affairs",
+        default_options=agent_options,
     )
     
     drug_development = chat_client.as_agent(
@@ -281,9 +289,11 @@ async def create_clinical_trial_workflow():
             "drug-drug interactions, formulation and stability, route of administration, "
             "therapeutic index, mechanism of action, preclinical data translation, "
             "bioavailability, half-life, metabolism, combination therapy considerations, "
-            "and CMC (chemistry, manufacturing, controls). Focus on safety and efficacy optimization."
+            "and CMC (chemistry, manufacturing, controls). Focus on safety and efficacy optimization. "
+            "Keep your analysis focused and concise."
         ),
         name="drug_development",
+        default_options=agent_options,
     )
     
     clinical_finance = chat_client.as_agent(
@@ -295,9 +305,11 @@ async def create_clinical_trial_workflow():
             "lab and imaging costs, insurance and indemnification, "
             "budget contingencies, milestone payments, risk-sharing arrangements, "
             "cost per completed patient, burn rate, and fundraising needs. "
-            "Provide realistic budget estimates and cost optimization strategies."
+            "Provide realistic budget estimates and cost optimization strategies. "
+            "Keep your analysis focused and concise."
         ),
         name="clinical_finance",
+        default_options=agent_options,
     )
     
     biostatistics = chat_client.as_agent(
@@ -309,9 +321,11 @@ async def create_clinical_trial_workflow():
             "multiple comparisons adjustments, missing data handling, ITT vs PP populations, "
             "subgroup analyses, sensitivity analyses, Bayesian vs frequentist approaches, "
             "EDC system requirements, data quality and monitoring, "
-            "and publication-ready analysis. Focus on statistical rigor and data integrity."
+            "and publication-ready analysis. Focus on statistical rigor and data integrity. "
+            "Keep your analysis focused and concise."
         ),
         name="biostatistics",
+        default_options=agent_options,
     )
     
     patient_advocacy = chat_client.as_agent(
@@ -323,9 +337,11 @@ async def create_clinical_trial_workflow():
             "patient-reported outcomes (PROs), quality of life assessments, "
             "patient advisory boards, community engagement, patient compensation adequacy, "
             "accessibility accommodations, language translation, health literacy, "
-            "and retention strategies. Prioritize patient welfare and meaningful engagement."
+            "and retention strategies. Prioritize patient welfare and meaningful engagement. "
+            "Keep your analysis focused and concise."
         ),
         name="patient_advocacy",
+        default_options=agent_options,
     )
     
         # Build the clinical trial workflow with structured input handling

@@ -132,54 +132,70 @@ async def create_ml_production_workflow():
     }
 
     # Create base agents
+    agent_options = {"max_tokens": 600}
+
     problem_framing = client.as_agent(
         instructions=(
             "You are the Problem Framing Reviewer. Provide: Business Objectives, KPIs/Target Metrics, Success Criteria,\n"
-            "Scope/Out-of-Scope, Assumptions, Open Clarifications. Return bullet lists where possible."
+            "Scope/Out-of-Scope, Assumptions, Open Clarifications. Return bullet lists where possible. "
+            "Keep your analysis focused and concise."
         ),
         name="problem_framing",
+        default_options=agent_options,
     )
     data_readiness = client.as_agent(
         instructions=(
             "You are the Data Readiness Assessor. Provide: Data Sources & Ownership, Volume/Freshness, Quality Issues,\n"
-            "Labeling & Ground Truth, Bias / Coverage Gaps, Drift Risks, Mitigation Actions."
+            "Labeling & Ground Truth, Bias / Coverage Gaps, Drift Risks, Mitigation Actions. "
+            "Keep your analysis focused and concise."
         ),
         name="data_readiness",
+        default_options=agent_options,
     )
     feature_engineering = client.as_agent(
         instructions=(
             "You are the Feature Engineering Auditor. Provide: Key Feature Groups, Transformations, Potential Leakage,\n"
-            "Missingness Handling, Feature Importance Expectations, Risks & Mitigations."
+            "Missingness Handling, Feature Importance Expectations, Risks & Mitigations. "
+            "Keep your analysis focused and concise."
         ),
         name="feature_engineering",
+        default_options=agent_options,
     )
     model_performance = client.as_agent(
         instructions=(
             "You are the Model Performance Reviewer. Provide: Candidate Algorithms/Architectures, Evaluation Metrics vs KPIs,\n"
-            "Validation Strategy, Generalization / Overfitting Risks, Error Analysis Priorities, Improvement Levers."
+            "Validation Strategy, Generalization / Overfitting Risks, Error Analysis Priorities, Improvement Levers. "
+            "Keep your analysis focused and concise."
         ),
         name="model_performance",
+        default_options=agent_options,
     )
     responsible_ai = client.as_agent(
         instructions=(
             "You are the Responsible AI & Fairness Gate. Provide: Sensitive Attributes (if any), Potential Harm Scenarios,\n"
-            "Fairness Metrics Needed, Bias Detection Plan, Mitigation Strategies, Governance / Review Requirements."
+            "Fairness Metrics Needed, Bias Detection Plan, Mitigation Strategies, Governance / Review Requirements. "
+            "Keep your analysis focused and concise."
         ),
         name="responsible_ai",
+        default_options=agent_options,
     )
     security_robustness = client.as_agent(
         instructions=(
             "You are the Security & Robustness Analyst. Provide: Threat Model (adversarial evasion/poisoning), Supply Chain Risks,\n"
-            "Model/Artifact Integrity Controls, Credential/Secret Safeguards, Runtime Abuse Scenarios, Hardening Actions."
+            "Model/Artifact Integrity Controls, Credential/Secret Safeguards, Runtime Abuse Scenarios, Hardening Actions. "
+            "Keep your analysis focused and concise."
         ),
         name="security_robustness",
+        default_options=agent_options,
     )
     deployment_monitoring = client.as_agent(
         instructions=(
             "You are the Deployment & Monitoring Planner. Provide: Rollout Strategy (staging/canary/gradual), Monitoring Metrics (latency, drift, quality),\n"
-            "Alert Thresholds, Retraining Triggers, On-call / Ownership, Post-launch Success Review Plan."
+            "Alert Thresholds, Retraining Triggers, On-call / Ownership, Post-launch Success Review Plan. "
+            "Keep your analysis focused and concise."
         ),
         name="deployment_monitoring",
+        default_options=agent_options,
     )
 
     ordered_agents = [

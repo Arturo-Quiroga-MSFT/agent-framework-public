@@ -87,7 +87,7 @@ def format_smart_city_results(results) -> str:
     # Process each agent's response
     for result in results:
         # Get the agent's messages
-        messages = getattr(result.agent_run_response, "messages", [])
+        messages = getattr(result.agent_response, "messages", [])
         
         # Find the final assistant message
         for msg in reversed(messages):
@@ -200,6 +200,8 @@ async def create_smart_city_workflow():
     )
     
     # Create seven specialized smart city agents
+    agent_options = {"max_tokens": 600}
+
     urban_planning = chat_client.as_agent(
         instructions=(
             "You're an urban planner and city development expert specializing in land use and community impact. "
@@ -208,9 +210,11 @@ async def create_smart_city_workflow():
             "zoning compliance, building codes, density analysis, open space requirements, "
             "neighborhood character, gentrification concerns, historic preservation, "
             "urban design principles, walkability, and quality of life impacts. "
-            "Focus on livable, equitable, and sustainable urban development."
+            "Focus on livable, equitable, and sustainable urban development. "
+            "Keep your analysis focused and concise."
         ),
         name="urban_planning",
+        default_options=agent_options,
     )
 
     iot_technology = chat_client.as_agent(
@@ -222,9 +226,11 @@ async def create_smart_city_workflow():
             "data integration platforms, interoperability standards (FIWARE, CityIQ), "
             "real-time analytics, digital twin implementations, API management, "
             "scalability, redundancy, and technology lifecycle. "
-            "Provide practical technology recommendations and architecture guidance."
+            "Provide practical technology recommendations and architecture guidance. "
+            "Keep your analysis focused and concise."
         ),
         name="iot_technology",
+        default_options=agent_options,
     )
 
     sustainability = chat_client.as_agent(
@@ -236,9 +242,11 @@ async def create_smart_city_workflow():
             "circular economy principles, waste reduction, water conservation, "
             "climate adaptation and resilience, heat island mitigation, green infrastructure, "
             "biodiversity, and long-term environmental sustainability. "
-            "Focus on net-zero pathways and climate-positive outcomes."
+            "Focus on net-zero pathways and climate-positive outcomes. "
+            "Keep your analysis focused and concise."
         ),
         name="sustainability",
+        default_options=agent_options,
     )
     
     transportation = chat_client.as_agent(
@@ -250,9 +258,11 @@ async def create_smart_city_workflow():
             "bike lanes and pedestrian infrastructure, micromobility (e-scooters, bike shares), "
             "EV charging infrastructure, autonomous vehicle readiness, mobility-as-a-service (MaaS), "
             "parking management, and multimodal connectivity. "
-            "Prioritize safety, accessibility, and reduced car dependency."
+            "Prioritize safety, accessibility, and reduced car dependency. "
+            "Keep your analysis focused and concise."
         ),
         name="transportation",
+        default_options=agent_options,
     )
     
     municipal_finance = chat_client.as_agent(
@@ -264,9 +274,11 @@ async def create_smart_city_workflow():
             "user fees and tariffs, cost-benefit analysis, ROI calculations, "
             "operating vs capital budgets, lifecycle cost analysis, "
             "risk allocation, procurement strategies, and long-term financial sustainability. "
-            "Provide realistic budget estimates and funding strategies."
+            "Provide realistic budget estimates and funding strategies. "
+            "Keep your analysis focused and concise."
         ),
         name="municipal_finance",
+        default_options=agent_options,
     )
     
     community_engagement = chat_client.as_agent(
@@ -278,9 +290,11 @@ async def create_smart_city_workflow():
             "accessibility for disabilities (ADA compliance), multilingual outreach, "
             "displacement and gentrification mitigation, benefits distribution, "
             "workforce development, local hiring, and meaningful community co-design. "
-            "Prioritize inclusive processes and equitable outcomes for all residents."
+            "Prioritize inclusive processes and equitable outcomes for all residents. "
+            "Keep your analysis focused and concise."
         ),
         name="community_engagement",
+        default_options=agent_options,
     )
     
     privacy_security = chat_client.as_agent(
@@ -292,9 +306,11 @@ async def create_smart_city_workflow():
             "cybersecurity for critical infrastructure, OT/IT convergence security, "
             "IoT device security, encryption (data at rest and in transit), "
             "access controls, incident response, GDPR/CCPA compliance, and public trust. "
-            "Balance innovation with privacy rights and security best practices."
+            "Balance innovation with privacy rights and security best practices. "
+            "Keep your analysis focused and concise."
         ),
         name="privacy_security",
+        default_options=agent_options,
     )
     
     # Build the smart city workflow with structured input handling
@@ -337,7 +353,7 @@ async def create_smart_city_workflow():
     aggregator = SmartCityAggregator(id="smart_city_aggregator")
     
     # Use WorkflowBuilder to create the complete workflow
-    builder = WorkflowBuilder(start_executor=dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher, name="workflow_smart_city")
     
     # Add all smart city agent participants
     agents = [
