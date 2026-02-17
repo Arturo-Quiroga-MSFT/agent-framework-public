@@ -37,7 +37,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, Role, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
+from agent_framework import Message, Executor, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import configure_otel_providers
 from agent_framework._workflows import WorkflowBuilder
@@ -264,7 +264,7 @@ async def create_healthcare_workflow():
                 ctx: WorkflowContext for dispatching to agents
             """
             request = AgentExecutorRequest(
-                messages=[ChatMessage(Role.USER, text=input_data.description)],
+                messages=[Message("user", text=input_data.description)],
                 should_respond=True
             )
             await ctx.send_message(request)

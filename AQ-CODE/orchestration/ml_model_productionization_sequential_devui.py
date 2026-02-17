@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any, List
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role
+from agent_framework import Message, Executor, WorkflowBuilder, WorkflowContext, handler
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
@@ -200,7 +200,7 @@ async def create_ml_production_workflow():
             self.label = label
 
         @handler
-        async def run_gate(self, conversation: list[ChatMessage], ctx: WorkflowContext[List[ChatMessage]]):
+        async def run_gate(self, conversation: list[Message], ctx: WorkflowContext[List[Message]]):
             # Insert a lightweight meta message so DevUI shows intent of this gate
             meta_key = self.agent.name
             meta = GATE_METADATA.get(meta_key, {})
@@ -208,7 +208,7 @@ async def create_ml_production_workflow():
                 f"[GATE INFO] {meta.get('title', self.label)} | Focus: {meta.get('focus','n/a')} | "
                 f"Expected: {meta.get('expects','n/a')} | Prior messages: {len(conversation)}"
             )
-            meta_msg = ChatMessage(Role.ASSISTANT, text=meta_msg_text, author_name=f"{meta_key}_meta")
+            meta_msg = Message("assistant", text=meta_msg_text, author_name=f"{meta_key}_meta")
             # Emit the meta message first so it's visible immediately in DevUI
             interim = list(conversation) + [meta_msg]
             await ctx.send_message(interim)
@@ -222,15 +222,15 @@ async def create_ml_production_workflow():
 
     class MLDispatcher(Executor):
         @handler
-        async def dispatch(self, input_data: MLProductionInput, ctx: WorkflowContext[List[ChatMessage]]):
+        async def dispatch(self, input_data: MLProductionInput, ctx: WorkflowContext[List[Message]]):
             global START_TIME
             START_TIME = datetime.now()
-            initial = [ChatMessage(Role.USER, text=input_data.description)]
+            initial = [Message("user", text=input_data.description)]
             await ctx.send_message(initial)
 
     class FinalFormatter(Executor):
         @handler
-        async def format_output(self, conversation: List[ChatMessage], ctx: WorkflowContext[str]):
+        async def format_output(self, conversation: List[Message], ctx: WorkflowContext[str]):
             # Build formatted report + markdown + elapsed timing
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             elapsed_str = "N/A"
@@ -270,7 +270,7 @@ async def create_ml_production_workflow():
 
             # Collect gate-specific sections
             for m in conversation:
-                author = m.author_name if m.author_name else ("user" if m.role == Role.USER else "assistant")
+                author = m.author_name if m.author_name else ("user" if m.role == "user" else "assistant")
                 if author == "user":
                     lines.append("─"*90)
                     lines.append("👤 USER INPUT")

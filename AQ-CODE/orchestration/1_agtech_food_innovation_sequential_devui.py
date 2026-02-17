@@ -46,13 +46,10 @@ from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
     AgentExecutorResponse,
-    ChatMessage,
     Executor,
-    Role,
-    SequentialBuilder,
+    Message,
     WorkflowBuilder,
     WorkflowContext,
-    WorkflowOutputEvent,
     handler,
 )
 from agent_framework.azure import AzureOpenAIChatClient
@@ -235,11 +232,11 @@ async def create_sequential_agents():
     ]
 
 
-def format_sequential_results(conversation: list[ChatMessage]) -> str:
+def format_sequential_results(conversation: list[Message]) -> str:
     """Format sequential conversation into readable output with file save.
     
     Args:
-        conversation: Complete list of ChatMessage objects from sequential workflow
+        conversation: Complete list of Message objects from sequential workflow
         
     Returns:
         Formatted string with all sequential agent responses
@@ -280,7 +277,7 @@ def format_sequential_results(conversation: list[ChatMessage]) -> str:
     }
     
     for i, msg in enumerate(conversation, start=1):
-        name = msg.author_name or ("user" if msg.role == Role.USER else "assistant")
+        name = msg.author_name or ("user" if msg.role == "user" else "assistant")
         emoji = agent_emoji.get(name, "🔹")
         display_name = agent_names.get(name, name.upper())
         
@@ -342,7 +339,7 @@ async def create_agtech_workflow():
             """
             # Create AgentExecutorRequest for the first agent
             request = AgentExecutorRequest(
-                messages=[ChatMessage(Role.USER, text=input_data.description)],
+                messages=[Message("user", text=input_data.description)],
                 should_respond=True
             )
             await ctx.send_message(request)

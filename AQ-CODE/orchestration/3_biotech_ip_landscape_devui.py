@@ -45,7 +45,7 @@ from typing import Any, Dict
 START_TIME: datetime | None = None
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
+from agent_framework import Message, Executor, WorkflowBuilder, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
@@ -150,7 +150,7 @@ async def create_biotech_ip_workflow():
             global START_TIME
             START_TIME = datetime.now()
             request = AgentExecutorRequest(
-                messages=[ChatMessage(Role.USER, text=input_data.description)],
+                messages=[Message("user", text=input_data.description)],
                 should_respond=True,
             )
             await ctx.send_message(request)

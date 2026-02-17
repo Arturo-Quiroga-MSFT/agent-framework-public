@@ -53,6 +53,19 @@ else:
     load_dotenv()
 
 # ============================================================================
+# WORKAROUND for azure-ai-projects gzip encoding bug
+# GitHub Issue: https://github.com/microsoft/agent-framework/issues/2457
+# Patches the Azure SDK to disable compressed responses which cause
+# UnicodeDecodeError when the SDK tries to decode gzip bytes as UTF-8
+# ============================================================================
+import azure.core.pipeline.policies as _policies
+_original_on_request = _policies.HeadersPolicy.on_request
+def _patched_on_request(self, request):
+    _original_on_request(self, request)
+    request.http_request.headers['Accept-Encoding'] = 'identity'
+_policies.HeadersPolicy.on_request = _patched_on_request
+
+# ============================================================================
 # TELEMETRY SETUP - Send metrics to Application Insights
 # ============================================================================
 TELEMETRY_ENABLED = False
@@ -152,7 +165,7 @@ try:
     from azure.ai.projects.aio import AIProjectClient as AsyncProjectClient  # for exercise
     from azure.identity import DefaultAzureCredential as SyncCredential      # for discovery
     from azure.identity.aio import DefaultAzureCredential as AsyncCredential # for exercise
-    from agent_framework import ChatAgent
+    from agent_framework import Agent
     from agent_framework.azure import AzureAIClient
 except ImportError as e:
     print(f"❌ Missing required package: {e}")
@@ -383,7 +396,7 @@ async def exercise_single_prompt(
             use_latest_version=True,
         )
 
-        agent = ChatAgent(chat_client=chat_client)
+        agent = Agent(client=chat_client)
 
         # Run the agent
         result = await agent.run(prompt if prompt else "Hello")

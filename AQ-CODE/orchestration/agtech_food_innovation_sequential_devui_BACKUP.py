@@ -43,9 +43,8 @@ from dotenv import load_dotenv
 from typing_extensions import Never
 
 from agent_framework import (
-    ChatMessage,
+    Message,
     Executor,
-    Role,
     SequentialBuilder,
     WorkflowBuilder,
     WorkflowContext,
@@ -232,11 +231,11 @@ async def create_sequential_agents():
     ]
 
 
-def format_sequential_results(conversation: list[ChatMessage]) -> str:
+def format_sequential_results(conversation: list[Message]) -> str:
     """Format sequential conversation into readable output with file save.
     
     Args:
-        conversation: Complete list of ChatMessage objects from sequential workflow
+        conversation: Complete list of Message objects from sequential workflow
         
     Returns:
         Formatted string with all sequential agent responses
@@ -277,7 +276,7 @@ def format_sequential_results(conversation: list[ChatMessage]) -> str:
     }
     
     for i, msg in enumerate(conversation, start=1):
-        name = msg.author_name or ("user" if msg.role == Role.USER else "assistant")
+        name = msg.author_name or ("user" if msg.role == "user" else "assistant")
         emoji = agent_emoji.get(name, "🔹")
         display_name = agent_names.get(name, name.upper())
         
@@ -326,7 +325,7 @@ class SequentialWorkflowExecutor(Executor):
         self._workflow = SequentialBuilder().participants(agents).build()
     
     @handler
-    async def run_sequential(self, input_text: str, ctx: WorkflowContext[Never, list[ChatMessage]]) -> None:
+    async def run_sequential(self, input_text: str, ctx: WorkflowContext[Never, list[Message]]) -> None:
         """Run the sequential workflow and capture the final conversation.
         
         Args:
@@ -334,12 +333,12 @@ class SequentialWorkflowExecutor(Executor):
             ctx: WorkflowContext for sending the result
         """
         # Run the sequential workflow and collect outputs
-        outputs: list[list[ChatMessage]] = []
+        outputs: list[list[Message]] = []
         async for event in self._workflow.run_stream(input_text):
             if isinstance(event, WorkflowOutputEvent):
                 outputs.append(event.data)
         
-        # Send the final conversation (list of ChatMessages) to the next executor
+        # Send the final conversation (list of Messages) to the next executor
         if outputs:
             await ctx.send_message(outputs[-1])
 
@@ -363,11 +362,11 @@ class SequentialOutputFormatter(Executor):
     """Executor that formats the complete sequential conversation for display."""
     
     @handler
-    async def format_output(self, conversation: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage], str]) -> None:
+    async def format_output(self, conversation: list[Message], ctx: WorkflowContext[list[Message], str]) -> None:
         """Format the complete sequential conversation and yield it.
         
         Args:
-            conversation: Complete list of ChatMessage objects from the sequential workflow
+            conversation: Complete list of Message objects from the sequential workflow
             ctx: WorkflowContext for yielding formatted output
         """
         formatted_output = format_sequential_results(conversation)

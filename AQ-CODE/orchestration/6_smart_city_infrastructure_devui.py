@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from agent_framework import ChatMessage, Executor, WorkflowBuilder, WorkflowContext, handler, Role, AgentExecutorRequest, AgentExecutorResponse
+from agent_framework import Message, Executor, WorkflowBuilder, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework.observability import configure_otel_providers
 from azure.identity import AzureCliCredential
@@ -311,7 +311,7 @@ async def create_smart_city_workflow():
                 ctx: WorkflowContext for dispatching to agents
             """
             request = AgentExecutorRequest(
-                messages=[ChatMessage(Role.USER, text=input_data.description)],
+                messages=[Message("user", text=input_data.description)],
                 should_respond=True
             )
             await ctx.send_message(request)

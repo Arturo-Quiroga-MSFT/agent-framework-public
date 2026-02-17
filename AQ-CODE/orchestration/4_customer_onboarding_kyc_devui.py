@@ -58,12 +58,10 @@ from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
     AgentExecutorResponse,
-    ChatMessage,
+    Message,
     Executor,
-    Role,
     WorkflowBuilder,
     WorkflowContext,
-    WorkflowOutputEvent,
     handler,
 )
 from agent_framework.azure import AzureOpenAIChatClient
@@ -153,7 +151,7 @@ Please analyze this customer onboarding request from your specialized perspectiv
 """
         
         request = AgentExecutorRequest(
-            messages=[ChatMessage(role=Role.USER, content=prompt)],
+            messages=[Message(role="user", content=prompt)],
             should_respond=True
         )
         await ctx.send_message(request)
