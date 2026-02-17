@@ -5,8 +5,16 @@ import asyncio
 import json
 import uuid
 from typing import AsyncIterator, Optional
+from pathlib import Path
 
-from agent_framework import ChatAgent, ai_function
+from dotenv import load_dotenv
+
+# Load .env from parent AQ-CODE directory
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
+from agent_framework import Agent, tool
 from agent_framework.azure import AzureOpenAIResponsesClient
 from azure.identity import DefaultAzureCredential
 from rich.console import Console
@@ -19,14 +27,15 @@ from models import Plan, Step, StepStatus, JsonPatchOperation
 class PlanningAgent:
     """Agent that creates and manages task plans with streaming updates."""
     
-    def __init__(self, chat_client):
+    def __init__(self, client):
         """Initialize the planning agent."""
-        self.chat_client = chat_client
+        self.client = client
         self.current_plan: Optional[Plan] = None
         self.console = Console()
         
         # Create the agent with planning tools
-        self.agent = ChatAgent(
+        self.agent = Agent(
+            client=self.client,
             name="PlanningAgent",
             instructions="""You are an expert project planner and task breakdown specialist.
 
@@ -43,11 +52,10 @@ Guidelines:
 - Think about edge cases and error handling
 
 After creating the plan, provide a brief summary explaining the approach.""",
-            chat_client=self.chat_client,
             tools=[self.create_plan_tool, self.update_step_status_tool]
         )
     
-    @ai_function
+    @tool
     async def create_plan_tool(
         self,
         title: str,
@@ -86,7 +94,7 @@ After creating the plan, provide a brief summary explaining the approach.""",
         
         return f"Plan '{title}' created with {len(step_objects)} steps (ID: {plan_id})"
     
-    @ai_function
+    @tool
     async def update_step_status_tool(
         self,
         step_number: int,
@@ -232,8 +240,7 @@ async def main():
         credential=DefaultAzureCredential()
     )
     
-    chat_client = client.create_chat_client()
-    agent = PlanningAgent(chat_client)
+    agent = PlanningAgent(client)
     
     # Example tasks
     console = Console()

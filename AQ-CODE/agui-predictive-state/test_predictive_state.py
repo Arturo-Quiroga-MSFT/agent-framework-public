@@ -121,7 +121,7 @@ async def test_state_streaming():
         # Track different update types
         for op in update.operations:
             path = op["path"]
-            if "completed_at" in path and op["value"]:
+            if "/tasks/" in path and "completed_at" in path and op["value"]:
                 task_completions += 1
             elif "progress" in path:
                 progress_updates += 1

@@ -490,7 +490,7 @@ if __name__ == "__main__":
     print("🚀 AG-UI Server - Microsoft Agent Framework")
     print("=" * 80)
     print(f"📍 Server: http://{SERVER_HOST}:{SERVER_PORT}")
-    print(f"🤖 Model: {AZURE_OPENAI_DEPLOYMENT_NAME}")
+    print(f"🤖 Model: {AZURE_AI_MODEL_DEPLOYMENT_NAME or AZURE_OPENAI_DEPLOYMENT_NAME}")
     print(f"📚 Docs: http://{SERVER_HOST}:{SERVER_PORT}/docs")
     print("=" * 80)
     

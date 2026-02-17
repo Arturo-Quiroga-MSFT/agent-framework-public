@@ -7,9 +7,17 @@ while keeping credentials and business logic secure.
 import asyncio
 import os
 from typing import Optional
+from pathlib import Path
 from pydantic import BaseModel, Field
 
-from agent_framework import ChatAgent, ai_function
+from dotenv import load_dotenv
+
+# Load .env from parent AQ-CODE directory
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
+from agent_framework import Agent, tool
 from agent_framework.azure import AzureOpenAIResponsesClient
 from azure.identity import DefaultAzureCredential
 from rich.console import Console
@@ -59,9 +67,9 @@ class DatabaseQueryResponse(BaseModel):
 class BackendToolsAgent:
     """Agent with backend tools that execute securely on the server."""
     
-    def __init__(self, chat_client):
+    def __init__(self, client):
         """Initialize the agent with backend tools."""
-        self.chat_client = chat_client
+        self.client = client
         self.console = Console()
         
         # Simulated API keys (in production, these would be in environment/vault)
@@ -69,7 +77,8 @@ class BackendToolsAgent:
         self._db_connection_string = "Server=db.example.com;Database=prod;User=admin;Password=secret"
         
         # Create agent with backend tools
-        self.agent = ChatAgent(
+        self.agent = Agent(
+            client=self.client,
             name="BackendToolsAgent",
             instructions="""You are a helpful assistant with access to backend systems.
 
@@ -84,11 +93,10 @@ When users ask questions:
 - Explain the results in a user-friendly way
 
 Remember: All tools execute securely on the server with proper authentication.""",
-            chat_client=self.chat_client,
             tools=[self.get_weather, self.query_database, self.send_notification]
         )
     
-    @ai_function
+    @tool
     async def get_weather(
         self,
         city: str,
@@ -137,7 +145,7 @@ Remember: All tools execute securely on the server with proper authentication.""
         self.console.print(f"[green]✓[/green] Weather data retrieved for {city}")
         return response
     
-    @ai_function
+    @tool
     async def query_database(
         self,
         query_type: str,
@@ -192,7 +200,7 @@ Remember: All tools execute securely on the server with proper authentication.""
         self.console.print(f"[green]✓[/green] Database query completed: {len(results)} records")
         return response
     
-    @ai_function
+    @tool
     async def send_notification(
         self,
         recipient: str,
@@ -259,8 +267,7 @@ async def demo_backend_tools():
         credential=DefaultAzureCredential()
     )
     
-    chat_client = client.create_chat_client()
-    agent = BackendToolsAgent(chat_client)
+    agent = BackendToolsAgent(client)
     
     # Example queries
     queries = [
