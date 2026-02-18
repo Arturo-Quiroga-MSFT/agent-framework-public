@@ -3,24 +3,23 @@
 
 import logging
 import os
-from collections.abc import AsyncIterable, Awaitable, Callable
 from typing import Annotated
 
 from agent_framework import (
-    ChatAgent,
+    Agent,
     ChatContext,
-    ChatMessage,
     ChatResponse,
-    ChatResponseUpdate,
     FunctionInvocationContext,
-    Role,
-    TextContent,
-    ai_function,
+    Message,
+    MiddlewareTermination,
     chat_middleware,
     function_middleware,
+    tool,
 )
 from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework_devui import register_cleanup
+from azure.identity import AzureCliCredential
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +35,14 @@ def cleanup_resources():
 @chat_middleware
 async def security_filter_middleware(
     context: ChatContext,
-    next: Callable[[ChatContext], Awaitable[None]],
+    call_next,
 ) -> None:
     """Chat middleware that blocks requests containing sensitive information."""
     blocked_terms = ["password", "secret", "api_key", "token"]
 
     # Check only the last message (most recent user input)
     last_message = context.messages[-1] if context.messages else None
-    if last_message and last_message.role == Role.USER and last_message.text:
+    if last_message and last_message.role == "user" and last_message.text:
         message_lower = last_message.text.lower()
         for term in blocked_terms:
             if term in message_lower:
@@ -53,27 +52,27 @@ async def security_filter_middleware(
                     "or other sensitive data."
                 )
 
-                if context.is_streaming:
-                    # Streaming mode: return async generator
-                    async def blocked_stream() -> AsyncIterable[ChatResponseUpdate]:
-                        yield ChatResponseUpdate(
-                            contents=[TextContent(text=error_message)],
-                            role=Role.ASSISTANT,
-                        )
-
-                    context.result = blocked_stream()
+                if context.stream:
+                    # Streaming mode: raise MiddlewareTermination
+                    raise MiddlewareTermination(result=ChatResponse(
+                        messages=[
+                            Message(
+                                role="assistant",
+                                text=error_message,
+                            )
+                        ]
+                    ))
                 else:
                     # Non-streaming mode: return complete response
                     context.result = ChatResponse(
                         messages=[
-                            ChatMessage(
-                                role=Role.ASSISTANT,
+                            Message(
+                                role="assistant",
                                 text=error_message,
                             )
                         ]
                     )
 
-                context.terminate = True
                 return
 
     await next(context)
@@ -82,7 +81,7 @@ async def security_filter_middleware(
 @function_middleware
 async def atlantis_location_filter_middleware(
     context: FunctionInvocationContext,
-    next: Callable[[FunctionInvocationContext], Awaitable[None]],
+    call_next,
 ) -> None:
     """Function middleware that blocks weather requests for Atlantis."""
     # Check if location parameter is "atlantis"
@@ -95,7 +94,7 @@ async def atlantis_location_filter_middleware(
         context.terminate = True
         return
 
-    await next(context)
+    await call_next()
 
 
 def get_weather(
@@ -123,7 +122,7 @@ def get_forecast(
     return f"Weather forecast for {location}:\n" + "\n".join(forecast)
 
 
-@ai_function(approval_mode="always_require")
+@tool(approval_mode="always_require")
 def send_email(
     recipient: Annotated[str, "The email address of the recipient."],
     subject: Annotated[str, "The subject of the email."],
@@ -133,8 +132,11 @@ def send_email(
     return f"Email sent to {recipient} with subject '{subject}'."
 
 
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), "../../../../../AQ-CODE/.env"))
+
 # Agent instance following Agent Framework conventions
-agent = ChatAgent(
+agent = Agent(
     name="AzureWeatherAgent",
     description="A helpful agent that provides weather information and forecasts",
     instructions="""
@@ -142,8 +144,10 @@ agent = ChatAgent(
     and forecasts for any location. Always be helpful and provide detailed
     weather information when asked.
     """,
-    chat_client=AzureOpenAIChatClient(
-        api_key=os.environ.get("AZURE_OPENAI_API_KEY", ""),
+    client=AzureOpenAIChatClient(
+        endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT", ""),
+        deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4.1"),
+        credential=AzureCliCredential(),
     ),
     tools=[get_weather, get_forecast, send_email],
     middleware=[security_filter_middleware, atlantis_location_filter_middleware],

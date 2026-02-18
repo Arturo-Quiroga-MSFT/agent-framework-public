@@ -264,7 +264,8 @@ class AgentFrameworkExecutor:
                 elif entity_info.type == "workflow":
                     async for event in self._execute_workflow(entity_obj, request, trace_collector):
                         # Log request_info event (type='request_info') for debugging HIL flow
-                        if event.type == "request_info":
+                        event_type = event.get("type") if isinstance(event, dict) else getattr(event, "type", None)
+                        if event_type == "request_info":
                             logger.info(
                                 "🔔 [EXECUTOR] request_info event (type='request_info') detected from workflow!"
                             )

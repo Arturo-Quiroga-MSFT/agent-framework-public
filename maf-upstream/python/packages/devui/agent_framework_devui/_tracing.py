@@ -162,7 +162,13 @@ def capture_traces(response_id: str | None = None, entity_id: str | None = None)
 
     except ImportError:
         logger.debug("OpenTelemetry not available")
-        yield collector
+        try:
+            yield collector
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error setting up trace capture: {e}")
-        yield collector
+        try:
+            yield collector
+        except Exception:
+            pass

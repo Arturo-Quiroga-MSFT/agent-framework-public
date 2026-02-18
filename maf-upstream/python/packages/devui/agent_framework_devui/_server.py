@@ -1112,7 +1112,14 @@ class DevServer:
                 # IMPORTANT: Check model_dump_json FIRST because to_json() can have newlines (pretty-printing)
                 # which breaks SSE format. model_dump_json() returns single-line JSON.
                 if hasattr(event, "model_dump_json"):
-                    payload = event.model_dump_json()  # type: ignore[attr-defined]
+                    try:
+                        payload = event.model_dump_json()  # type: ignore[attr-defined]
+                    except Exception:
+                        # Fallback for types with unserializable fields (e.g., Azure SDK citation annotations)
+                        if hasattr(event, "to_dict") and callable(getattr(event, "to_dict", None)):
+                            payload = json.dumps(event.to_dict())  # type: ignore[attr-defined]
+                        else:
+                            payload = json.dumps(event.model_dump(mode="python", warnings=False), default=str)
                 elif hasattr(event, "to_json") and callable(getattr(event, "to_json", None)):
                     payload = event.to_json()  # type: ignore[attr-defined]
                     # Strip newlines from pretty-printed JSON for SSE compatibility

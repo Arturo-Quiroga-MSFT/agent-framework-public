@@ -34,16 +34,15 @@ TRACING OPTIONS:
 
 import asyncio
 import os
-from contextlib import AsyncExitStack
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from agent_framework import Message, Executor, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse, HostedWebSearchTool
+from agent_framework import Message, Executor, WorkflowContext, handler, AgentExecutorRequest, AgentExecutorResponse
 from agent_framework.azure import AzureAIAgentClient
 from agent_framework.observability import configure_otel_providers
 from agent_framework._workflows import WorkflowBuilder
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential
 from pydantic import BaseModel, Field
 
 # Load environment variables from orchestration/.env file (same directory)
@@ -195,19 +194,25 @@ def setup_tracing():
 async def create_ai_stock_research_workflow():
     """Create and return an AI stock bubble research workflow for DevUI."""
     
-    # Create async context stack for managing resources
-    stack = AsyncExitStack()
-    
     # Initialize Azure AI Agent client (for Bing Grounding support)
     # Note: Bing Grounding requires a compatible model like gpt-4.1, gpt-4o, gpt-4o-mini, or gpt-4-turbo
-    credential = await stack.enter_async_context(DefaultAzureCredential())
-    agent_client = await stack.enter_async_context(AzureAIAgentClient(async_credential=credential))
+    credential = DefaultAzureCredential()
+    agent_client = AzureAIAgentClient(
+        credential=credential,
+        project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        model_deployment_name=os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4.1"),
+    )
     
     # Create Bing web search tool for real-time market data
-    bing_search_tool = HostedWebSearchTool(
-        name="Bing Market Search",
-        description="Search the web for current stock prices, market news, financial data, and analysis",
-    )
+    bing_connection_id = os.environ.get("BING_CONNECTION_ID", "")
+    bing_search_tool = {
+        "type": "bing_grounding",
+        "bing_grounding": {
+            "search_configurations": [
+                {"connection_id": bing_connection_id}
+            ]
+        },
+    }
     
     # Create five specialized financial research agents with web search capability
     agent_options = {"max_tokens": 600}
@@ -358,9 +363,6 @@ async def create_ai_stock_research_workflow():
     builder.add_fan_in_edges(agents, aggregator)
     
     workflow = builder.build()
-    
-    # Store the stack for cleanup
-    workflow._devui_stack = stack
     
     return workflow
 
