@@ -151,7 +151,7 @@ Please analyze this customer onboarding request from your specialized perspectiv
 """
         
         request = AgentExecutorRequest(
-            messages=[Message(role="user", content=prompt)],
+            messages=[Message(role="user", text=prompt)],
             should_respond=True
         )
         await ctx.send_message(request)
@@ -325,7 +325,7 @@ def create_customer_onboarding_workflow() -> WorkflowBuilder:
     )
     
     # Create specialized agents for each stage using chat_client.as_agent()
-    agent_options = {"max_tokens": 600}
+    agent_options = {"max_tokens": 400}
     
     # Stage 1: Initial Intake - Data validation and completeness check
     intake_agent = chat_client.as_agent(
@@ -650,7 +650,7 @@ Keep your analysis focused and concise.
     # Build the workflow - using fan-out/fan-in pattern for parallel processing
     # Note: The agents are designed to work sequentially via conversation history
     # but DevUI will visualize them as parallel for this demo
-    builder = WorkflowBuilder(start_executor=dispatcher)
+    builder = WorkflowBuilder(start_executor=dispatcher, name="workflow_customer_onboarding")
     
     # Add all agents in fan-out pattern (they will process in sequence via context)
     all_agents = [
