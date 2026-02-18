@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Chainlit generated files
+.chainlit/
+chainlit.md
+
 # C extensions
 *.so
 
