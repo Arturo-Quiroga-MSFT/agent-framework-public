@@ -1,0 +1,183 @@
+# AI Stock Bubble Research Workflow — Fan-Out Multi-Analyst with Bing Grounding
+#
+# 5 specialized financial analysts ALL run on every query (fan-out pattern).
+# Each agent uses Bing Grounding for real-time market data.
+# Supports multi-turn conversation up to 10 questions per session.
+#
+# Agents required (create in Foundry first — see seeds/ folder):
+#   - ai-market-analyst        (Bing Grounding tool)
+#   - ai-technical-analyst     (Bing Grounding tool)
+#   - ai-fundamental-analyst   (Bing Grounding tool)
+#   - ai-economic-historian    (Bing Grounding tool)
+#   - ai-risk-analyst          (Bing Grounding tool)
+#
+# Bing connection: aqbinggrounding001 (in r2d2-foundry-001 / Main-Project)
+# Model: gpt-4.1 (required for Bing Grounding compatibility)
+#
+# Created: February 2026 — ThoughtWorks Demo
+
+kind: Workflow
+trigger:
+
+  kind: OnConversationStart
+  id: trigger_wf
+  actions:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # WELCOME — Send a scripted greeting so any opening message (including
+    # "hello") is handled gracefully without firing all 5 analysts.
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: SendActivity
+      id: send_welcome
+      activity: "Welcome to the AI Stock Bubble Research panel. 5 specialist analysts (Market, Technical, Fundamental, Economic History, Risk) plus a Synthesis expert — all with live Bing web search. Ask about any AI company (NVIDIA, Microsoft, Google, Meta, Amazon, Tesla, OpenAI-linked stocks), or say 'full AI bubble analysis' for a complete panel report. What would you like to research?"
+
+    # Initialize turn counter
+    - kind: SetVariable
+      id: init_turn_count
+      variable: Local.TurnCount
+      value: =0
+
+    # Wait for the user's actual research question (ignores the opening message)
+    - kind: WaitForInput
+      id: wait_first_question
+      variable: Local.UserInput
+
+    - kind: SetVariable
+      id: init_message
+      variable: Local.LatestMessage
+      value: =UserMessage(Local.UserInput)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANALYST 1 — MARKET VALUATION
+    # Current stock prices, P/E ratios, market caps, valuation multiples
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: market_analyst_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-market-analyst"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.MarketAnalystResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANALYST 2 — TECHNICAL & SENTIMENT
+    # Price momentum, RSI, retail euphoria, insider selling, FOMO signals
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: technical_analyst_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-technical-analyst"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.TechnicalAnalystResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANALYST 3 — FUNDAMENTAL BUSINESS
+    # Revenue, earnings, profit margins, unit economics, sustainability
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: fundamental_analyst_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-fundamental-analyst"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.FundamentalAnalystResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANALYST 4 — ECONOMIC HISTORY
+    # Dot-com vs AI bubble parallels, historical market cycle comparisons
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: economic_historian_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-economic-historian"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.EconomicHistorianResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANALYST 5 — SYSTEMIC RISK
+    # Index concentration, leverage, contagion scenarios, portfolio exposure
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: risk_analyst_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-risk-analyst"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.RiskAnalystResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SYNTHESIS — UNIFIED VERDICT
+    # After all 5 analysts have responded, aggregate into a single conclusion.
+    # The synthesis agent shares conversationId so it sees all 5 analyst
+    # responses in the thread. Its system prompt directs it to synthesize.
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: InvokeAzureAgent
+      id: synthesis_agent
+      conversationId: =System.ConversationId
+      agent:
+        name: "ai-synthesis-analyst"
+      input:
+        messages: =Local.LatestMessage
+      output:
+        messages: Local.SynthesisResponse
+        autoSend: true
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # MULTI-TURN LOOP — Increment counter, wait for next question, or end
+    # ─────────────────────────────────────────────────────────────────────────
+    - kind: SetVariable
+      id: increment_turn
+      variable: Local.TurnCount
+      value: =Local.TurnCount + 1
+
+    - kind: ConditionGroup
+      id: termination_check
+      conditions:
+        - condition: =Local.TurnCount >= 10
+          id: check_max_turns
+          actions:
+            - kind: SendActivity
+              id: send_limit
+              activity: "You've reached the session limit (10 research questions). Please start a new conversation to continue."
+            - kind: EndConversation
+              id: end_max_turns
+
+      elseActions:
+        # Wait for next user research question
+        - kind: WaitForInput
+          id: wait_for_next
+          variable: Local.UserInput
+        - kind: SetVariable
+          id: update_message
+          variable: Local.LatestMessage
+          value: =UserMessage(Local.UserInput)
+        - kind: GotoAction
+          id: loop_to_market_analyst
+          actionId: market_analyst_agent
+
+id: "ai-stock-bubble-research"
+name: "AI Stock Bubble Research (5-Analyst Panel)"
+description: "Fan-out research workflow: 5 financial analysts with Bing web search analyze every AI market question from their specialist perspective"
+
+# STICKY_NOTE: {"id":"sticky_overview","text":"AI STOCK BUBBLE RESEARCH\n\n5 analysts + 1 synthesizer per query:\n- Market Analyst (valuations, P/E)\n- Technical Analyst (momentum, RSI)\n- Fundamental Analyst (revenue, earnings)\n- Economic Historian (dot-com parallels)\n- Risk Analyst (systemic risk)\n- Synthesis Analyst (unified verdict)\n\nAll use Bing Grounding (aqbinggrounding001)","width":310,"height":240,"x":"50","y":"-130"}
+
+# STICKY_NOTE: {"id":"sticky_pattern","text":"FAN-OUT + AGGREGATE PATTERN\n\nStep 1 (Fan-Out): All 5 analysts run\nindependently on every question.\nautoSend: true → streamed to user.\n\nStep 2 (Aggregate): Synthesis agent\nreads full conversation thread (all\n5 responses already in context) and\ndelivers a unified verdict.\n\nMax 10 questions per session.","width":290,"height":230,"x":"420","y":"-130"}
+
+# STICKY_NOTE: {"id":"sticky_setup","text":"SETUP CHECKLIST\n\n1. Create 6 agents in Foundry\n2. Add Bing Grounding tool to each\n   (connection: aqbinggrounding001)\n3. Set model: gpt-4.1\n4. Copy instructions from seeds/ folder\n   (01-05 = analysts, 06 = synthesizer)\n5. Import this YAML\n\nProject: r2d2-foundry-001/Main-Project","width":290,"height":220,"x":"760","y":"-130"}

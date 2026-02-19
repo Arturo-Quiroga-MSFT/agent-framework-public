@@ -13,7 +13,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Configuration
-PARTNER_DIRS=("AQ-ZAFIN-2026" "AQ-PROFISEE" "AQ-TERADATA" "AQ-THOUGHTWORKS-2026")
+PARTNER_DIRS=("AQ-ZAFIN-2026" "AQ-PROFISEE" "AQ-TERADATA" "AQ-THOUGHTWORKS-2026" "AQ-CERENCE-2026")
 EXPORT_DIR="./partner-exports"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
@@ -107,6 +107,9 @@ else
         --thoughtworks)
             zip_partner "AQ-THOUGHTWORKS-2026"
             ;;
+        --cerence)
+            zip_partner "AQ-CERENCE-2026"
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -119,6 +122,7 @@ else
             echo "  --profisee        Export AQ-PROFISEE only"
             echo "  --teradata        Export AQ-TERADATA only"
             echo "  --thoughtworks    Export AQ-THOUGHTWORKS-2026 only"
+            echo "  --cerence         Export AQ-CERENCE-2026 only"
             echo "  -h, --help        Show this help message"
             echo ""
             echo "Examples:"

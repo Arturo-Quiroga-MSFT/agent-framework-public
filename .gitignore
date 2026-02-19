@@ -234,6 +234,7 @@ AQ-ZAFIN-2026/
 AQ-PROFISEE/
 AQ-TERADATA/
 AQ-THOUGHTWORKS-2026/
+AQ-CERENCE-2026/
 
 # Partner exports (zip files for sharing)
 partner-exports/
@@ -247,6 +248,10 @@ internal-docs/
 # profisee artifacts in root directory
 PROFISEE_SYNC_GUIDE.md
 sync_to_profisee_private.sh
+
+# cerence artifacts in root directory
+CERENCE_SYNC_GUIDE.md
+sync_to_cerence_private.sh
 
 AQ-CODE/AZURE_DEPLOYMENTS_INFO/
 .env.old
