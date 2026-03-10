@@ -256,3 +256,5 @@ sync_to_cerence_private.sh
 AQ-CODE/AZURE_DEPLOYMENTS_INFO/
 .env.old
 
+links-to-repos/*
+private/*
