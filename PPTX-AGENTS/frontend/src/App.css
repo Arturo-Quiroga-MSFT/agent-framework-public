@@ -1,0 +1,328 @@
+/* App.css — PPTX Agents UI */
+
+/* ── Reset & base ────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0f1117;
+  --surface:    #1a1d27;
+  --surface2:   #22263a;
+  --border:     #2e3348;
+  --accent:     #6366f1;
+  --accent-lit: #818cf8;
+  --success:    #22c55e;
+  --error:      #ef4444;
+  --text:       #e2e8f0;
+  --text-dim:   #94a3b8;
+  --radius:     12px;
+  --shadow:     0 4px 24px rgba(0,0,0,.4);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.header-brand { display: flex; align-items: center; gap: 14px; }
+.header-logo  { font-size: 2rem; }
+.header-brand h1 { font-size: 1.4rem; font-weight: 700; }
+.header-brand p  { font-size: 0.82rem; color: var(--text-dim); }
+
+.tab-nav { display: flex; gap: 8px; }
+.tab-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all .15s;
+}
+.tab-btn:hover { background: var(--surface2); color: var(--text); }
+.tab-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.app-main {
+  flex: 1;
+  padding: 40px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: var(--shadow);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.panel-header h2 { font-size: 1.2rem; font-weight: 600; flex: 1; }
+.model-badge {
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--accent-lit);
+  border: 1px solid var(--border);
+  font-family: monospace;
+}
+
+/* ── Form elements ───────────────────────────────────────────────────────── */
+.form { display: flex; flex-direction: column; gap: 16px; }
+.field-label { font-size: 0.85rem; font-weight: 500; color: var(--text-dim); }
+
+.question-input,
+.brief-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color .15s;
+}
+.question-input:focus,
+.brief-input:focus { border-color: var(--accent); }
+
+/* ── Drop zone ───────────────────────────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--surface2);
+}
+.dropzone:hover, .dropzone.dragging {
+  border-color: var(--accent);
+  background: rgba(99,102,241,.07);
+}
+.dropzone.has-file { border-color: var(--success); border-style: solid; }
+
+.dropzone-hint { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dropzone-hint p { color: var(--text-dim); font-size: 0.9rem; }
+
+.file-selected {
+  display: flex; align-items: center; gap: 10px;
+  justify-content: center;
+  color: var(--success);
+  font-weight: 500;
+}
+.file-size { font-size: 0.8rem; color: var(--text-dim); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  align-self: flex-start;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-lit); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+.btn-link {
+  background: none; border: none;
+  color: var(--accent-lit);
+  cursor: pointer;
+  font-size: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.btn-download {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 20px;
+  background: var(--success);
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: opacity .15s;
+}
+.btn-download:hover { opacity: .85; }
+
+/* ── Stream / result output ──────────────────────────────────────────────── */
+.stream-container, .result-container { display: flex; flex-direction: column; gap: 16px; }
+
+.stream-header, .result-header {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.85rem; color: var(--text-dim);
+}
+
+.stream-output {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+/* Markdown within stream output */
+.stream-output h1, .stream-output h2, .stream-output h3 {
+  color: var(--accent-lit);
+  margin: 1em 0 .4em;
+}
+.stream-output table {
+  border-collapse: collapse; width: 100%; margin: 1em 0;
+}
+.stream-output th, .stream-output td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+.stream-output th { background: var(--surface); }
+.stream-output code {
+  background: var(--surface); padding: 1px 6px; border-radius: 4px;
+  font-family: monospace; font-size: 0.85em;
+}
+.stream-output blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  color: var(--text-dim);
+  margin: .8em 0;
+}
+
+/* ── Build progress ──────────────────────────────────────────────────────── */
+.build-progress { display: flex; flex-direction: column; gap: 16px; }
+
+.event-log {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.event-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.88rem;
+}
+.event-icon { font-size: 1rem; flex-shrink: 0; }
+.event-msg  { flex: 1; }
+.event-row.event-error .event-msg { color: var(--error); }
+.event-row.event-done  .event-msg { color: var(--success); }
+
+.code-preview {
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.slide-outline {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 0.88rem;
+}
+.slide-outline summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+.slide-outline ol { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.slide-layout { font-size: 0.78rem; color: var(--text-dim); margin-left: 6px; }
+
+.download-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: rgba(34,197,94,.08);
+  border: 1px solid rgba(34,197,94,.25);
+  border-radius: 8px;
+  padding: 14px 20px;
+}
+.success-icon { color: var(--success); flex-shrink: 0; }
+
+/* ── Indicators ──────────────────────────────────────────────────────────── */
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.success-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;  transform: scale(1); }
+  50%       { opacity: .4; transform: scale(1.3); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 1s linear infinite; }
+
+/* ── Error banner ────────────────────────────────────────────────────────── */
+.error-banner {
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.3);
+  color: var(--error);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+}

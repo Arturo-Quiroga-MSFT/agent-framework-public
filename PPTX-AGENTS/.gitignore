@@ -1,0 +1,23 @@
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.env
+backend/.venv/
+
+# Generated PPTX outputs
+tmp_outputs/
+*.pptx
+
+# Node
+frontend/node_modules/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
