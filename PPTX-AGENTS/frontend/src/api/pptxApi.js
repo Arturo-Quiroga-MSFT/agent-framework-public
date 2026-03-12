@@ -34,6 +34,20 @@ export async function analysePresentation(file, question, onChunk, onDone, onErr
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let eventLines = []; // accumulates data: fields for the current SSE event
+
+    const dispatchEvent = (lines) => {
+      if (lines.length === 0) return;
+      // SSE spec: multiple data: fields in one event are joined with \n
+      const payload = lines.join("\n");
+      if (payload === "[DONE]") { onDone(); return true; }
+      try {
+        const parsed = JSON.parse(payload);
+        if (parsed.error) { onError(parsed.error); return true; }
+      } catch (_) {}
+      onChunk(payload);
+      return false;
+    };
 
     while (true) {
       const { done, value } = await reader.read();
@@ -44,23 +58,25 @@ export async function analysePresentation(file, question, onChunk, onDone, onErr
       buffer = lines.pop(); // incomplete line stays buffered
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const payload = line.slice(6);
-          if (payload === "[DONE]") {
-            onDone();
-            return;
-          }
-          // Check for error event
+        if (line === "" || line === "\r") {
+          // Blank line = SSE event boundary — dispatch accumulated data
+          if (dispatchEvent(eventLines)) return;
+          eventLines = [];
+        } else if (line.startsWith("data: ")) {
+          // Try to parse as JSON telemetry
+          const raw = line.slice(6);
           try {
-            const parsed = JSON.parse(payload);
-            if (parsed.error) { onError(parsed.error); return; }
-          } catch (_) {
-            // Not JSON — it's a plain text chunk
-          }
-          onChunk(payload);
+            const parsed = JSON.parse(raw);
+            if (parsed.type === "telemetry") { onChunk(parsed); eventLines = []; continue; }
+          } catch (_) {}
+          eventLines.push(raw);
+        } else if (line.startsWith("data:")) {
+          eventLines.push(""); // empty data field = blank line in content
         }
       }
     }
+    // Dispatch any remaining buffered event
+    dispatchEvent(eventLines);
     onDone();
   } catch (err) {
     onError(err.message);
@@ -110,7 +126,7 @@ export async function buildPresentation(brief, onEvent, onDone, onError) {
           try {
             const event = JSON.parse(payload);
             onEvent(event);
-            if (event.type === "done")  { onDone(event); return; }
+            if (event.type === "done")  { onDone(event); /* keep reading for telemetry */ }
             if (event.type === "error") { onError(event.message); return; }
           } catch (_) {
             // ignore non-JSON lines

@@ -221,14 +221,18 @@ body {
   padding: 20px 24px;
   max-height: 60vh;
   overflow-y: auto;
-  font-size: 0.9rem;
-  line-height: 1.75;
+  font-size: 0.8rem;
+  line-height: 1.6;
 }
 /* Markdown within stream output */
 .stream-output h1, .stream-output h2, .stream-output h3 {
   color: var(--accent-lit);
   margin: 1em 0 .4em;
+  font-size: 0.92rem;
 }
+.stream-output h1 { font-size: 1rem; }
+.stream-output h2 { font-size: 0.95rem; }
+.stream-output h3 { font-size: 0.9rem; }
 .stream-output table {
   border-collapse: collapse; width: 100%; margin: 1em 0;
 }
@@ -251,6 +255,52 @@ body {
 
 /* ── Build progress ──────────────────────────────────────────────────────── */
 .build-progress { display: flex; flex-direction: column; gap: 16px; }
+
+/* Waiting / connecting state */
+.waiting-state {
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 22px;
+  overflow: hidden;
+}
+
+.waiting-bar {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent-lit) 60%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.waiting-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.88rem; color: var(--text-dim);
+}
+
+.waiting-steps {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.waiting-step {
+  font-size: 0.82rem;
+  color: var(--border);
+  padding-left: 6px;
+  border-left: 2px solid var(--border);
+  animation: fadeInStep 0.4s ease forwards;
+  opacity: 0;
+}
+.waiting-step:nth-child(1) { animation-delay: 0.4s; border-left-color: var(--accent); color: var(--text-dim); }
+.waiting-step:nth-child(2) { animation-delay: 0.9s; }
+.waiting-step:nth-child(3) { animation-delay: 1.4s; }
+@keyframes fadeInStep {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
 .event-log {
   display: flex; flex-direction: column; gap: 8px;
@@ -283,7 +333,14 @@ body {
   padding: 12px 18px;
   font-size: 0.88rem;
 }
-.slide-outline summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+.slide-outline summary {
+  cursor: pointer; font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.outline-save-btn {
+  padding: 2px 10px; font-size: 0.75rem;
+  margin-left: auto; flex-shrink: 0;
+}
 .slide-outline ol { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .slide-layout { font-size: 0.78rem; color: var(--text-dim); margin-left: 6px; }
 
@@ -295,6 +352,22 @@ body {
   padding: 14px 20px;
 }
 .success-icon { color: var(--success); flex-shrink: 0; }
+
+/* ── Telemetry bar ───────────────────────────────────────────────────────── */
+.telemetry-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-family: monospace;
+}
+.telem-sep   { color: var(--border); }
+.telem-total { color: var(--accent-lit); font-weight: 600; }
+.telem-model { margin-left: auto; color: var(--text-dim); font-style: italic; }
+.telem-call  { color: var(--text-dim); }
 
 /* ── Indicators ──────────────────────────────────────────────────────────── */
 .pulse-dot {

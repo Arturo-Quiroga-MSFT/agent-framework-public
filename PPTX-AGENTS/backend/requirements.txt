@@ -6,8 +6,8 @@ uvicorn[standard]>=0.32.0
 sse-starlette>=2.2.1
 
 # Azure AI
-azure-ai-projects>=1.0.0b1
-azure-identity>=1.19.0
+azure-identity
+aiohttp
 
 # PPTX read/write
 python-pptx>=1.0.2
@@ -21,4 +21,5 @@ Pillow>=11.0.0
 
 # Utilities
 python-dotenv>=1.0.0
-pydantic>=2.10.0
+pydantic
+python-multipart

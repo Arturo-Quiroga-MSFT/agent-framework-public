@@ -2,15 +2,32 @@
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Upload, Search, RotateCcw, FileText } from "lucide-react";
+import { Upload, Search, RotateCcw, FileText, Save } from "lucide-react";
 import { useAnalyst } from "../hooks/useAnalyst";
+
+/**
+ * Fix spacing artifacts from token-level streaming:
+ *   "** bold **"  →  "**bold**"
+ *   "* item *"   →  "*item*"
+ *   "_ text _"   →  "_text_"
+ */
+function fixMarkdown(text) {
+  return text
+    // collapse spaces inside bold/italic markers
+    .replace(/\*\*\s+([^*]+?)\s+\*\*/g, (_, t) => `**${t.trim()}**`)
+    .replace(/\*\s+([^*]+?)\s+\*/g,   (_, t) => `*${t.trim()}*`)
+    .replace(/_\s+([^_]+?)\s+_/g,     (_, t) => `_${t.trim()}_`)
+    // fix "( Slide 2 – 8 )" → "(Slide 2–8)" style spacing
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")");
+}
 
 export default function AnalystPanel() {
   const [file, setFile]         = useState(null);
   const [question, setQuestion] = useState("");
   const [dragging, setDragging] = useState(false);
   const inputRef                = useRef(null);
-  const { status, output, error, analyse, reset } = useAnalyst();
+  const { status, output, error, telemetry, analyse, reset } = useAnalyst();
 
   const handleFile = (f) => {
     if (f && f.name.toLowerCase().endsWith(".pptx")) setFile(f);
@@ -32,6 +49,18 @@ export default function AnalystPanel() {
     setFile(null);
     setQuestion("");
     reset();
+  };
+
+  const handleSave = () => {
+    const stem = file ? file.name.replace(/\.pptx$/i, "") : "analysis";
+    const header = `# Analysis: ${stem}\n_Model: gpt-5.3-codex · Analysed ${new Date().toLocaleString()}_\n\n---\n\n`;
+    const blob = new Blob([header + fixMarkdown(output)], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${stem}-analysis.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const isLoading = status === "loading";
@@ -99,7 +128,7 @@ export default function AnalystPanel() {
             <span>Analysing with gpt-5.3-codex…</span>
           </div>
           <div className="stream-output">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{output}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{fixMarkdown(output)}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -109,13 +138,28 @@ export default function AnalystPanel() {
           <div className="result-header">
             <span className="success-dot" />
             <span>Analysis complete</span>
+            <button className="btn-ghost" onClick={handleSave}>
+              <Save size={14} /> Save as Markdown
+            </button>
             <button className="btn-ghost" onClick={handleReset}>
               <RotateCcw size={14} /> New analysis
             </button>
           </div>
           <div className="stream-output">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{output}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{fixMarkdown(output)}</ReactMarkdown>
           </div>
+          {telemetry && (
+            <div className="telemetry-bar">
+              <span>⏱ {telemetry.elapsed_s}s</span>
+              <span className="telem-sep">·</span>
+              <span>↑ {telemetry.input_tokens.toLocaleString()} in</span>
+              <span className="telem-sep">·</span>
+              <span>↓ {telemetry.output_tokens.toLocaleString()} out</span>
+              <span className="telem-sep">·</span>
+              <span className="telem-total">{telemetry.total_tokens.toLocaleString()} tokens total</span>
+              <span className="telem-model">{telemetry.model}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

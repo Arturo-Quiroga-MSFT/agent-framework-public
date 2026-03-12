@@ -94,7 +94,15 @@ async def analyse(
     async def event_generator() -> AsyncIterator[dict]:
         try:
             async for chunk in analyst.analyse(upload_path, question):
-                yield {"data": chunk}
+                if isinstance(chunk, dict) and chunk.get("__telemetry__"):
+                    yield {"data": json.dumps({"type": "telemetry",
+                                              "model": chunk["model"],
+                                              "elapsed_s": chunk["elapsed_s"],
+                                              "input_tokens": chunk["input_tokens"],
+                                              "output_tokens": chunk["output_tokens"],
+                                              "total_tokens": chunk["total_tokens"]})}
+                else:
+                    yield {"data": chunk}
         except Exception as exc:
             yield {"data": json.dumps({"error": str(exc)}), "event": "error"}
         finally:

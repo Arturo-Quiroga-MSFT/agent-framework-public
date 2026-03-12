@@ -9,53 +9,95 @@ Analyses the presentation using:
   2. Slide images (base64 PNG) for visual / diagram understanding
 
 Streams its response back via an async generator.
+Uses azure-ai-projects 2.0.0 via get_openai_client() → streaming chat completions.
 """
 
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import AsyncIterator
 
-from azure.identity.aio import DefaultAzureCredential
-from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import (
-    AgentsApiResponseFormatOption,
-    MessageRole,
-)
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from openai import OpenAI
 from dotenv import load_dotenv
 
 from shared.pptx_utils import extract_text, render_slides_to_images, slide_count, slide_titles
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-PROJECT_ENDPOINT = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-ANALYST_MODEL    = os.getenv("ANALYST_MODEL", "gpt-5.3-codex")
+AZURE_OPENAI_ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/")
+ANALYST_MODEL         = os.getenv("ANALYST_MODEL", "gpt-5.3-codex")
 
 SYSTEM_PROMPT = """\
 You are an expert presentation analyst. You receive a PowerPoint presentation —
 both its extracted text content and visual slide images — and produce structured,
 insightful analysis.
 
-When analysing, always cover:
-1. **Executive summary** — what is this presentation about and what is its goal?
-2. **Key messages** — the 3-5 most important points being made
-3. **Narrative structure** — how the story flows across slides
-4. **Data & evidence** — key statistics, charts, or claims (and their strength)
-5. **Gaps & weaknesses** — what is missing, unclear, or unsupported?
-6. **Audience & tone** — who is this for and what is the communication style?
-7. **Actionable recommendations** — concrete improvements if asked
+CRITICAL — OUTPUT FORMAT RULES (follow exactly):
+- Each section MUST start with a clean level-2 heading on its own line: ## Section Title
+- The heading line must contain ONLY the section title — never any content after it.
+- Leave one blank line after each heading before the content begins.
+- Use bullet points (- item) for lists, each on its own separate line.
+- For numbered lists (recommendations) use 1. 2. 3. on separate lines.
+- Bold key terms with **term** inside sentences — never bold entire sentences.
+- Leave one blank line between paragraphs and between bullet points groups.
+- Never concatenate multiple points onto a single line separated by dashes.
 
-If the user asks a specific question, answer it first, then provide the above
-structured analysis. Be direct, precise, and business-focused.
+Always produce exactly these seven sections in this order:
+
+## Executive Summary
+
+One paragraph: what is this presentation about, what is its goal, and who commissioned it?
+
+## Key Messages
+
+A bullet list of the 3–5 most important points being made.
+
+## Narrative Structure
+
+Describe how the story flows across slides. Reference specific slide numbers or ranges.
+
+## Data & Evidence Quality
+
+Assess the strength of data, statistics, and claims. Call out what is evidence-based vs assertion-based.
+
+## Gaps & Weaknesses
+
+A bullet list of what is missing, unclear, or unsupported.
+
+## Audience & Tone
+
+Who is this for? What is the communication style? Is the tone appropriate?
+
+## Actionable Recommendations
+
+A numbered list of concrete improvements, ordered by impact.
+
+If the user asks a specific question, answer it first in a ## Response to Your Question
+section, then produce the full structured analysis below it.
+Be direct, precise, and business-focused.
 """
+
+
+def _make_client() -> OpenAI:
+    """Responses API sync client: base_url /openai/v1/, token provider as api_key."""
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(),
+        "https://cognitiveservices.azure.com/.default",
+    )
+    return OpenAI(
+        base_url=f"{AZURE_OPENAI_ENDPOINT}/openai/v1/",
+        api_key=token_provider,
+    )
 
 
 class PPTXAnalyst:
     """Streams analysis of a PPTX file using gpt-5.3-codex."""
 
     def __init__(self):
-        self.credential = DefaultAzureCredential()
+        pass  # client created per-request (token provider is async-safe)
 
     async def analyse(
         self,
@@ -64,25 +106,21 @@ class PPTXAnalyst:
     ) -> AsyncIterator[str]:
         """
         Async generator — yields text chunks as the model streams them.
-
-        Usage:
-            async for chunk in analyst.analyse("deck.pptx"):
-                print(chunk, end="", flush=True)
         """
         pptx_path = Path(pptx_path)
         if not pptx_path.exists():
             raise FileNotFoundError(f"PPTX not found: {pptx_path}")
 
         # --- Build context ---
-        n_slides  = slide_count(pptx_path)
-        titles    = slide_titles(pptx_path)
-        text_md   = extract_text(pptx_path)
+        n_slides   = slide_count(pptx_path)
+        titles     = slide_titles(pptx_path)
+        text_md    = extract_text(pptx_path)
         images_b64 = render_slides_to_images(pptx_path)
 
-        # Build the multimodal message content
-        content: list[dict] = [
+        # Build the multimodal input list
+        input_content: list[dict] = [
             {
-                "type": "text",
+                "type": "input_text",
                 "text": (
                     f"**Presentation:** `{pptx_path.name}`\n"
                     f"**Slides:** {n_slides}\n"
@@ -95,40 +133,57 @@ class PPTXAnalyst:
             }
         ]
 
-        # Attach slide images (model card confirms gpt-5.3-codex is multimodal)
-        for i, img_b64 in enumerate(images_b64, 1):
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+        for img_b64 in images_b64:
+            input_content.append({
+                "type": "input_image",
+                "image_url": f"data:image/png;base64,{img_b64}",
             })
 
-        async with AIProjectClient(
-            endpoint=PROJECT_ENDPOINT,
-            credential=self.credential,
-        ) as client:
-            agent = await client.agents.create_agent(
+        import asyncio
+        import time as _time
+        loop = asyncio.get_event_loop()
+        t_start = _time.monotonic()
+
+        usage_box: list = []
+
+        def _stream_sync():
+            """Run the synchronous Responses API stream in a thread."""
+            client = _make_client()
+            stream = client.responses.create(
                 model=ANALYST_MODEL,
-                name="pptx-analyst",
                 instructions=SYSTEM_PROMPT,
+                input=[{"role": "user", "content": input_content}],
+                stream=True,
             )
-            thread = await client.agents.create_thread()
+            chunks = []
+            for event in stream:
+                if event.type == "response.output_text.delta":
+                    chunks.append(event.delta)
+                elif event.type == "response.completed":
+                    u = getattr(event.response, "usage", None)
+                    if u:
+                        usage_box.append({
+                            "input_tokens":  getattr(u, "input_tokens",  0),
+                            "output_tokens": getattr(u, "output_tokens", 0),
+                            "total_tokens":  getattr(u, "total_tokens",  0),
+                        })
+            return chunks
 
-            await client.agents.create_message(
-                thread_id=thread.id,
-                role=MessageRole.USER,
-                content=content,
-            )
+        chunks = await loop.run_in_executor(None, _stream_sync)
+        elapsed = round(_time.monotonic() - t_start, 1)
+        full_text = "".join(chunks)
 
-            # Stream the response
-            async with client.agents.create_stream(
-                thread_id=thread.id,
-                agent_id=agent.id,
-            ) as stream:
-                async for event_type, event_data, _ in stream:
-                    if hasattr(event_data, "delta") and hasattr(event_data.delta, "content"):
-                        for block in event_data.delta.content or []:
-                            if hasattr(block, "text") and block.text:
-                                yield block.text.value or ""
+        # Normalize Responses API streaming artifacts:
+        # Each token delta ends with \n — collapse single \n → space, preserve \n\n.
+        full_text = re.sub(r'(?<!\n)\n(?!\n)', ' ', full_text)
+        full_text = re.sub(r' {2,}', ' ', full_text)          # collapse double spaces
+        full_text = re.sub(r'(\d+) \.', r'\1.', full_text)   # fix "1 ." → "1."
+        full_text = re.sub(r'\*\* +', '**', full_text)        # fix "** text" → "**text"
+        full_text = re.sub(r' +\*\*', '**', full_text)        # fix "text **" → "text**"
+        full_text = full_text.strip()
 
-            # Clean up ephemeral agent
-            await client.agents.delete_agent(agent.id)
+        yield full_text
+
+        usage = usage_box[0] if usage_box else {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+        yield {"__telemetry__": True, "model": ANALYST_MODEL,
+               "elapsed_s": elapsed, **usage}

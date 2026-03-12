@@ -3,21 +3,27 @@ import { useState, useCallback, useRef } from "react";
 import { analysePresentation } from "../api/pptxApi";
 
 export function useAnalyst() {
-  const [status, setStatus]     = useState("idle");   // idle | loading | done | error
-  const [output, setOutput]     = useState("");
-  const [error, setError]       = useState(null);
-  const abortRef                = useRef(false);
+  const [status, setStatus]       = useState("idle");   // idle | loading | done | error
+  const [output, setOutput]       = useState("");
+  const [error, setError]         = useState(null);
+  const [telemetry, setTelemetry] = useState(null);
+  const abortRef                  = useRef(false);
 
   const analyse = useCallback(async (file, question) => {
     abortRef.current = false;
     setStatus("loading");
     setOutput("");
     setError(null);
+    setTelemetry(null);
 
     await analysePresentation(
       file,
       question,
       (chunk) => {
+        if (typeof chunk === "object" && chunk?.type === "telemetry") {
+          if (!abortRef.current) setTelemetry(chunk);
+          return;
+        }
         if (!abortRef.current) setOutput((prev) => prev + chunk);
       },
       () => { if (!abortRef.current) setStatus("done"); },
@@ -30,7 +36,8 @@ export function useAnalyst() {
     setStatus("idle");
     setOutput("");
     setError(null);
+    setTelemetry(null);
   }, []);
 
-  return { status, output, error, analyse, reset };
+  return { status, output, error, telemetry, analyse, reset };
 }
