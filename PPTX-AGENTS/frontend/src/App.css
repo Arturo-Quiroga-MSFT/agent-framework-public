@@ -369,6 +369,34 @@ body {
 .telem-model { margin-left: auto; color: var(--text-dim); font-style: italic; }
 .telem-call  { color: var(--text-dim); }
 
+/* ── Addendum / recommendations panel ───────────────────────────────────── */
+.addendum-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+.addendum-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; font-weight: 600; color: var(--accent-lit);
+}
+.addendum-header .btn-xs {
+  margin-left: auto; font-size: 0.75rem; padding: 2px 8px;
+}
+.rec-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rec-item label {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.8rem; color: var(--text); cursor: pointer;
+  line-height: 1.5;
+}
+.rec-item input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); }
+.rec-item.selected label { color: var(--accent-lit); }
+.btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+
 /* ── Indicators ──────────────────────────────────────────────────────────── */
 .pulse-dot {
   width: 8px; height: 8px; border-radius: 50%;

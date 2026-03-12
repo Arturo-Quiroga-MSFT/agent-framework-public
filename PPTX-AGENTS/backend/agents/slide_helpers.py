@@ -21,10 +21,40 @@ THEME and OUTPUT_PATH are pre-set variables — no need to hardcode them.
 
 from __future__ import annotations
 
+import io
+from urllib.parse import urlparse
+
+import requests as _requests
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+
+# ── Allowed image hosts (security gate) ─────────────────────────────────────
+ALLOWED_IMAGE_HOSTS: frozenset[str] = frozenset({
+    "learn.microsoft.com",
+    "docs.microsoft.com",
+    "azure.microsoft.com",
+    "devblogs.microsoft.com",
+    "techcommunity.microsoft.com",
+    "cdn-dynmedia-1.microsoft.com",
+    "msazure.blob.core.windows.net",
+})
+
+
+def _fetch_image_bytes(url: str) -> io.BytesIO | None:
+    """Download an image URL, enforcing the allowed-host list. Returns BytesIO or None."""
+    try:
+        host = urlparse(url).hostname or ""
+        # Accept exact match or subdomain of allowed hosts
+        if not any(host == h or host.endswith("." + h) for h in ALLOWED_IMAGE_HOSTS):
+            return None
+        r = _requests.get(url, timeout=8, headers={"User-Agent": "PPTX-Agents/1.0"})
+        if r.status_code == 200 and r.content:
+            return io.BytesIO(r.content)
+    except Exception:
+        pass
+    return None
 
 # ── Slide canvas (widescreen 16:9) ─────────────────────────────────────────
 _W = Inches(13.33)
@@ -305,6 +335,60 @@ def add_section_break_slide(prs: Presentation, title: str, subtitle: str = "",
     if subtitle:
         tf2 = _tf(slide, 1.5, 4.5, 11.3, 1.4)
         _p0(tf2, subtitle, 20, False, t["sub_txt"])
+
+    _notes(slide, notes)
+    return slide
+
+
+def add_content_slide_with_image(
+        prs: Presentation, title: str,
+        bullets: list[str] | None = None,
+        image_url: str = "",
+        image_caption: str = "",
+        notes: str = "",
+        theme_name: str = "professional"):
+    """
+    Content slide with an image panel on the right:
+        ┌──────────────────────────────────┐
+        │  TITLE (dark header band)        │
+        │▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇  │
+        │  • bullet     │ [  image   ] │
+        │  • bullet     │  caption     │
+        └──────────────────────────────────┘
+    image_url must be from ALLOWED_IMAGE_HOSTS; silently omitted otherwise.
+    """
+    t = _t(theme_name)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+
+    _fill_bg(slide, t["bg_content"])
+    _rect(slide, 0, 0, 13.33, 1.28, t["bg"])
+    _rect(slide, 0, 1.28, 13.33, 0.07, t["accent"])
+
+    # Title
+    tf = _tf(slide, 0.45, 0.13, 12.4, 1.0)
+    _p0(tf, title, 30, True, t["title_txt"])
+
+    # Bullets on left portion
+    if bullets:
+        bft = _tf(slide, 0.6, 1.55, 6.5, 5.65)
+        _bullet_list(bft, bullets, 18, t["body_txt"])
+
+    # Image on right portion
+    if image_url:
+        img_bytes = _fetch_image_bytes(image_url)
+        if img_bytes:
+            try:
+                slide.shapes.add_picture(
+                    img_bytes,
+                    Inches(7.3), Inches(1.55), Inches(5.6), Inches(4.9),
+                )
+            except Exception:
+                img_bytes = None  # fall through to caption-only
+
+            # Caption / source link
+            if image_caption:
+                cf = _tf(slide, 7.3, 6.5, 5.6, 0.6)
+                _p0(cf, f"\u2192 {image_caption}", 9, False, t["accent"], PP_ALIGN.RIGHT)
 
     _notes(slide, notes)
     return slide

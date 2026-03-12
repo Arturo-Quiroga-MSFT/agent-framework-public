@@ -1,5 +1,5 @@
 // src/components/BuilderPanel.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Wand2, Download, RotateCcw, CheckCircle, AlertCircle, Loader, Save } from "lucide-react";
 import { useBuilder } from "../hooks/useBuilder";
 import { downloadUrl } from "../api/pptxApi";
@@ -14,10 +14,19 @@ const EVENT_ICONS = {
   error:   "❌",
 };
 
-export default function BuilderPanel() {
+export default function BuilderPanel({ addendumBrief, onAddendumConsumed }) {
   const [brief, setBrief]       = useState("");
   const [showCode, setShowCode] = useState(false);
   const { status, events, result, error, telemetry, build, reset } = useBuilder();
+
+  // Auto-fire when an addendum brief arrives from the Analyst panel
+  useEffect(() => {
+    if (addendumBrief && status === "idle") {
+      setBrief(addendumBrief);
+      build(addendumBrief);
+      onAddendumConsumed?.();
+    }
+  }, [addendumBrief]); // intentionally omitting build/status/onAddendumConsumed
 
   const handleSubmit = (e) => {
     e.preventDefault();

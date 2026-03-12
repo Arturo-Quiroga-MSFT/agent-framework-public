@@ -67,7 +67,7 @@ export async function analysePresentation(file, question, onChunk, onDone, onErr
           const raw = line.slice(6);
           try {
             const parsed = JSON.parse(raw);
-            if (parsed.type === "telemetry") { onChunk(parsed); eventLines = []; continue; }
+            if (parsed.type === "telemetry" || parsed.type === "recommendations") { onChunk(parsed); eventLines = []; continue; }
           } catch (_) {}
           eventLines.push(raw);
         } else if (line.startsWith("data:")) {

@@ -101,6 +101,9 @@ async def analyse(
                                               "input_tokens": chunk["input_tokens"],
                                               "output_tokens": chunk["output_tokens"],
                                               "total_tokens": chunk["total_tokens"]})}
+                elif isinstance(chunk, dict) and chunk.get("__recommendations__"):
+                    yield {"data": json.dumps({"type": "recommendations",
+                                              "items": chunk["items"]})}
                 else:
                     yield {"data": chunk}
         except Exception as exc:

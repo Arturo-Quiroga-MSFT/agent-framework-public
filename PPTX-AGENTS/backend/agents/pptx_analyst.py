@@ -187,3 +187,19 @@ class PPTXAnalyst:
         usage = usage_box[0] if usage_box else {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         yield {"__telemetry__": True, "model": ANALYST_MODEL,
                "elapsed_s": elapsed, **usage}
+
+        # Extract actionable recommendations as a structured list
+        recs_match = re.search(
+            r'##\s+Actionable Recommendations\s*\n(.*?)(?=\n##\s|\Z)',
+            full_text, re.DOTALL
+        )
+        recs = []
+        if recs_match:
+            items = re.findall(
+                r'^\d+\.\s+(.+?)(?=\n\d+\.\s|\Z)',
+                recs_match.group(1), re.MULTILINE | re.DOTALL
+            )
+            recs = [{"id": i + 1, "text": item.strip().replace('\n', ' ')}
+                    for i, item in enumerate(items)]
+        if recs:
+            yield {"__recommendations__": True, "items": recs}

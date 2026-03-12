@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Upload, Search, RotateCcw, FileText, Save } from "lucide-react";
+import { Upload, Search, RotateCcw, FileText, Save, Wand2 } from "lucide-react";
 import { useAnalyst } from "../hooks/useAnalyst";
 
 /**
@@ -22,12 +22,13 @@ function fixMarkdown(text) {
     .replace(/\s+\)/g, ")");
 }
 
-export default function AnalystPanel() {
+export default function AnalystPanel({ onBuildAddendum }) {
   const [file, setFile]         = useState(null);
   const [question, setQuestion] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const inputRef                = useRef(null);
-  const { status, output, error, telemetry, analyse, reset } = useAnalyst();
+  const { status, output, error, telemetry, recommendations, analyse, reset } = useAnalyst();
 
   const handleFile = (f) => {
     if (f && f.name.toLowerCase().endsWith(".pptx")) setFile(f);
@@ -48,7 +49,34 @@ export default function AnalystPanel() {
   const handleReset = () => {
     setFile(null);
     setQuestion("");
+    setSelectedIds([]);
     reset();
+  };
+
+  const toggleRec = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+
+  const handleBuildAddendum = () => {
+    if (!onBuildAddendum || selectedIds.length === 0) return;
+    const chosen = recommendations.filter((r) => selectedIds.includes(r.id));
+    const stem   = file ? file.name.replace(/\.pptx$/i, "") : "the presentation";
+    const ctx    = output.slice(0, 400).replace(/\n+/g, " ");
+    const brief  =
+      `ADDENDUM MODE — Generate only additional slides to extend an existing deck.\n\n` +
+      `Existing deck: "${stem}"\n` +
+      `Context: ${ctx}\n\n` +
+      `Generate ONLY 4-6 slides that address these specific recommendations:\n` +
+      chosen.map((r, i) => `${i + 1}. ${r.text}`).join("\n") +
+      `\n\nIMPORTANT:\n` +
+      `- Start with a section_break slide titled "Addendum: Improvements"\n` +
+      `- Generate ONLY the gap-filling slides, NOT a full deck\n` +
+      `- End with a closing slide\n` +
+      `- Include a references slide if you consult web sources\n` +
+      `- Do NOT repeat content already in the original deck\n` +
+      `- 4-6 slides maximum`;
+    onBuildAddendum(brief);
   };
 
   const handleSave = () => {
@@ -158,6 +186,46 @@ export default function AnalystPanel() {
               <span className="telem-sep">·</span>
               <span className="telem-total">{telemetry.total_tokens.toLocaleString()} tokens total</span>
               <span className="telem-model">{telemetry.model}</span>
+            </div>
+          )}
+
+          {recommendations.length > 0 && (
+            <div className="addendum-panel">
+              <div className="addendum-header">
+                <Wand2 size={15} />
+                <span>Generate addendum slides from selected recommendations</span>
+                <button
+                  className="btn-ghost btn-xs"
+                  onClick={() =>
+                    selectedIds.length === recommendations.length
+                      ? setSelectedIds([])
+                      : setSelectedIds(recommendations.map((r) => r.id))
+                  }
+                >
+                  {selectedIds.length === recommendations.length ? "Deselect all" : "Select all"}
+                </button>
+              </div>
+              <ul className="rec-list">
+                {recommendations.map((rec) => (
+                  <li key={rec.id} className={`rec-item ${selectedIds.includes(rec.id) ? "selected" : ""}`}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(rec.id)}
+                        onChange={() => toggleRec(rec.id)}
+                      />
+                      <span>{rec.text}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <button
+                className="btn-primary btn-sm"
+                disabled={selectedIds.length === 0}
+                onClick={handleBuildAddendum}
+              >
+                <Wand2 size={14} /> Build {selectedIds.length || ""} addendum slide{selectedIds.length !== 1 ? "s" : ""} →
+              </button>
             </div>
           )}
         </div>

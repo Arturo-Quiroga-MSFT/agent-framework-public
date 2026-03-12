@@ -11,6 +11,12 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState("analyse");
+  const [addendumBrief, setAddendumBrief] = useState(null);
+
+  const handleBuildAddendum = (brief) => {
+    setAddendumBrief(brief);
+    setTab("build");
+  };
 
   return (
     <div className="app">
@@ -36,8 +42,8 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {tab === "analyse" && <AnalystPanel />}
-        {tab === "build"   && <BuilderPanel />}
+        {tab === "analyse" && <AnalystPanel onBuildAddendum={handleBuildAddendum} />}
+        {tab === "build"   && <BuilderPanel addendumBrief={addendumBrief} onAddendumConsumed={() => setAddendumBrief(null)} />}
       </main>
 
       <footer className="app-footer">

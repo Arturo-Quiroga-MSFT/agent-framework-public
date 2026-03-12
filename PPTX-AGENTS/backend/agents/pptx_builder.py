@@ -13,20 +13,25 @@ Streams progress events back to the caller.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import re
 import traceback
 from pathlib import Path
 from typing import AsyncIterator
+from urllib.parse import urlparse
 
+import requests as _requests
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
 from dotenv import load_dotenv
 from .slide_helpers import (
+    ALLOWED_IMAGE_HOSTS,
     make_presentation,
     add_title_slide,
     add_content_slide,
+    add_content_slide_with_image,
     add_two_column_slide,
     add_section_break_slide,
     add_references_slide,
@@ -38,6 +43,48 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 AZURE_OPENAI_ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/")
 CONTENT_MODEL         = os.getenv("CONTENT_MODEL", "gpt-5.4")       # slide content
 CODE_MODEL            = os.getenv("CODE_MODEL",    "gpt-5.3-codex") # python-pptx code
+TAVILY_API_KEY        = os.getenv("TAVILY_API_KEY", "")
+
+
+def _search_image_for_slide(query: str) -> tuple[str, str] | None:
+    """
+    Call Tavily Search with include_images=True; return (image_url, source_url)
+    for the first PNG/JPG from an allowed Microsoft host, or None.
+    """
+    if not TAVILY_API_KEY:
+        return None
+    try:
+        r = _requests.post(
+            "https://api.tavily.com/search",
+            json={
+                "api_key": TAVILY_API_KEY,
+                "query": query,
+                "include_images": True,
+                "max_results": 5,
+                "search_depth": "basic",
+            },
+            timeout=12,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        results = data.get("results", [])
+        for img_url in data.get("images", []):
+            host = urlparse(img_url).hostname or ""
+            is_allowed = any(host == h or host.endswith("." + h) for h in ALLOWED_IMAGE_HOSTS)
+            is_raster  = img_url.lower().split("?")[0].endswith((".png", ".jpg", ".jpeg"))
+            if is_allowed and is_raster:
+                # Find the source page URL from search results (best-effort)
+                source_url = next(
+                    (res.get("url", "") for res in results
+                     if urlparse(res.get("url", "")).hostname and
+                     urlparse(res.get("url", "")).hostname.split(".")[-2:] == ["microsoft", "com"]),
+                    ""
+                )
+                return img_url, source_url
+    except Exception:
+        pass
+    return None
 
 
 def _make_client() -> OpenAI:
@@ -81,18 +128,28 @@ Slide object schemas by layout:
      "right_title":"...", "right_bullets":["..."],
      "notes":"..." }
 
-5. layout = "references"  (second-to-last slide — always include when web sources were used)
+6. layout = "content_with_image"  (content slide + image from an approved Microsoft source)
+   { "index":N, "layout":"content_with_image", "title":"...",
+     "bullets":["...","..."],
+     "image_search_query": "specific search query to find a diagram or screenshot on learn.microsoft.com",
+     "notes":"..." }
+   Use this for 1-3 slides where an official architecture diagram, screenshot, or
+   concept illustration from learn.microsoft.com or devblogs.microsoft.com would
+   genuinely improve comprehension. Only use when a real diagram exists.
+
+7. layout = "references"  (second-to-last slide — always include when web sources were used)
    { "index":N, "layout":"references", "title":"Sources & References",
      "links":[{"text":"Display title of the source","url":"https://..."},...],
      "notes":"..." }
 
-6. layout = "closing"  (last slide — call to action or thank you)
+8. layout = "closing"  (last slide — call to action or thank you)
    { "index":N, "layout":"closing", "title":"...", "subtitle":"CTA or contact info", "notes":"..." }
 
 Content rules:
 - 10-14 slides total (references + closing count toward total)
 - ALWAYS start with layout=title and end with layout=closing
 - ALWAYS include a layout=references slide as the second-to-last slide; populate links with every web source you consulted
+- Use content_with_image for 1-3 slides where an official Microsoft diagram would help (architecture, flow, concept)
 - Use section_break to open each major section (every 3-4 content slides)
 - Use two_column for comparisons, before/after, pros/cons (at least 2 per deck)
 - Bullets: outcome-focused, 8-12 words, use concrete numbers/metrics where plausible
@@ -118,6 +175,7 @@ The following functions are ALREADY available in the execution scope — do NOT 
                          right_title="", right_bullets=[],
                          notes="", theme_name=THEME)
     add_section_break_slide(prs, title, subtitle="", notes="", theme_name=THEME)
+    add_content_slide_with_image(prs, title, bullets=[], image_url="", image_caption="", notes="", theme_name=THEME)
     add_references_slide(prs, title, links=[], notes="", theme_name=THEME)
     # links = list of {"text": "Source display title", "url": "https://..."} dicts
     add_closing_slide(prs, title, cta="", notes="", theme_name=THEME)
@@ -132,6 +190,7 @@ Layout → function mapping:
     "content"      → add_content_slide
     "two_column"   → add_two_column_slide
     "references"   → add_references_slide
+    "content_with_image" → add_content_slide_with_image
     "closing"      → add_closing_slide
     anything else  → add_content_slide
 
@@ -232,6 +291,31 @@ class PPTXBuilder:
         yield {"type": "content", "json": slide_spec}
         yield {"type": "status", "message": f"Step 1 complete — {len(slide_spec.get('slides', []))} slides planned."}
 
+        # ── STEP 1.5: Enrich content_with_image slides via Tavily ─────────
+        image_slides = [
+            s for s in slide_spec.get("slides", [])
+            if s.get("layout") == "content_with_image" and s.get("image_search_query")
+        ]
+        if image_slides and TAVILY_API_KEY:
+            yield {"type": "status", "message": f"Step 1.5 — Searching for {len(image_slides)} slide image(s)…"}
+            for slide in image_slides:
+                query  = slide.pop("image_search_query")
+                result = await loop.run_in_executor(None, _search_image_for_slide, query)
+                if result:
+                    img_url, src_url = result
+                    slide["image_url"]     = img_url
+                    slide["image_caption"] = src_url or urlparse(img_url).hostname
+                else:
+                    # Downgrade to plain content if no image found
+                    slide["layout"] = "content"
+                    slide.pop("image_url", None)
+                    slide.pop("image_caption", None)
+        elif image_slides:
+            # No Tavily key — downgrade all gracefully
+            for slide in image_slides:
+                slide["layout"] = "content"
+                slide.pop("image_search_query", None)
+
         # ── STEP 2: Generate python-pptx code with gpt-5.3-codex ──────────
         yield {"type": "status", "message": "Step 2/3 — Generating python-pptx code with gpt-5.3-codex…"}
 
@@ -258,8 +342,7 @@ class PPTXBuilder:
             "THEME":                    slide_spec.get("theme", "professional"),
             "make_presentation":        make_presentation,
             "add_title_slide":          add_title_slide,
-            "add_content_slide":        add_content_slide,
-            "add_two_column_slide":     add_two_column_slide,
+            "add_content_slide":        add_content_slide,            "add_content_slide_with_image": add_content_slide_with_image,            "add_two_column_slide":     add_two_column_slide,
             "add_section_break_slide":  add_section_break_slide,
             "add_references_slide":     add_references_slide,
             "add_closing_slide":        add_closing_slide,
